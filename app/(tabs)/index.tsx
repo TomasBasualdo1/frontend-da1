@@ -1,98 +1,206 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+type Pais = {
+  numero: number;
+  nombre: string;
+  capital: string;
+};
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const [paises, setPaises] = useState<Pais[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const loadPaises = async () => {
+      const baseUrl = process.env.EXPO_PUBLIC_API_URL;
+
+      if (!baseUrl) {
+        setError(
+          "No está definida la variable de entorno EXPO_PUBLIC_API_URL.",
+        );
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await fetch(`${baseUrl.replace(/\/$/, "")}/paises`, {
+          method: "GET",
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status} ${response.statusText}`);
+        }
+
+        const data = (await response.json()) as Pais[];
+        setPaises(data);
+      } catch (err) {
+        if (
+          typeof err === "object" &&
+          err !== null &&
+          "name" in err &&
+          err.name === "AbortError"
+        ) {
+          return;
+        }
+
+        const message =
+          err instanceof Error
+            ? err.message
+            : "Error desconocido al conectar con el backend.";
+        setError(`No se pudo obtener /paises: ${message}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPaises();
+
+    return () => controller.abort();
+  }, []);
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Prueba de conexión con FastAPI</Text>
+      <Text style={styles.subtitle}>
+        GET {process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "")}/paises
+      </Text>
+
+      {loading ? (
+        <View style={styles.centerContent}>
+          <ActivityIndicator size="large" color="#1D4ED8" />
+          <Text style={styles.statusText}>Cargando países...</Text>
+        </View>
+      ) : error ? (
+        <View style={[styles.centerContent, styles.errorBox]}>
+          <Text style={styles.errorTitle}>Error de red</Text>
+          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.hintText}>
+            Revisá que tu backend esté levantado, que la IP local sea accesible
+            y que EXPO_PUBLIC_API_URL apunte al host correcto.
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={paises}
+          keyExtractor={(item) => item.numero.toString()}
+          contentContainerStyle={
+            paises.length === 0 ? styles.emptyList : styles.list
+          }
+          ListEmptyComponent={
+            <Text style={styles.statusText}>
+              La API respondió sin registros.
+            </Text>
+          }
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              <Text style={styles.countryName}>{item.nombre}</Text>
+              <Text style={styles.countryMeta}>Número: {item.numero}</Text>
+              <Text style={styles.countryMeta}>Capital: {item.capital}</Text>
+            </View>
+          )}
+        />
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    backgroundColor: "#F8FAFC",
+    paddingTop: 64,
+    paddingHorizontal: 20,
   },
-  stepContainer: {
-    gap: 8,
+  title: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#0F172A",
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  subtitle: {
+    fontSize: 14,
+    color: "#475569",
+    marginBottom: 24,
+  },
+  centerContent: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+  },
+  statusText: {
+    fontSize: 16,
+    color: "#334155",
+    textAlign: "center",
+  },
+  errorBox: {
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FCA5A5",
+    borderRadius: 16,
+    padding: 18,
+    alignItems: "flex-start",
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#B91C1C",
+    marginBottom: 8,
+  },
+  errorText: {
+    fontSize: 15,
+    color: "#7F1D1D",
+    lineHeight: 21,
+  },
+  hintText: {
+    marginTop: 12,
+    fontSize: 13,
+    color: "#991B1B",
+    lineHeight: 19,
+  },
+  list: {
+    paddingBottom: 24,
+    gap: 12,
+  },
+  emptyList: {
+    flexGrow: 1,
+    justifyContent: "center",
+  },
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  countryName: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 6,
+  },
+  countryMeta: {
+    fontSize: 14,
+    color: "#334155",
+    marginTop: 2,
   },
 });
