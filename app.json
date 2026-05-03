@@ -19,8 +19,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "package": "com.tbasualdo.frontendda1"
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "static",
@@ -44,12 +43,6 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    },
-    "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "f53fde9d-e989-4961-adc7-07faac1cf93c"
-      }
     }
   }
 }
