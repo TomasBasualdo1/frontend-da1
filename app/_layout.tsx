@@ -1,28 +1,10 @@
-import { MaterialIcons } from "@expo/vector-icons";
-import {
-  Icon,
-  Label,
-  NativeTabs,
-  VectorIcon,
-} from "expo-router/unstable-native-tabs";
+import { Stack } from "expo-router";
+import "../global.css";
 
-export default function TabLayout() {
+export default function RootLayout() {
   return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="index">
-        <Label>Home</Label>
-        <Icon
-          sf="house.fill"
-          androidSrc={<VectorIcon family={MaterialIcons} name="home" />}
-        />
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile">
-        <Icon
-          sf="person"
-          androidSrc={<VectorIcon family={MaterialIcons} name="person" />}
-        />
-        <Label>Profile</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(tabs)" />
+    </Stack>
   );
 }

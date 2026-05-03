@@ -23,7 +23,15 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "web": {
+        "bundler": "metro",
+        "build": {
+          "babel": {
+            "include": ["nativewind"]
+          }
+        }
+      }
     },
     "plugins": [
       "expo-router",
