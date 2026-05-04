@@ -28,7 +28,9 @@
         "bundler": "metro",
         "build": {
           "babel": {
-            "include": ["nativewind"]
+            "include": [
+              "nativewind"
+            ]
           }
         }
       }
@@ -46,7 +48,8 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,
