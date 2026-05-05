@@ -5,17 +5,30 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { articleService } from "../src/services";
+import { Categoria } from "../src/types";
+
+const CATEGORIAS: { value: Categoria; label: string }[] = [
+  { value: "comun", label: "Común" },
+  { value: "especial", label: "Especial" },
+  { value: "plata", label: "Plata" },
+  { value: "oro", label: "Oro" },
+  { value: "platino", label: "Platino" },
+];
 
 export default function ConsignarScreen() {
   const router = useRouter();
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({
-    descripcion: "",
-    historia: "",
-    artista: "",
-    fechaCreacion: "",
-  });
+  
+  // Form state
+  const [titulo, setTitulo] = useState("");
+  const [categoria, setCategoria] = useState<Categoria | "">("");
+  const [descripcion, setDescripcion] = useState("");
+  const [historia, setHistoria] = useState("");
+  const [valorEstimado, setValorEstimado] = useState("");
   const [fotos, setFotos] = useState<string[]>([]);
+  
+  const [showCategPicker, setShowCategPicker] = useState(false);
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -39,23 +52,44 @@ export default function ConsignarScreen() {
     setFotos(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleNext = () => {
+    if (step === 1) {
+      if (!titulo.trim() || !categoria || !descripcion.trim()) {
+        Alert.alert("Campos requeridos", "Por favor completa el título, categoría y descripción.");
+        return;
+      }
+    } else if (step === 2) {
+      if (!historia.trim() || !valorEstimado.trim()) {
+        Alert.alert("Campos requeridos", "Por favor completa la historia y el valor estimado.");
+        return;
+      }
+    }
+    setStep(prev => prev + 1);
+  };
+
+  const handleBack = () => {
+    if (step > 1) setStep(prev => prev - 1);
+  };
+
   const handleSubmit = async () => {
-    if (!form.descripcion.trim() || fotos.length < 6) {
-      Alert.alert("Error", "La descripción y al menos 6 fotos son requeridas.");
+    if (fotos.length < 6) {
+      Alert.alert("Error", "Se requieren al menos 6 fotos.");
       return;
     }
 
     setLoading(true);
     try {
       await articleService.publicar({
-        ...form,
+        descripcion: `${titulo} - ${descripcion}`,
+        historia,
+        artista: "", // Optional, not in mockup
+        fechaCreacion: "", // Optional, not in mockup
         fotos,
         esPropietario: true,
         declaraOrigenLicito: true,
       });
-      Alert.alert("¡Enviado!", "Tu artículo fue enviado para tasación.", [
-        { text: "OK", onPress: () => router.back() }
-      ]);
+      // Move to success step
+      setStep(4);
     } catch (e) {
       Alert.alert("Error", "No se pudo enviar el artículo.");
     } finally {
@@ -63,91 +97,247 @@ export default function ConsignarScreen() {
     }
   };
 
+  // Render progress bar segments
+  const ProgressBar = () => (
+    <View style={st.progressContainer}>
+      <Text style={st.stepText}>Paso {step} de 4</Text>
+      <View style={st.barsRow}>
+        {[1, 2, 3, 4].map((i) => (
+          <View key={i} style={[st.barSegment, step >= i && st.barSegmentActive]} />
+        ))}
+      </View>
+    </View>
+  );
+
   return (
-    <View style={s.container}>
+    <View style={st.container}>
       <SafeAreaView style={{ flex: 1 }}>
-        <View style={s.header}>
-          <Pressable style={s.back} onPress={() => router.back()}><MaterialIcons name="arrow-back" size={24} color="#1A1A2E" /></Pressable>
-          <Text style={s.headerTitle}>Consignar Artículo</Text>
-          <View style={{ width: 44 }} />
+        {/* Header */}
+        <View style={st.header}>
+          <Pressable style={st.backBtn} onPress={() => {
+            if (step === 1 || step === 4) router.back();
+            else handleBack();
+          }}>
+            <MaterialIcons name="arrow-back" size={20} color="#1A1A2E" />
+            <Text style={st.headerTitle}>Subastar Artículo</Text>
+          </Pressable>
+          <Pressable onPress={() => router.replace("/(tabs)/profile")}>
+            <Text style={st.misEnviosBtn}>Mis Envíos</Text>
+          </Pressable>
         </View>
 
-        <ScrollView contentContainerStyle={s.scroll}>
-          <Text style={s.desc}>Completá los datos de tu artículo para enviarlo a evaluación por nuestros expertos.</Text>
+        {step < 4 && <ProgressBar />}
 
-          <View style={s.form}>
-            <View style={s.group}>
-              <Text style={s.label}>Descripción *</Text>
-              <TextInput style={s.input} placeholder="Ej: Reloj antiguo de oro" value={form.descripcion} onChangeText={t => setForm({...form, descripcion: t})} />
-            </View>
+        <ScrollView contentContainerStyle={st.scroll}>
+          {/* STEP 1 */}
+          {step === 1 && (
+            <View style={st.stepContent}>
+              <Text style={st.sectionTitle}>Información Básica</Text>
+              
+              <View style={st.group}>
+                <Text style={st.label}>Título del Artículo *</Text>
+                <TextInput 
+                  style={st.input} 
+                  placeholder="Ej: Reloj de Bolsillo Patek Philippe 1895" 
+                  value={titulo} 
+                  onChangeText={setTitulo} 
+                />
+              </View>
 
-            <View style={s.group}>
-              <Text style={s.label}>Historia / Detalles</Text>
-              <TextInput style={[s.input, { height: 100, paddingTop: 12 }]} multiline textAlignVertical="top" placeholder="Contanos la historia del objeto..." value={form.historia} onChangeText={t => setForm({...form, historia: t})} />
-            </View>
-
-            <View style={s.group}>
-              <Text style={s.label}>Artista / Fabricante</Text>
-              <TextInput style={s.input} placeholder="Opcional" value={form.artista} onChangeText={t => setForm({...form, artista: t})} />
-            </View>
-
-            <View style={s.group}>
-              <Text style={s.label}>Año de creación</Text>
-              <TextInput style={s.input} placeholder="Ej: 1920" value={form.fechaCreacion} onChangeText={t => setForm({...form, fechaCreacion: t})} />
-            </View>
-
-            <View style={s.group}>
-              <Text style={s.label}>Fotos ({fotos.length}/6 mín) *</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.photoScroll}>
-                <Pressable style={s.addPhoto} onPress={pickImage}>
-                  <MaterialIcons name="add-a-photo" size={28} color="#8B6914" />
+              <View style={st.group}>
+                <Text style={st.label}>Categoría *</Text>
+                <Pressable style={st.input} onPress={() => setShowCategPicker(!showCategPicker)}>
+                  <Text style={{ color: categoria ? "#1A1A2E" : "#9CA3AF" }}>
+                    {categoria ? CATEGORIAS.find(c => c.value === categoria)?.label : "Seleccionar categoría"}
+                  </Text>
+                  <MaterialIcons name={showCategPicker ? "arrow-drop-up" : "arrow-drop-down"} size={24} color="#6B7280" />
                 </Pressable>
-                {fotos.map((uri, i) => (
-                  <View key={i} style={s.photoWrapper}>
-                    <Image source={{ uri }} style={s.photo} />
-                    <Pressable style={s.removePhoto} onPress={() => removeFoto(i)}>
-                      <MaterialIcons name="close" size={14} color="#FFF" />
-                    </Pressable>
+                {showCategPicker && (
+                  <View style={st.dropdown}>
+                    {CATEGORIAS.map(c => (
+                      <Pressable 
+                        key={c.value} 
+                        style={st.dropdownItem} 
+                        onPress={() => { setCategoria(c.value); setShowCategPicker(false); }}
+                      >
+                        <Text style={st.dropdownText}>{c.label}</Text>
+                      </Pressable>
+                    ))}
                   </View>
-                ))}
-              </ScrollView>
-            </View>
+                )}
+              </View>
 
-            <View style={s.terms}>
-              <MaterialIcons name="info" size={20} color="#8B6914" />
-              <Text style={s.termsText}>Al enviar, declarás bajo juramento que sos el propietario legítimo del bien y que el mismo tiene un origen lícito.</Text>
+              <View style={st.group}>
+                <Text style={st.label}>Descripción Detallada *</Text>
+                <TextInput 
+                  style={[st.input, { height: 120, paddingTop: 12 }]} 
+                  multiline 
+                  textAlignVertical="top" 
+                  placeholder="Describe el artículo en detalle: materiales, dimensiones, estado de conservación..." 
+                  value={descripcion} 
+                  onChangeText={setDescripcion} 
+                />
+              </View>
             </View>
+          )}
 
-            <Pressable style={({ pressed }) => [s.btn, pressed && s.pressed, loading && s.dis]} onPress={handleSubmit} disabled={loading}>
-              {loading ? <ActivityIndicator color="#FFF" /> : <Text style={s.btnText}>Enviar para evaluación</Text>}
+          {/* STEP 2 */}
+          {step === 2 && (
+            <View style={st.stepContent}>
+              <Text style={st.sectionTitle}>Historia y Valoración</Text>
+              
+              <View style={st.group}>
+                <Text style={st.label}>Historia y Procedencia *</Text>
+                <TextInput 
+                  style={[st.input, { height: 120, paddingTop: 12 }]} 
+                  multiline 
+                  textAlignVertical="top" 
+                  placeholder="Describe la historia del objeto: origen, artista/fabricante, contexto histórico, cadena de custodia..." 
+                  value={historia} 
+                  onChangeText={setHistoria} 
+                />
+              </View>
+
+              <View style={st.group}>
+                <Text style={st.label}>Valor Estimado (USD) *</Text>
+                <View style={st.inputWithIcon}>
+                  <Text style={st.inputIcon}>$</Text>
+                  <TextInput 
+                    style={st.inputBorderles} 
+                    placeholder="0" 
+                    keyboardType="numeric"
+                    value={valorEstimado} 
+                    onChangeText={setValorEstimado} 
+                  />
+                </View>
+                <Text style={st.helpText}>Este valor es solo una estimación. Nuestros expertos determinarán el precio base final.</Text>
+              </View>
+            </View>
+          )}
+
+          {/* STEP 3 */}
+          {step === 3 && (
+            <View style={st.stepContent}>
+              <Text style={st.sectionTitle}>Imágenes del Artículo</Text>
+              
+              <View style={st.alertBanner}>
+                <Text style={st.alertText}>Debes cargar al menos 6 imágenes de alta calidad del artículo desde diferentes ángulos.</Text>
+              </View>
+
+              <Pressable style={st.uploadBox} onPress={pickImage}>
+                <MaterialIcons name="upload-file" size={32} color="#1A1A2E" />
+                <Text style={st.uploadBoxText}>Cargar</Text>
+              </Pressable>
+
+              <Text style={st.photoCountText}>{fotos.length} de 10 imágenes cargadas (mínimo 6 requeridas)</Text>
+
+              {fotos.length > 0 && (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={st.photoScroll}>
+                  {fotos.map((uri, i) => (
+                    <View key={i} style={st.photoWrapper}>
+                      <Image source={{ uri }} style={st.photo} />
+                      <Pressable style={st.removePhoto} onPress={() => removeFoto(i)}>
+                        <MaterialIcons name="close" size={14} color="#FFF" />
+                      </Pressable>
+                    </View>
+                  ))}
+                </ScrollView>
+              )}
+            </View>
+          )}
+
+          {/* STEP 4: SUCCESS */}
+          {step === 4 && (
+            <View style={st.successContainer}>
+              <View style={st.successIconWrap}>
+                <MaterialIcons name="check-circle-outline" size={48} color="#059669" />
+                <Text style={st.successText}>Artículo cargado con éxito</Text>
+              </View>
+              <Pressable style={st.btnPrimary} onPress={() => router.replace("/(tabs)/profile")}>
+                <Text style={st.btnPrimaryText}>Volver a Mis Subastas</Text>
+              </Pressable>
+            </View>
+          )}
+
+        </ScrollView>
+
+        {/* Bottom Actions for Steps 1-3 */}
+        {step < 4 && (
+          <View style={st.footerActions}>
+            {step > 1 && (
+              <Pressable style={st.btnSecondary} onPress={handleBack}>
+                <Text style={st.btnSecondaryText}>Atrás</Text>
+              </Pressable>
+            )}
+            <Pressable 
+              style={[st.btnPrimary, step === 1 && { flex: 1 }, loading && { opacity: 0.7 }]} 
+              onPress={step === 3 ? handleSubmit : handleNext}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <Text style={st.btnPrimaryText}>Continuar</Text>
+              )}
             </Pressable>
           </View>
-        </ScrollView>
+        )}
       </SafeAreaView>
     </View>
   );
 }
 
-const s = StyleSheet.create({
+const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF8F0" },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 24, paddingVertical: 12 },
-  back: { width: 44, height: 44, borderRadius: 14, backgroundColor: "#FFFCF7", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "#F0EBE3" },
-  headerTitle: { fontSize: 18, fontWeight: "700", color: "#1A1A2E" },
-  scroll: { paddingHorizontal: 24, paddingBottom: 40, paddingTop: 10 },
-  desc: { fontSize: 15, color: "#6B7280", marginBottom: 24, lineHeight: 22 },
-  form: { gap: 16 },
-  group: { gap: 6 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#F0EBE3", backgroundColor: "#FFF" },
+  backBtn: { flexDirection: "row", alignItems: "center", gap: 8 },
+  headerTitle: { fontSize: 16, fontWeight: "700", color: "#1A1A2E" },
+  misEnviosBtn: { fontSize: 13, fontWeight: "600", color: "#6B7280" },
+
+  progressContainer: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 10, backgroundColor: "#FFF" },
+  stepText: { fontSize: 12, fontWeight: "600", color: "#6B7280", marginBottom: 8 },
+  barsRow: { flexDirection: "row", gap: 6 },
+  barSegment: { flex: 1, height: 4, borderRadius: 2, backgroundColor: "#E5DDD0" },
+  barSegmentActive: { backgroundColor: "#1A1A2E" },
+
+  scroll: { paddingHorizontal: 20, paddingVertical: 24, flexGrow: 1 },
+  stepContent: { flex: 1 },
+  sectionTitle: { fontSize: 20, fontWeight: "800", color: "#1A1A2E", marginBottom: 24 },
+
+  group: { gap: 8, marginBottom: 20 },
   label: { fontSize: 13, fontWeight: "600", color: "#1A1A2E", marginLeft: 2 },
-  input: { backgroundColor: "#FFFCF7", borderWidth: 1.5, borderColor: "#E5DDD0", borderRadius: 14, height: 52, paddingHorizontal: 16, fontSize: 15, color: "#1A1A2E" },
+  input: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "#FFF", borderWidth: 1, borderColor: "#E5DDD0", borderRadius: 12, minHeight: 52, paddingHorizontal: 16, fontSize: 15, color: "#1A1A2E" },
+  
+  dropdown: { backgroundColor: "#FFF", borderWidth: 1, borderColor: "#E5DDD0", borderRadius: 12, marginTop: -16, marginBottom: 16, overflow: "hidden" },
+  dropdownItem: { paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: "#F0EBE3" },
+  dropdownText: { fontSize: 15, color: "#1A1A2E" },
+
+  inputWithIcon: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFF", borderWidth: 1, borderColor: "#E5DDD0", borderRadius: 12, height: 52, paddingHorizontal: 16 },
+  inputIcon: { fontSize: 16, color: "#1A1A2E", fontWeight: "600", marginRight: 8 },
+  inputBorderles: { flex: 1, fontSize: 15, color: "#1A1A2E" },
+  helpText: { fontSize: 11, color: "#9CA3AF", marginTop: 4, lineHeight: 16 },
+
+  // Step 3 specific
+  alertBanner: { backgroundColor: "#FFB800", padding: 14, borderRadius: 8, marginBottom: 24 },
+  alertText: { fontSize: 13, color: "#1A1A2E", fontWeight: "600", lineHeight: 18 },
+  uploadBox: { height: 140, borderRadius: 12, backgroundColor: "#F5F1EC", borderWidth: 2, borderColor: "#E5DDD0", borderStyle: "dashed", justifyContent: "center", alignItems: "center", marginBottom: 16 },
+  uploadBoxText: { marginTop: 8, fontSize: 14, fontWeight: "600", color: "#1A1A2E" },
+  photoCountText: { fontSize: 13, color: "#6B7280", textAlign: "center", marginBottom: 16 },
+
   photoScroll: { flexDirection: "row" },
-  addPhoto: { width: 100, height: 100, borderRadius: 12, backgroundColor: "rgba(139,105,20,0.08)", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "rgba(139,105,20,0.2)", borderStyle: "dashed", marginRight: 12 },
   photoWrapper: { marginRight: 12, position: "relative" },
-  photo: { width: 100, height: 100, borderRadius: 12 },
+  photo: { width: 90, height: 90, borderRadius: 10 },
   removePhoto: { position: "absolute", top: 4, right: 4, backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 10, width: 20, height: 20, justifyContent: "center", alignItems: "center" },
-  terms: { flexDirection: "row", backgroundColor: "#FEF3C7", padding: 14, borderRadius: 12, gap: 10, marginTop: 8 },
-  termsText: { flex: 1, fontSize: 12, color: "#D97706", lineHeight: 18 },
-  btn: { backgroundColor: "#8B6914", height: 56, borderRadius: 16, justifyContent: "center", alignItems: "center", marginTop: 12, elevation: 4 },
-  btnText: { color: "#FFF", fontSize: 17, fontWeight: "700" },
-  pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
-  dis: { opacity: 0.7 },
+
+  // Step 4
+  successContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  successIconWrap: { alignItems: "center", gap: 16, marginBottom: 40 },
+  successText: { fontSize: 18, fontWeight: "700", color: "#059669" },
+
+  // Footer Actions
+  footerActions: { flexDirection: "row", gap: 12, paddingHorizontal: 20, paddingVertical: 16, backgroundColor: "#FFF", borderTopWidth: 1, borderTopColor: "#F0EBE3" },
+  btnSecondary: { flex: 1, backgroundColor: "#F0EBE3", height: 52, borderRadius: 12, justifyContent: "center", alignItems: "center" },
+  btnSecondaryText: { color: "#1A1A2E", fontSize: 16, fontWeight: "700" },
+  btnPrimary: { flex: 1, backgroundColor: "#1A1A2E", height: 52, borderRadius: 12, justifyContent: "center", alignItems: "center" },
+  btnPrimaryText: { color: "#FFF", fontSize: 16, fontWeight: "700" },
 });

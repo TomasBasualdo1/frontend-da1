@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Pressable, StyleSheet, FlatList, RefreshControl } from "react-native";
+import { View, Text, Pressable, StyleSheet, FlatList, RefreshControl, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -7,8 +7,13 @@ import { useAuth } from "../../src/context/AuthContext";
 import { SubastaListado, Categoria } from "../../src/types";
 import { auctionService } from "../../src/services";
 
-const CATEG_COLORS: Record<Categoria, string> = { comun: "#6B7280", especial: "#2563EB", plata: "#94A3B8", oro: "#D97706", platino: "#7C3AED" };
 const CATEG_LABELS: Record<Categoria, string> = { comun: "Común", especial: "Especial", plata: "Plata", oro: "Oro", platino: "Platino" };
+const CATEG_COLORS: Record<Categoria, string> = { comun: "#6B7280", especial: "#2563EB", plata: "#94A3B8", oro: "#D97706", platino: "#7C3AED" };
+const PLACEHOLDER_IMAGES = [
+  "https://images.unsplash.com/photo-1599643478518-a784e5dc3f25?w=400&h=250&fit=crop",
+  "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=250&fit=crop",
+  "https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=400&h=250&fit=crop",
+];
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -21,81 +26,113 @@ export default function HomeScreen() {
     try {
       const data = await auctionService.getPublicas();
       setSubastas(data);
-    } catch { /* sin conexión, mostrar vacío */ } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+    } catch {} finally { setLoading(false); setRefreshing(false); }
   };
 
   useEffect(() => { loadSubastas(); }, []);
 
-  const renderSubasta = ({ item }: { item: SubastaListado }) => (
-    <Pressable style={({ pressed }) => [s.card, pressed && s.cardPressed]} onPress={() => router.push(`/subasta/${item.id}` as any)}>
-      <View style={s.cardHeader}>
-        <View style={[s.categBadge, { backgroundColor: CATEG_COLORS[item.categoria] + "18" }]}>
-          <View style={[s.categDot, { backgroundColor: CATEG_COLORS[item.categoria] }]} />
-          <Text style={[s.categText, { color: CATEG_COLORS[item.categoria] }]}>{CATEG_LABELS[item.categoria]}</Text>
+  const liveSubastas = subastas.filter(s => s.estado === "abierta");
+  const proximasSubastas = subastas.filter(s => s.estado === "cerrada");
+
+  const renderFeatured = ({ item, index }: { item: SubastaListado; index: number }) => {
+    const img = PLACEHOLDER_IMAGES[index % PLACEHOLDER_IMAGES.length];
+    return (
+      <Pressable style={({ pressed }) => [st.featuredCard, pressed && { opacity: 0.95 }]} onPress={() => router.push(`/subasta/${item.id}` as any)}>
+        <Image source={{ uri: img }} style={st.featuredImg} />
+        <View style={st.featuredOverlay}>
+          {item.estado === "abierta" && (
+            <View style={st.liveBadge}><Text style={st.liveText}>EN VIVO</Text></View>
+          )}
         </View>
-        <View style={[s.estadoBadge, { backgroundColor: item.estado === "abierta" ? "#ECFDF5" : "#FEF2F2" }]}>
-          <Text style={[s.estadoText, { color: item.estado === "abierta" ? "#059669" : "#DC2626" }]}>
-            {item.estado === "abierta" ? "Abierta" : "Cerrada"}
-          </Text>
+        <View style={st.featuredInfo}>
+          <Text style={st.featuredTitle} numberOfLines={1}>Subasta #{item.id}</Text>
+          <View style={st.featuredMeta}>
+            <View style={[st.categChip, { backgroundColor: CATEG_COLORS[item.categoria] + "15" }]}>
+              <Text style={[st.categText, { color: CATEG_COLORS[item.categoria] }]}>{CATEG_LABELS[item.categoria]}</Text>
+            </View>
+            <Text style={st.featuredDate}>{item.fecha}</Text>
+          </View>
         </View>
+      </Pressable>
+    );
+  };
+
+  const renderSmall = ({ item, index }: { item: SubastaListado; index: number }) => (
+    <Pressable style={({ pressed }) => [st.smallCard, pressed && { opacity: 0.92 }]} onPress={() => router.push(`/subasta/${item.id}` as any)}>
+      <Image source={{ uri: PLACEHOLDER_IMAGES[index % PLACEHOLDER_IMAGES.length] }} style={st.smallThumb} />
+      <View style={st.smallInfo}>
+        <Text style={st.smallTitle}>Subasta #{item.id}</Text>
+        <Text style={st.smallMeta}>{CATEG_LABELS[item.categoria]} · {item.moneda}</Text>
+        <Text style={st.smallDate}>{item.fecha}, {item.hora}</Text>
       </View>
-      <View style={s.cardBody}>
-        <View style={s.infoRow}>
-          <MaterialIcons name="event" size={16} color="#9CA3AF" />
-          <Text style={s.infoText}>{item.fecha} · {item.hora}</Text>
-        </View>
-        <View style={s.infoRow}>
-          <MaterialIcons name="place" size={16} color="#9CA3AF" />
-          <Text style={s.infoText} numberOfLines={1}>{item.ubicacion || "Sin ubicación"}</Text>
-        </View>
-        <View style={s.infoRow}>
-          <MaterialIcons name="attach-money" size={16} color="#9CA3AF" />
-          <Text style={s.monedaText}>{item.moneda}</Text>
-        </View>
-      </View>
-      <View style={s.cardFooter}>
-        <Text style={s.verDetalle}>Ver detalle</Text>
-        <MaterialIcons name="arrow-forward-ios" size={14} color="#8B6914" />
-      </View>
+      <MaterialIcons name="chevron-right" size={20} color="#9CA3AF" />
     </Pressable>
   );
 
   return (
-    <View style={s.container}>
+    <View style={st.container}>
       <SafeAreaView style={{ flex: 1 }}>
-        {/* Header */}
-        <View style={s.header}>
-          <View>
-            <Text style={s.greeting}>{isAuthenticated ? `Hola, ${user?.nombre || ""}` : "Bienvenido"}</Text>
-            <Text style={s.headerSub}>Subastas disponibles</Text>
-          </View>
-          {isAuthenticated ? (
-            <Pressable style={s.notifBtn} onPress={() => router.push("/profile" as any)}>
-              <MaterialIcons name="notifications-none" size={24} color="#1A1A2E" />
-            </Pressable>
-          ) : (
-            <Pressable style={s.loginBtn} onPress={() => router.push("/(auth)/welcome")}>
-              <Text style={s.loginBtnText}>Ingresar</Text>
-            </Pressable>
-          )}
-        </View>
-
-        {/* Lista */}
         <FlatList
-          data={subastas}
+          data={proximasSubastas}
           keyExtractor={(i) => String(i.id)}
-          renderItem={renderSubasta}
-          contentContainerStyle={s.list}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadSubastas(); }} tintColor="#8B6914" />}
+          renderItem={renderSmall}
+          contentContainerStyle={st.mainList}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadSubastas(); }} tintColor="#1A1A2E" />}
+          ListHeaderComponent={
+            <>
+              {/* Header */}
+              <View style={st.header}>
+                <View>
+                  <Text style={st.greeting}>{isAuthenticated ? `Hola, ${user?.nombre || ""}` : "Bienvenido"}</Text>
+                  <Text style={st.subGreeting}>Descubrí las mejores subastas</Text>
+                </View>
+                {isAuthenticated ? (
+                  <Pressable style={st.profileBtn} onPress={() => router.push("/(tabs)/profile" as any)}>
+                    <MaterialIcons name="person" size={22} color="#1A1A2E" />
+                  </Pressable>
+                ) : (
+                  <Pressable style={st.loginHeaderBtn} onPress={() => router.push("/(auth)/welcome")}>
+                    <Text style={st.loginHeaderText}>Ingresar</Text>
+                  </Pressable>
+                )}
+              </View>
+
+              {/* Featured / En Vivo */}
+              {liveSubastas.length > 0 && (
+                <>
+                  <View style={st.sectionHeader}>
+                    <Text style={st.sectionTitle}>🔴 En Vivo</Text>
+                    <Pressable onPress={() => router.push("/(tabs)/live" as any)}>
+                      <Text style={st.seeAll}>Ver todas →</Text>
+                    </Pressable>
+                  </View>
+                  <FlatList
+                    data={liveSubastas}
+                    keyExtractor={(i) => `live-${i.id}`}
+                    renderItem={renderFeatured}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={st.featuredList}
+                  />
+                </>
+              )}
+
+              {/* Section: Próximas */}
+              <View style={st.sectionHeader}>
+                <Text style={st.sectionTitle}>Próximas Subastas</Text>
+                <Pressable onPress={() => router.push("/(tabs)/subastas" as any)}>
+                  <Text style={st.seeAll}>Ver todas →</Text>
+                </Pressable>
+              </View>
+            </>
+          }
           ListEmptyComponent={
             !loading ? (
-              <View style={s.empty}>
-                <MaterialIcons name="event-busy" size={56} color="#E5DDD0" />
-                <Text style={s.emptyTitle}>Sin subastas</Text>
-                <Text style={s.emptyText}>No hay subastas disponibles en este momento</Text>
+              <View style={st.empty}>
+                <MaterialIcons name="event-busy" size={48} color="#E5DDD0" />
+                <Text style={st.emptyTitle}>Sin subastas próximas</Text>
+                <Text style={st.emptyText}>Volvé pronto para ver nuevas subastas</Text>
               </View>
             ) : null
           }
@@ -105,30 +142,42 @@ export default function HomeScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF8F0" },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 24, paddingVertical: 16 },
+  mainList: { paddingBottom: 24 },
+
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20 },
   greeting: { fontSize: 24, fontWeight: "800", color: "#1A1A2E" },
-  headerSub: { fontSize: 14, color: "#6B7280", marginTop: 2 },
-  notifBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: "#FFFCF7", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "#F0EBE3" },
-  loginBtn: { backgroundColor: "#8B6914", paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 },
-  loginBtnText: { color: "#FFF", fontWeight: "700", fontSize: 14 },
-  list: { paddingHorizontal: 24, paddingBottom: 24, gap: 16 },
-  card: { backgroundColor: "#FFFCF7", borderRadius: 18, borderWidth: 1, borderColor: "#F0EBE3", padding: 18, shadowColor: "#8B6914", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 },
-  cardPressed: { opacity: 0.9, transform: [{ scale: 0.99 }] },
-  cardHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 14 },
-  categBadge: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, gap: 6 },
-  categDot: { width: 6, height: 6, borderRadius: 3 },
-  categText: { fontSize: 12, fontWeight: "700" },
-  estadoBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
-  estadoText: { fontSize: 12, fontWeight: "700" },
-  cardBody: { gap: 8 },
-  infoRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  infoText: { fontSize: 14, color: "#6B7280", flex: 1 },
-  monedaText: { fontSize: 14, color: "#1A1A2E", fontWeight: "700" },
-  cardFooter: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: "#F3EDE4", gap: 4 },
-  verDetalle: { fontSize: 14, color: "#8B6914", fontWeight: "700" },
-  empty: { alignItems: "center", marginTop: 80, gap: 12 },
-  emptyTitle: { fontSize: 18, fontWeight: "700", color: "#1A1A2E" },
-  emptyText: { fontSize: 14, color: "#9CA3AF" },
+  subGreeting: { fontSize: 14, color: "#6B7280", marginTop: 2 },
+  profileBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: "#F5F1EC", justifyContent: "center", alignItems: "center" },
+  loginHeaderBtn: { backgroundColor: "#1A1A2E", paddingHorizontal: 18, paddingVertical: 10, borderRadius: 10 },
+  loginHeaderText: { color: "#FFF", fontWeight: "700", fontSize: 13 },
+
+  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, marginTop: 20, marginBottom: 12 },
+  sectionTitle: { fontSize: 18, fontWeight: "700", color: "#1A1A2E" },
+  seeAll: { fontSize: 13, color: "#8B6914", fontWeight: "600" },
+
+  featuredList: { paddingHorizontal: 20, gap: 14 },
+  featuredCard: { width: 280, borderRadius: 16, backgroundColor: "#FFF", overflow: "hidden", borderWidth: 1, borderColor: "#F0EBE3" },
+  featuredImg: { width: "100%", height: 150, resizeMode: "cover" },
+  featuredOverlay: { position: "absolute", top: 10, left: 10 },
+  liveBadge: { backgroundColor: "#DC2626", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  liveText: { fontSize: 10, fontWeight: "800", color: "#FFF", letterSpacing: 0.5 },
+  featuredInfo: { padding: 14, gap: 6 },
+  featuredTitle: { fontSize: 16, fontWeight: "700", color: "#1A1A2E" },
+  featuredMeta: { flexDirection: "row", alignItems: "center", gap: 8 },
+  categChip: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  categText: { fontSize: 11, fontWeight: "700" },
+  featuredDate: { fontSize: 12, color: "#9CA3AF" },
+
+  smallCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFF", borderRadius: 14, borderWidth: 1, borderColor: "#F0EBE3", padding: 12, marginHorizontal: 20, marginBottom: 10, gap: 14 },
+  smallThumb: { width: 60, height: 60, borderRadius: 10, backgroundColor: "#F0EBE3" },
+  smallInfo: { flex: 1 },
+  smallTitle: { fontSize: 15, fontWeight: "700", color: "#1A1A2E" },
+  smallMeta: { fontSize: 12, color: "#6B7280", marginTop: 2 },
+  smallDate: { fontSize: 11, color: "#9CA3AF", marginTop: 2 },
+
+  empty: { alignItems: "center", marginTop: 40, gap: 10 },
+  emptyTitle: { fontSize: 17, fontWeight: "700", color: "#1A1A2E" },
+  emptyText: { fontSize: 13, color: "#9CA3AF" },
 });

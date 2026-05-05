@@ -1,23 +1,24 @@
 import { Tabs } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
+import { View, StyleSheet } from "react-native";
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#8B6914",
+        tabBarActiveTintColor: "#1A1A2E",
         tabBarInactiveTintColor: "#9CA3AF",
         tabBarStyle: {
-          backgroundColor: "#FFFCF7",
+          backgroundColor: "#FFFFFF",
           borderTopColor: "#F0EBE3",
           borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
+          height: 64,
+          paddingBottom: 10,
           paddingTop: 8,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: "600",
         },
       }}
@@ -27,7 +28,16 @@ export default function TabLayout() {
         options={{
           title: "Inicio",
           tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="home" size={size} color={color} />
+            <MaterialIcons name="home-filled" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="live"
+        options={{
+          title: "En Vivo",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="cell-tower" size={size} color={color} />
           ),
         }}
       />
@@ -41,23 +51,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="live"
-        options={{
-          title: "En Vivo",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="play-circle" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="profile"
         options={{
           title: "Perfil",
           tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="person" size={size} color={color} />
+            <MaterialIcons name="person-outline" size={size} color={color} />
           ),
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({});
