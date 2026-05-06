@@ -1,56 +1,352 @@
 import React, { useState } from "react";
-import { Text, TextInput, Pressable, View } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from "react-native";
 import { useRouter } from "expo-router";
+import { MaterialIcons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "../../src/context/AuthContext";
 
-export default function Login() {
+export default function LoginScreen() {
   const [documento, setDocumento] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<{ documento?: string; password?: string }>({});
   const router = useRouter();
+  const { login } = useAuth();
 
-  const handleLogin = () => {
-    console.log("Documento:", documento, "Password:", password);
-    router.push("/");
+  const validate = () => {
+    const newErrors: typeof errors = {};
+    if (!documento.trim()) newErrors.documento = "Ingrese su documento";
+    if (!password.trim()) newErrors.password = "Ingrese su contraseña";
+    else if (password.length < 6) newErrors.password = "Mínimo 6 caracteres";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleLogin = async () => {
+    if (!validate()) return;
+    setLoading(true);
+    try {
+      await login({ documento: documento.trim(), password });
+      router.replace("/(tabs)");
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 401) {
+        Alert.alert("Error", "Documento o contraseña incorrectos.");
+      } else if (status === 403) {
+        Alert.alert(
+          "Cuenta no disponible",
+          "Su cuenta está pendiente de aprobación o se encuentra bloqueada."
+        );
+      } else if (status === 400) {
+        Alert.alert("Error", "Datos inválidos. Revise los campos.");
+      } else {
+        Alert.alert("Error", "No se pudo conectar al servidor. Intente más tarde.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <View className="flex-1 bg-white items-center justify-center px-6">
-      <Text className="text-3xl font-bold text-gray-900 mb-8">Iniciar Sesión</Text>
+    <View style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.keyboardView}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scroll}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Header */}
+            <Pressable style={styles.backButton} onPress={() => router.back()}>
+              <MaterialIcons name="arrow-back" size={24} color="#1A1A2E" />
+            </Pressable>
 
-      <View className="w-full mb-4">
-        <Text className="text-base text-gray-700 mb-2">Documento</Text>
-        <TextInput
-          className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base"
-          placeholder="Ingrese su documento"
-          keyboardType="numeric"
-          value={documento}
-          onChangeText={setDocumento}
-        />
-      </View>
+            <View style={styles.header}>
+              <View style={styles.iconContainer}>
+                <MaterialIcons name="lock-open" size={32} color="#8B6914" />
+              </View>
+              <Text style={styles.title}>Bienvenido</Text>
+              <Text style={styles.subtitle}>
+                Ingresá con tu documento y contraseña
+              </Text>
+            </View>
 
-      <View className="w-full mb-6">
-        <Text className="text-base text-gray-700 mb-2">Contraseña</Text>
-        <TextInput
-          className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base"
-          placeholder="Ingrese su contraseña"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
-      </View>
+            {/* Form */}
+            <View style={styles.form}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Documento</Text>
+                <View
+                  style={[
+                    styles.inputContainer,
+                    errors.documento && styles.inputError,
+                  ]}
+                >
+                  <MaterialIcons
+                    name="badge"
+                    size={20}
+                    color={errors.documento ? "#DC2626" : "#9CA3AF"}
+                    style={styles.inputIcon}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Ej: 35123456"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="numeric"
+                    value={documento}
+                    onChangeText={(t) => {
+                      setDocumento(t);
+                      if (errors.documento) setErrors((e) => ({ ...e, documento: undefined }));
+                    }}
+                    autoCapitalize="none"
+                  />
+                </View>
+                {errors.documento && (
+                  <Text style={styles.errorText}>{errors.documento}</Text>
+                )}
+              </View>
 
-      <Pressable
-        className="w-full bg-blue-600 rounded-lg py-4 items-center mb-4"
-        onPress={handleLogin}
-      >
-        <Text className="text-white text-lg font-semibold">Ingresar</Text>
-      </Pressable>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Contraseña</Text>
+                <View
+                  style={[
+                    styles.inputContainer,
+                    errors.password && styles.inputError,
+                  ]}
+                >
+                  <MaterialIcons
+                    name="lock"
+                    size={20}
+                    color={errors.password ? "#DC2626" : "#9CA3AF"}
+                    style={styles.inputIcon}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Tu contraseña"
+                    placeholderTextColor="#9CA3AF"
+                    secureTextEntry={!showPassword}
+                    value={password}
+                    onChangeText={(t) => {
+                      setPassword(t);
+                      if (errors.password) setErrors((e) => ({ ...e, password: undefined }));
+                    }}
+                  />
+                  <Pressable
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={styles.eyeButton}
+                  >
+                    <MaterialIcons
+                      name={showPassword ? "visibility-off" : "visibility"}
+                      size={20}
+                      color="#9CA3AF"
+                    />
+                  </Pressable>
+                </View>
+                {errors.password && (
+                  <Text style={styles.errorText}>{errors.password}</Text>
+                )}
+              </View>
 
-      <Pressable
-        className="w-full border border-gray-300 rounded-lg py-4 items-center"
-        onPress={() => router.push("/")}
-      >
-        <Text className="text-gray-700 text-base">Ir al Home</Text>
-      </Pressable>
+              <Pressable
+                style={styles.forgotLink}
+                onPress={() => router.push("/(auth)/forgot-password")}
+              >
+                <Text style={styles.forgotLinkText}>¿Olvidaste tu contraseña?</Text>
+              </Pressable>
+
+              <Pressable
+                style={({ pressed }) => [
+                  styles.loginButton,
+                  pressed && styles.buttonPressed,
+                  loading && styles.buttonDisabled,
+                ]}
+                onPress={handleLogin}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <>
+                    <Text style={styles.loginButtonText}>Ingresar</Text>
+                    <MaterialIcons name="arrow-forward" size={20} color="#FFF" />
+                  </>
+                )}
+              </Pressable>
+            </View>
+
+            {/* Footer */}
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>¿No tenés cuenta? </Text>
+              <Pressable onPress={() => router.push("/(auth)/register-step1")}>
+                <Text style={styles.footerLink}>Registrate</Text>
+              </Pressable>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#FFF8F0",
+  },
+  safeArea: {
+    flex: 1,
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scroll: {
+    flexGrow: 1,
+    paddingHorizontal: 28,
+    paddingBottom: 40,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: "#FFFCF7",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#F0EBE3",
+    marginTop: 8,
+  },
+  header: {
+    alignItems: "center",
+    marginTop: 32,
+    marginBottom: 40,
+  },
+  iconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 22,
+    backgroundColor: "rgba(139, 105, 20, 0.08)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "rgba(139, 105, 20, 0.12)",
+  },
+  title: {
+    fontSize: 30,
+    fontWeight: "800",
+    color: "#1A1A2E",
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: "#6B7280",
+    marginTop: 8,
+    textAlign: "center",
+  },
+  form: {
+    gap: 20,
+  },
+  inputGroup: {
+    gap: 6,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1A1A2E",
+    marginLeft: 4,
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFCF7",
+    borderWidth: 1.5,
+    borderColor: "#E5DDD0",
+    borderRadius: 14,
+    height: 54,
+    paddingHorizontal: 16,
+  },
+  inputError: {
+    borderColor: "#DC2626",
+    backgroundColor: "#FEF2F2",
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    color: "#1A1A2E",
+  },
+  eyeButton: {
+    padding: 4,
+  },
+  errorText: {
+    fontSize: 12,
+    color: "#DC2626",
+    marginLeft: 4,
+    marginTop: 2,
+  },
+  forgotLink: {
+    alignSelf: "flex-end",
+  },
+  forgotLinkText: {
+    fontSize: 14,
+    color: "#8B6914",
+    fontWeight: "600",
+  },
+  loginButton: {
+    flexDirection: "row",
+    backgroundColor: "#8B6914",
+    height: 56,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 8,
+    shadowColor: "#8B6914",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  loginButtonText: {
+    color: "#FFFFFF",
+    fontSize: 17,
+    fontWeight: "700",
+  },
+  buttonPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.98 }],
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 32,
+  },
+  footerText: {
+    fontSize: 15,
+    color: "#6B7280",
+  },
+  footerLink: {
+    fontSize: 15,
+    color: "#8B6914",
+    fontWeight: "700",
+  },
+});

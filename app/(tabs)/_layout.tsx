@@ -1,42 +1,66 @@
+import { Tabs } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
-import {
-  Icon,
-  Label,
-  NativeTabs,
-  VectorIcon,
-} from "expo-router/unstable-native-tabs";
+import { View, StyleSheet } from "react-native";
 
 export default function TabLayout() {
   return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="index">
-        <Label>Inicio</Label>
-        <Icon
-          sf="house.fill"
-          androidSrc={<VectorIcon family={MaterialIcons} name="home" />}
-        />
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="live">
-        <Icon
-          sf="play"
-          androidSrc={<VectorIcon family={MaterialIcons} name="play-circle" />}
-        />
-        <Label>En Vivo</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="subastas">
-        <Icon
-          sf="plus"
-          androidSrc={<VectorIcon family={MaterialIcons} name="gavel" />}
-        />
-        <Label>Subastas</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile">
-        <Icon
-          sf="person"
-          androidSrc={<VectorIcon family={MaterialIcons} name="person" />}
-        />
-        <Label>Perfil</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: "#1A1A2E",
+        tabBarInactiveTintColor: "#9CA3AF",
+        tabBarStyle: {
+          backgroundColor: "#FFFFFF",
+          borderTopColor: "#F0EBE3",
+          borderTopWidth: 1,
+          height: 64,
+          paddingBottom: 10,
+          paddingTop: 8,
+        },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: "600",
+        },
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: "Inicio",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="home-filled" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="live"
+        options={{
+          title: "En Vivo",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="cell-tower" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="subastas"
+        options={{
+          title: "Subastas",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="gavel" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Perfil",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="person-outline" size={size} color={color} />
+          ),
+        }}
+      />
+    </Tabs>
   );
 }
+
+const styles = StyleSheet.create({});
