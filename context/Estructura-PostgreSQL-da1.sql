@@ -10,6 +10,13 @@ CREATE TABLE public.asistentes (
   CONSTRAINT fk_asistentes_clientes FOREIGN KEY (cliente) REFERENCES public.clientes(identificador),
   CONSTRAINT fk_asistentes_subasta FOREIGN KEY (subasta) REFERENCES public.subastas(identificador)
 );
+CREATE TABLE public.blacklisted_tokens (
+  id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+  jti character varying NOT NULL UNIQUE,
+  expires_at timestamp with time zone NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT blacklisted_tokens_pkey PRIMARY KEY (id)
+);
 CREATE TABLE public.catalogos (
   identificador integer NOT NULL DEFAULT nextval('catalogos_identificador_seq'::regclass),
   descripcion character varying NOT NULL,
@@ -68,6 +75,39 @@ CREATE TABLE public.itemscatalogo (
   CONSTRAINT fk_itemscatalogo_productos FOREIGN KEY (producto) REFERENCES public.productos(identificador),
   CONSTRAINT fk_itemscatalogo_catalogos FOREIGN KEY (catalogo) REFERENCES public.catalogos(identificador)
 );
+CREATE TABLE public.medios_pago (
+  identificador integer NOT NULL DEFAULT nextval('medios_pago_identificador_seq'::regclass),
+  cliente_id integer NOT NULL,
+  tipo character varying NOT NULL CHECK (tipo::text = ANY (ARRAY['tarjeta_credito'::character varying, 'cuenta_bancaria'::character varying, 'cheque_certificado'::character varying]::text[])),
+  ultimos_digitos character varying,
+  estado_verificacion character varying DEFAULT 'pendiente'::character varying CHECK (estado_verificacion::text = ANY (ARRAY['pendiente'::character varying, 'validado'::character varying, 'rechazado'::character varying]::text[])),
+  moneda character varying CHECK (moneda::text = ANY (ARRAY['ARS'::character varying, 'USD'::character varying]::text[])),
+  limite_reservado numeric DEFAULT 0.00,
+  pais_banco character varying,
+  es_cuenta_receptora boolean DEFAULT false,
+  CONSTRAINT medios_pago_pkey PRIMARY KEY (identificador),
+  CONSTRAINT medios_pago_cliente_id_fkey FOREIGN KEY (cliente_id) REFERENCES public.clientes(identificador)
+);
+CREATE TABLE public.multas (
+  identificador integer NOT NULL DEFAULT nextval('multas_identificador_seq'::regclass),
+  cliente_id integer NOT NULL,
+  importe numeric NOT NULL,
+  estado character varying DEFAULT 'pendiente'::character varying CHECK (estado::text = ANY (ARRAY['pendiente'::character varying, 'pagada'::character varying]::text[])),
+  fecha_limite timestamp without time zone,
+  motivo character varying,
+  CONSTRAINT multas_pkey PRIMARY KEY (identificador),
+  CONSTRAINT multas_cliente_id_fkey FOREIGN KEY (cliente_id) REFERENCES public.clientes(identificador)
+);
+CREATE TABLE public.notificaciones (
+  identificador integer NOT NULL DEFAULT nextval('notificaciones_identificador_seq'::regclass),
+  cliente_id integer NOT NULL,
+  tipo character varying CHECK (tipo::text = ANY (ARRAY['pago'::character varying, 'subasta'::character varying, 'sistema'::character varying]::text[])),
+  mensaje text NOT NULL,
+  fecha_hora timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  leida boolean DEFAULT false,
+  CONSTRAINT notificaciones_pkey PRIMARY KEY (identificador),
+  CONSTRAINT notificaciones_cliente_id_fkey FOREIGN KEY (cliente_id) REFERENCES public.clientes(identificador)
+);
 CREATE TABLE public.paises (
   numero integer NOT NULL,
   nombre character varying NOT NULL,
@@ -87,6 +127,7 @@ CREATE TABLE public.personas (
   email character varying UNIQUE,
   password_hash character varying,
   fotoDorso character varying,
+  apellido character varying,
   CONSTRAINT personas_pkey PRIMARY KEY (identificador)
 );
 CREATE TABLE public.productos (
@@ -98,6 +139,13 @@ CREATE TABLE public.productos (
   revisor integer NOT NULL,
   duenio integer NOT NULL,
   seguro character varying,
+  historia text,
+  artista character varying,
+  precio_base_propuesto numeric,
+  comision_propuesta numeric,
+  tasacion_aceptada boolean,
+  estado_evaluacion character varying DEFAULT 'pendiente'::character varying CHECK (estado_evaluacion::text = ANY (ARRAY['pendiente'::character varying, 'en_inspeccion'::character varying, 'aprobado'::character varying, 'rechazado'::character varying, 'devuelto'::character varying]::text[])),
+  motivo_rechazo text,
   CONSTRAINT productos_pkey PRIMARY KEY (identificador),
   CONSTRAINT fk_productos_empleados FOREIGN KEY (revisor) REFERENCES public.empleados(identificador),
   CONSTRAINT fk_productos_duenios FOREIGN KEY (duenio) REFERENCES public.duenios(identificador)

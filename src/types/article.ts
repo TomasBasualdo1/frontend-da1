@@ -12,18 +12,18 @@ export interface ArticuloInput {
 }
 
 export interface Articulo {
-  id: number;
-  descripcion: string;
+  id?: number;
+  descripcion?: string;
   precioBasePropuesto?: number;
   comisionPropuesta?: number;
   tasacionAceptada?: boolean | null;
   historia?: string;
   artista?: string;
   fechaCreacion?: string;
-  estado: 'pendiente' | 'en_inspeccion' | 'aprobado' | 'rechazado' | 'devuelto';
+  estado?: 'pendiente' | 'en_inspeccion' | 'aprobado' | 'rechazado' | 'devuelto';
   motivoRechazo?: string | null;
   fechaEnvio?: string;
-  fotos: string[];
+  fotos?: string[];
   ubicacion?: string;
   seguro?: Seguro;
 }

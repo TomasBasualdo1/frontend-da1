@@ -1,4 +1,4 @@
-import api from './api';
+import api from "./api";
 import {
   SubastaListado,
   SubastaDetalle,
@@ -9,25 +9,27 @@ import {
   PujaResponse,
   Pago,
   PagoRequest,
-} from '../types';
+} from "../types";
 
 export const auctionService = {
   /** Listar subastas públicas (sin auth) */
   async getPublicas(): Promise<SubastaListado[]> {
-    const response = await api.get<SubastaListado[]>('/subastas/publicas');
-    return response.data;
+    const response = await api.get("/subastas/publicas");
+    return Array.isArray(response.data) ? response.data : [];
   },
 
   /** Detalle público de una subasta */
   async getPublicaDetalle(id: number): Promise<SubastaDetallePublica> {
-    const response = await api.get<SubastaDetallePublica>(`/subastas/publicas/${id}`);
+    const response = await api.get<SubastaDetallePublica>(
+      `/subastas/publicas/${id}`,
+    );
     return response.data;
   },
 
   /** Listar subastas para usuarios autenticados */
   async getSubastas(): Promise<SubastaListado[]> {
-    const response = await api.get<SubastaListado[]>('/subastas');
-    return response.data;
+    const response = await api.get("/subastas");
+    return Array.isArray(response.data) ? response.data : [];
   },
 
   /** Detalle de subasta con catálogo (autenticado) */
@@ -54,13 +56,18 @@ export const auctionService = {
   },
 
   /** Realizar una puja */
-  async pujar(subastaId: number, itemId: number, data: PujaRequest, idempotencyKey?: string): Promise<PujaResponse> {
+  async pujar(
+    subastaId: number,
+    itemId: number,
+    data: PujaRequest,
+    idempotencyKey?: string,
+  ): Promise<PujaResponse> {
     const headers: Record<string, string> = {};
-    if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
+    if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
     const response = await api.post<PujaResponse>(
       `/subastas/${subastaId}/items/${itemId}/pujar`,
       data,
-      { headers }
+      { headers },
     );
     return response.data;
   },

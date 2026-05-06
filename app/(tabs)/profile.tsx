@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Image, TextInput, FlatList } from "react-native";
+import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Image, TextInput } from "react-native";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -16,12 +16,14 @@ const PLACEHOLDER_IMAGES = [
 
 type ProfileTab = "subastas" | "perfil" | "pagos" | "stats";
 
+
 export default function ProfileScreen() {
   const router = useRouter();
   const { isAuthenticated, user, logout } = useAuth();
   const [medios, setMedios] = useState<MedioPago[]>([]);
   const [metricas, setMetricas] = useState<UsuarioMetricas | null>(null);
   const [multas, setMultas] = useState<Multa[]>([]);
+  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [misSubastas, setMisSubastas] = useState<SubastaListado[]>([]);
   const [tab, setTab] = useState<ProfileTab>("subastas");
   const [searchMis, setSearchMis] = useState("");
@@ -31,8 +33,21 @@ export default function ProfileScreen() {
     userService.getMediosPago().then(setMedios).catch(() => {});
     userService.getMetricas().then(setMetricas).catch(() => {});
     userService.getMultas().then(setMultas).catch(() => {});
+    userService.getNotificaciones().then(setNotificaciones).catch(() => {});
     auctionService.getSubastas().then(setMisSubastas).catch(() => {});
   }, [isAuthenticated]);
+
+  const formatFecha = (value?: string) => (value ? new Date(value).toLocaleString() : "—");
+
+  const handleNotificacionPress = async (id?: number) => {
+    if (!id) return;
+    try {
+      await userService.marcarNotificacionLeida(id);
+      setNotificaciones((prev) => prev.map((n) => (n.id === id ? { ...n, leida: true } : n)));
+    } catch {
+      // Silencioso
+    }
+  };
 
   const misSubastasStats = useMemo(() => {
     const total = misSubastas.length;
@@ -59,7 +74,13 @@ export default function ProfileScreen() {
           {/* Header */}
           <View style={s.profileHeader}>
             <Text style={s.headerTitle}>
-              {tab === "subastas" ? "Mis Subastas" : "Mi Perfil"}
+              {tab === "subastas"
+                ? "Mis Subastas"
+                : tab === "pagos"
+                ? "Pagos"
+                : tab === "stats"
+                ? "Métricas"
+                : "Mi Perfil"}
             </Text>
           </View>
 
@@ -159,6 +180,40 @@ export default function ProfileScreen() {
                 <InfoRow icon="phone" label="Teléfono" value={user?.telefono || "—"} />
               </View>
 
+              <Text style={[s.secTitle, { marginTop: 16 }]}>Notificaciones</Text>
+              {notificaciones.length === 0 ? (
+                <Text style={s.emptyText}>No hay notificaciones</Text>
+              ) : (
+                notificaciones.map((n, idx) => (
+                  <Pressable
+                    key={n.id ?? `notif-${idx}`}
+                    style={[s.notificationCard, n.leida && s.notificationCardRead]}
+                    onPress={() => handleNotificacionPress(n.id)}
+                  >
+                    <View style={s.notificationIcon}>
+                      <MaterialIcons
+                        name={
+                          n.tipo === "pago"
+                            ? "payment"
+                            : n.tipo === "subasta"
+                            ? "gavel"
+                            : "info"
+                        }
+                        size={18}
+                        color="#1A1A2E"
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.notificationText} numberOfLines={2}>
+                        {n.mensaje || "Notificación del sistema"}
+                      </Text>
+                      <Text style={s.notificationMeta}>{formatFecha(n.fechaHora)}</Text>
+                    </View>
+                    {!n.leida && <View style={s.unreadDot} />}
+                  </Pressable>
+                ))
+              )}
+
               <Pressable style={s.logoutBtn} onPress={() => Alert.alert("Cerrar sesión", "¿Estás seguro?", [{ text: "Cancelar" }, { text: "Salir", style: "destructive", onPress: () => { logout(); router.replace("/(auth)/welcome"); } }])}>
                 <MaterialIcons name="logout" size={18} color="#DC2626" /><Text style={s.logoutText}>Cerrar sesión</Text>
               </Pressable>
@@ -171,19 +226,52 @@ export default function ProfileScreen() {
               <Text style={s.secTitle}>Medios de Pago</Text>
               {medios.length === 0 ? <Text style={s.emptyText}>No tenés medios de pago</Text> :
                 medios.map((m) => (
-                  <View key={m.id} style={s.payCard}>
-                    <MaterialIcons name={m.tipo === "tarjeta_credito" ? "credit-card" : "account-balance"} size={22} color="#1A1A2E" />
-                    <View style={{ flex: 1 }}><Text style={s.payType}>{m.tipo === "tarjeta_credito" ? "Tarjeta" : "Cuenta"} ···{m.ultimos_digitos}</Text><Text style={s.payInfo}>{m.moneda}</Text></View>
+                  <View key={m.id ?? `${m.tipo}-${m.ultimos_digitos}`} style={s.payCard}>
+                    <MaterialIcons
+                      name={
+                        m.tipo === "tarjeta_credito"
+                          ? "credit-card"
+                          : m.tipo === "cheque_certificado"
+                          ? "receipt"
+                          : "account-balance"
+                      }
+                      size={22}
+                      color="#1A1A2E"
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.payType}>
+                        {m.tipo === "tarjeta_credito"
+                          ? "Tarjeta"
+                          : m.tipo === "cuenta_bancaria"
+                          ? "Cuenta"
+                          : m.tipo === "cheque_certificado"
+                          ? "Cheque"
+                          : "Medio de pago"}
+                        {m.ultimos_digitos ? ` ···${m.ultimos_digitos}` : ""}
+                      </Text>
+                      <Text style={s.payInfo}>{m.moneda || ""}</Text>
+                    </View>
                     <View style={[s.verifBadge, { backgroundColor: m.estadoVerificacion === "validado" ? "#ECFDF5" : "#FEF3C7" }]}>
-                      <Text style={{ fontSize: 11, fontWeight: "600", color: m.estadoVerificacion === "validado" ? "#059669" : "#D97706" }}>{m.estadoVerificacion === "validado" ? "✓" : "⏳"}</Text>
+                      <Text style={{ fontSize: 11, fontWeight: "600", color: m.estadoVerificacion === "validado" ? "#059669" : "#D97706" }}>
+                        {m.estadoVerificacion === "validado" ? "✓" : "⏳"}
+                      </Text>
                     </View>
                   </View>
                 ))}
               {multas.length > 0 && <>
                 <Text style={[s.secTitle, { marginTop: 20 }]}>Multas</Text>
                 {multas.map((m) => (
-                  <View key={m.id} style={s.payCard}><View style={{ flex: 1 }}><Text style={{ fontSize: 15, fontWeight: "700", color: "#DC2626" }}>${m.importe.toLocaleString()}</Text><Text style={s.payInfo}>{m.motivo}</Text></View>
-                  <View style={[s.verifBadge, { backgroundColor: m.estado === "pendiente" ? "#FEF2F2" : "#ECFDF5" }]}><Text style={{ fontSize: 11, fontWeight: "600", color: m.estado === "pendiente" ? "#DC2626" : "#059669" }}>{m.estado}</Text></View></View>
+                  <View key={m.id ?? `${m.importe}-${m.estado}`} style={s.payCard}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 15, fontWeight: "700", color: "#DC2626" }}>
+                        {m.importe != null ? `$${m.importe.toLocaleString()}` : "—"}
+                      </Text>
+                      <Text style={s.payInfo}>{m.motivo || "Sin detalle"}</Text>
+                    </View>
+                    <View style={[s.verifBadge, { backgroundColor: m.estado === "pendiente" ? "#FEF2F2" : "#ECFDF5" }]}>
+                      <Text style={{ fontSize: 11, fontWeight: "600", color: m.estado === "pendiente" ? "#DC2626" : "#059669" }}>{m.estado || "pendiente"}</Text>
+                    </View>
+                  </View>
                 ))}
               </>}
             </View>
@@ -291,6 +379,14 @@ const s = StyleSheet.create({
   payType: { fontSize: 14, fontWeight: "600", color: "#1A1A2E" },
   payInfo: { fontSize: 12, color: "#9CA3AF", marginTop: 2 },
   verifBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+
+  // Notificaciones
+  notificationCard: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#F3EDE4" },
+  notificationCardRead: { opacity: 0.7 },
+  notificationIcon: { width: 32, height: 32, borderRadius: 10, backgroundColor: "#F5F1EC", justifyContent: "center", alignItems: "center" },
+  notificationText: { fontSize: 14, color: "#1A1A2E", fontWeight: "600" },
+  notificationMeta: { fontSize: 11, color: "#9CA3AF", marginTop: 2 },
+  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#DC2626" },
 
   // Métricas
   metricsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 14 },

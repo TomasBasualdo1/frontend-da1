@@ -65,6 +65,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
+    try {
+      await authService.logout();
+    } catch {
+      // Ignorar errores de red para permitir logout local
+    }
     await deleteItemAsync('access_token');
     setState({
       isLoading: false,

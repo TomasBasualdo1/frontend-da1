@@ -1,8 +1,7 @@
 import axios from 'axios';
 import { getItemAsync, deleteItemAsync } from '../utils/storage';
 
-// TODO: Cambiar a la URL del backend en producción
-const BASE_URL = 'http://localhost:8000';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: BASE_URL,

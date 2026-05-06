@@ -35,6 +35,8 @@ export default function ConsignarScreen() {
   const [categoria, setCategoria] = useState<Categoria | "">("");
   const [descripcion, setDescripcion] = useState("");
   const [historia, setHistoria] = useState("");
+  const [artista, setArtista] = useState("");
+  const [fechaCreacion, setFechaCreacion] = useState("");
   const [valorEstimado, setValorEstimado] = useState("");
   const [fotos, setFotos] = useState<string[]>([]);
   const [esPropietario, setEsPropietario] = useState(false);
@@ -107,8 +109,8 @@ export default function ConsignarScreen() {
       await articleService.publicar({
         descripcion: `${titulo} - ${descripcion}`,
         historia,
-        artista: "", // Optional, not in mockup
-        fechaCreacion: "", // Optional, not in mockup
+        artista: artista.trim() || undefined,
+        fechaCreacion: fechaCreacion.trim() || undefined,
         fotos,
         esPropietario,
         declaraOrigenLicito,
@@ -238,6 +240,26 @@ export default function ConsignarScreen() {
                   placeholder="Describe la historia del objeto: origen, artista/fabricante, contexto histórico, cadena de custodia..."
                   value={historia}
                   onChangeText={setHistoria}
+                />
+              </View>
+
+              <View style={st.group}>
+                <Text style={st.label}>Artista / Autor (opcional)</Text>
+                <TextInput
+                  style={st.input}
+                  placeholder="Ej: Joaquín Torres García"
+                  value={artista}
+                  onChangeText={setArtista}
+                />
+              </View>
+
+              <View style={st.group}>
+                <Text style={st.label}>Fecha de creación (opcional)</Text>
+                <TextInput
+                  style={st.input}
+                  placeholder="AAAA-MM-DD"
+                  value={fechaCreacion}
+                  onChangeText={setFechaCreacion}
                 />
               </View>
 

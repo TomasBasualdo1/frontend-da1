@@ -4,14 +4,14 @@ export type TipoMedioPago = 'tarjeta_credito' | 'cuenta_bancaria' | 'cheque_cert
 export type EstadoVerificacion = 'pendiente' | 'validado' | 'rechazado';
 
 export interface MedioPago {
-  id: number;
-  tipo: TipoMedioPago;
-  ultimos_digitos: string;
-  estadoVerificacion: EstadoVerificacion;
-  moneda: Moneda;
+  id?: number;
+  tipo?: TipoMedioPago;
+  ultimos_digitos?: string;
+  estadoVerificacion?: EstadoVerificacion;
+  moneda?: Moneda;
   limiteReservado?: number;
   paisBanco?: string;
-  esCuentaReceptora: boolean;
+  esCuentaReceptora?: boolean;
 }
 
 export interface MedioPagoInput {
@@ -29,11 +29,11 @@ export interface MedioPagoUpdate {
 }
 
 export interface Multa {
-  id: number;
-  importe: number;
-  estado: 'pendiente' | 'pagada';
-  fechaLimite: string;
-  motivo: string;
+  id?: number;
+  importe?: number;
+  estado?: 'pendiente' | 'pagada';
+  fechaLimite?: string;
+  motivo?: string;
 }
 
 export interface MultaPagoRequest {

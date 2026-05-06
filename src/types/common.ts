@@ -4,11 +4,11 @@ export type Moneda = 'ARS' | 'USD';
 
 // Notificación del sistema
 export interface Notificacion {
-  id: number;
-  tipo: 'pago' | 'subasta' | 'sistema';
-  mensaje: string;
-  fechaHora: string;
-  leida: boolean;
+  id?: number;
+  tipo?: 'pago' | 'subasta' | 'sistema';
+  mensaje?: string;
+  fechaHora?: string;
+  leida?: boolean;
 }
 
 // Evento de streaming (SSE)

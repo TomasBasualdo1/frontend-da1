@@ -1,6 +1,23 @@
 import api from './api';
 import { Articulo, ArticuloInput } from '../types';
 
+const normalizeArticulo = (data: any): Articulo => ({
+  id: data?.id ?? data?.identificador,
+  descripcion: data?.descripcion ?? data?.descripcioncompleta ?? data?.descripcioncatalogo,
+  precioBasePropuesto: data?.precioBasePropuesto ?? data?.precio_base_propuesto,
+  comisionPropuesta: data?.comisionPropuesta ?? data?.comision_propuesta,
+  tasacionAceptada: data?.tasacionAceptada ?? data?.tasacion_aceptada,
+  historia: data?.historia,
+  artista: data?.artista,
+  fechaCreacion: data?.fechaCreacion ?? data?.fecha_creacion ?? data?.fecha,
+  estado: data?.estado ?? data?.estado_evaluacion,
+  motivoRechazo: data?.motivoRechazo ?? data?.motivo_rechazo,
+  fechaEnvio: data?.fechaEnvio ?? data?.fecha_envio,
+  fotos: data?.fotos ?? data?.imagenes,
+  ubicacion: data?.ubicacion,
+  seguro: data?.seguro,
+});
+
 export const articleService = {
   /** Publicar un artículo para subasta (multipart) */
   async publicar(data: ArticuloInput): Promise<void> {
@@ -37,14 +54,15 @@ export const articleService = {
 
   /** Listar artículos publicados por el usuario */
   async getMisPublicaciones(): Promise<Articulo[]> {
-    const response = await api.get<Articulo[]>('/articulos/mis-publicaciones');
-    return response.data;
+    const response = await api.get('/articulos/mis-publicaciones');
+    const items = Array.isArray(response.data) ? response.data : [];
+    return items.map(normalizeArticulo);
   },
 
   /** Ver detalle de un artículo */
   async getDetalle(id: number): Promise<Articulo> {
-    const response = await api.get<Articulo>(`/articulos/${id}`);
-    return response.data;
+    const response = await api.get(`/articulos/${id}`);
+    return normalizeArticulo(response.data);
   },
 
   /** Aceptar o rechazar tasación */

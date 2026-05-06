@@ -1,19 +1,20 @@
 import { Categoria } from './common';
 
 export interface Usuario {
-  id: number;
-  documento: string;
-  nombre: string;
-  apellido: string;
-  email: string;
-  direccion: string;
+  id?: number;
+  documento?: string;
+  nombre?: string;
+  apellido?: string;
+  email?: string;
+  direccion?: string;
+  telefono?: string;
   foto?: string;
-  numeroPais: number;
-  admitido: 'si' | 'no';
-  estadoRegistro: 'pendiente' | 'aprobado' | 'rechazado';
-  categoria: Categoria;
-  multaActiva: boolean;
-  bloqueado: boolean;
+  numeroPais?: number;
+  admitido?: 'si' | 'no';
+  estadoRegistro?: 'pendiente' | 'aprobado' | 'rechazado';
+  categoria?: Categoria;
+  multaActiva?: boolean;
+  bloqueado?: boolean;
 }
 
 export interface UsuarioUpdate {

@@ -11,11 +11,55 @@ import {
   Notificacion,
 } from '../types';
 
+const normalizeUsuario = (data: any): Usuario => ({
+  id: data?.id ?? data?.identificador,
+  documento: data?.documento,
+  nombre: data?.nombre,
+  apellido: data?.apellido,
+  email: data?.email,
+  direccion: data?.direccion,
+  telefono: data?.telefono ?? data?.telefono_contacto ?? data?.telefonoContacto,
+  foto: data?.foto ?? data?.foto_url ?? data?.fotoUrl,
+  numeroPais: data?.numeroPais ?? data?.numeropais ?? data?.numero_pais,
+  admitido: data?.admitido,
+  estadoRegistro: data?.estadoRegistro ?? data?.estado_registro ?? data?.estadoregistro,
+  categoria: data?.categoria,
+  multaActiva: data?.multaActiva ?? data?.multa_activa ?? data?.multaactiva,
+  bloqueado: data?.bloqueado,
+});
+
+const normalizeMedioPago = (data: any): MedioPago => ({
+  id: data?.id ?? data?.identificador,
+  tipo: data?.tipo,
+  ultimos_digitos: data?.ultimos_digitos ?? data?.ultimosDigitos,
+  estadoVerificacion: data?.estadoVerificacion ?? data?.estado_verificacion,
+  moneda: data?.moneda,
+  limiteReservado: data?.limiteReservado ?? data?.limite_reservado,
+  paisBanco: data?.paisBanco ?? data?.pais_banco,
+  esCuentaReceptora: data?.esCuentaReceptora ?? data?.es_cuenta_receptora,
+});
+
+const normalizeMulta = (data: any): Multa => ({
+  id: data?.id ?? data?.identificador,
+  importe: data?.importe,
+  estado: data?.estado,
+  fechaLimite: data?.fechaLimite ?? data?.fecha_limite,
+  motivo: data?.motivo,
+});
+
+const normalizeNotificacion = (data: any): Notificacion => ({
+  id: data?.id ?? data?.identificador,
+  tipo: data?.tipo,
+  mensaje: data?.mensaje,
+  fechaHora: data?.fechaHora ?? data?.fecha_hora,
+  leida: data?.leida,
+});
+
 export const userService = {
   /** Obtener perfil autenticado */
   async getProfile(): Promise<Usuario> {
-    const response = await api.get<Usuario>('/usuarios/me');
-    return response.data;
+    const response = await api.get('/usuarios/me');
+    return normalizeUsuario(response.data);
   },
 
   /** Actualizar perfil */
@@ -39,8 +83,9 @@ export const userService = {
 
   /** Listar medios de pago */
   async getMediosPago(): Promise<MedioPago[]> {
-    const response = await api.get<MedioPago[]>('/usuarios/me/medios-pago');
-    return response.data;
+    const response = await api.get('/usuarios/me/medios-pago');
+    const items = Array.isArray(response.data) ? response.data : [];
+    return items.map(normalizeMedioPago);
   },
 
   /** Agregar medio de pago */
@@ -66,8 +111,9 @@ export const userService = {
 
   /** Listar multas activas */
   async getMultas(): Promise<Multa[]> {
-    const response = await api.get<Multa[]>('/usuarios/me/multas');
-    return response.data;
+    const response = await api.get('/usuarios/me/multas');
+    const items = Array.isArray(response.data) ? response.data : [];
+    return items.map(normalizeMulta);
   },
 
   /** Pagar multa */
@@ -77,8 +123,9 @@ export const userService = {
 
   /** Listar notificaciones */
   async getNotificaciones(): Promise<Notificacion[]> {
-    const response = await api.get<Notificacion[]>('/usuarios/me/notificaciones');
-    return response.data;
+    const response = await api.get('/usuarios/me/notificaciones');
+    const items = Array.isArray(response.data) ? response.data : [];
+    return items.map(normalizeNotificacion);
   },
 
   /** Marcar notificación como leída */

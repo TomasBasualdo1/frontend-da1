@@ -48,6 +48,11 @@ export const authService = {
     return response.data;
   },
 
+  /** Logout para invalidar el token en el backend */
+  async logout(): Promise<void> {
+    await api.post('/auth/logout');
+  },
+
   /** Solicitar recupero de contraseña */
   async forgotPassword(data: ForgotPasswordRequest): Promise<void> {
     await api.post('/auth/forgot-password', data);
