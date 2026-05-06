@@ -1,179 +1,164 @@
--- Postgres-compatible DDL adapted for Supabase
--- Minimal fixes: fecha check cast and fotos -> url (VARCHAR)
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
 
-create table paises(
-    numero int not null,
-    nombre varchar(250) not null,
-    nombreCorto varchar(250) null,
-    capital varchar(250) not null,
-    nacionalidad varchar(250) not null,
-    idiomas varchar(150) not null,
-    constraint pk_paises primary key (numero)
+CREATE TABLE public.asistentes (
+  identificador integer NOT NULL DEFAULT nextval('asistentes_identificador_seq'::regclass),
+  numeropostor integer NOT NULL,
+  cliente integer NOT NULL,
+  subasta integer NOT NULL,
+  CONSTRAINT asistentes_pkey PRIMARY KEY (identificador),
+  CONSTRAINT fk_asistentes_clientes FOREIGN KEY (cliente) REFERENCES public.clientes(identificador),
+  CONSTRAINT fk_asistentes_subasta FOREIGN KEY (subasta) REFERENCES public.subastas(identificador)
 );
-
-create table personas(
-    identificador serial not null,
-    documento varchar(20) not null,
-    nombre varchar(150) not null,
-    direccion varchar(250),
-    estado varchar(15) constraint chkEstado check (estado in ('activo', 'inactivo')),
-    foto varchar(2048),
-    constraint pk_personas primary key (identificador)
+CREATE TABLE public.catalogos (
+  identificador integer NOT NULL DEFAULT nextval('catalogos_identificador_seq'::regclass),
+  descripcion character varying NOT NULL,
+  subasta integer,
+  responsable integer NOT NULL,
+  CONSTRAINT catalogos_pkey PRIMARY KEY (identificador),
+  CONSTRAINT fk_catalogos_empleados FOREIGN KEY (responsable) REFERENCES public.empleados(identificador),
+  CONSTRAINT fk_catalogos_subastas FOREIGN KEY (subasta) REFERENCES public.subastas(identificador)
 );
-
-create table empleados(
-    identificador int not null,
-    cargo varchar(100),
-    sector int null,
-    constraint pk_empleados primary key (identificador)
+CREATE TABLE public.clientes (
+  identificador integer NOT NULL,
+  numeropais integer,
+  admitido character varying CHECK (admitido::text = ANY (ARRAY['si'::character varying, 'no'::character varying]::text[])),
+  categoria character varying CHECK (categoria::text = ANY (ARRAY['comun'::character varying, 'especial'::character varying, 'plata'::character varying, 'oro'::character varying, 'platino'::character varying]::text[])),
+  verificador integer NOT NULL,
+  estadoRegistro character varying DEFAULT 'pendiente'::character varying CHECK ("estadoRegistro"::text = ANY (ARRAY['pendiente'::character varying, 'aprobado'::character varying, 'rechazado'::character varying]::text[])),
+  multaActiva boolean DEFAULT false,
+  bloqueado boolean DEFAULT false,
+  CONSTRAINT clientes_pkey PRIMARY KEY (identificador),
+  CONSTRAINT fk_clientes_personas FOREIGN KEY (identificador) REFERENCES public.personas(identificador),
+  CONSTRAINT fk_clientes_empleados FOREIGN KEY (verificador) REFERENCES public.empleados(identificador),
+  CONSTRAINT fk_clientes_paises FOREIGN KEY (numeropais) REFERENCES public.paises(numero)
 );
-
-create table sectores(
-    identificador serial not null,
-    nombreSector varchar(150) not null,
-    codigoSector varchar(10) null,
-    responsableSector int null,
-    constraint pk_sectores primary key (identificador),
-    constraint fk_sectores_empleados foreign key (responsableSector) references empleados(identificador)
+CREATE TABLE public.duenios (
+  identificador integer NOT NULL,
+  numeropais integer,
+  verificacionfinanciera character varying CHECK (verificacionfinanciera::text = ANY (ARRAY['si'::character varying, 'no'::character varying]::text[])),
+  verificacionjudicial character varying CHECK (verificacionjudicial::text = ANY (ARRAY['si'::character varying, 'no'::character varying]::text[])),
+  calificacionriesgo integer CHECK (calificacionriesgo = ANY (ARRAY[1, 2, 3, 4, 5, 6])),
+  verificador integer NOT NULL,
+  CONSTRAINT duenios_pkey PRIMARY KEY (identificador),
+  CONSTRAINT fk_duenios_personas FOREIGN KEY (identificador) REFERENCES public.personas(identificador),
+  CONSTRAINT fk_duenios_empleados FOREIGN KEY (verificador) REFERENCES public.empleados(identificador)
 );
-
-create table seguros(
-    nroPoliza varchar(30) not null,
-    compania varchar(150) not null,
-    polizaCombinada varchar(2) constraint chkpolizaCombinada check(polizaCombinada in ('si','no')),
-    importe numeric(18,2) not null constraint chkImporte check (importe > 0),
-    constraint pk_seguro primary key (nroPoliza)
+CREATE TABLE public.empleados (
+  identificador integer NOT NULL,
+  cargo character varying,
+  sector integer,
+  CONSTRAINT empleados_pkey PRIMARY KEY (identificador)
 );
-    
-create table clientes(
-    identificador int not null,
-    numeroPais int,
-    admitido varchar(2) constraint chkAdmitido check(admitido in ('si','no')),
-    categoria varchar(10) constraint chkCategoria check (categoria in ('comun', 'especial', 'plata', 'oro', 'platino')),
-    verificador int not null,
-    constraint pk_clientes primary key (identificador),
-    constraint fk_clientes_personas foreign key (identificador) references personas(identificador),
-    constraint fk_clientes_empleados foreign key (verificador) references empleados(identificador),
-    constraint fk_clientes_paises foreign key (numeroPais) references paises(numero)
+CREATE TABLE public.fotos (
+  identificador integer NOT NULL DEFAULT nextval('fotos_identificador_seq'::regclass),
+  producto integer NOT NULL,
+  url character varying NOT NULL,
+  CONSTRAINT fotos_pkey PRIMARY KEY (identificador),
+  CONSTRAINT fk_fotos_productos FOREIGN KEY (producto) REFERENCES public.productos(identificador)
 );
-
-create table duenios(
-    identificador int not null,
-    numeroPais int,
-    verificacionFinanciera varchar(2) constraint chkVF check(verificacionFinanciera in ('si','no')),
-    verificacionJudicial varchar(2) constraint chkVJ check(verificacionJudicial in ('si','no')),
-    calificacionRiesgo int constraint chkCR check(calificacionRiesgo in (1,2,3,4,5,6)),
-    verificador int not null,
-    constraint pk_duenios primary key (identificador),
-    constraint fk_duenios_personas foreign key (identificador) references personas(identificador),
-    constraint fk_duenios_empleados foreign key (verificador) references empleados(identificador)
+CREATE TABLE public.itemscatalogo (
+  identificador integer NOT NULL DEFAULT nextval('itemscatalogo_identificador_seq'::regclass),
+  catalogo integer NOT NULL,
+  producto integer NOT NULL,
+  preciobase numeric NOT NULL CHECK (preciobase > 0.01),
+  comision numeric NOT NULL CHECK (comision > 0.01),
+  subastado character varying CHECK (subastado::text = ANY (ARRAY['si'::character varying, 'no'::character varying]::text[])),
+  CONSTRAINT itemscatalogo_pkey PRIMARY KEY (identificador),
+  CONSTRAINT fk_itemscatalogo_productos FOREIGN KEY (producto) REFERENCES public.productos(identificador),
+  CONSTRAINT fk_itemscatalogo_catalogos FOREIGN KEY (catalogo) REFERENCES public.catalogos(identificador)
 );
-
-create table subastadores(
-    identificador int not null,
-    matricula varchar(15),
-    region varchar(50),
-    constraint pk_subastadores primary key (identificador),
-    constraint fk_subastadores_personas foreign key (identificador) references personas(identificador)
+CREATE TABLE public.paises (
+  numero integer NOT NULL,
+  nombre character varying NOT NULL,
+  nombrecorto character varying,
+  capital character varying NOT NULL,
+  nacionalidad character varying NOT NULL,
+  idiomas character varying NOT NULL,
+  CONSTRAINT paises_pkey PRIMARY KEY (numero)
 );
-
-create table subastas(
-    identificador serial not null,
-    -- las subastas tienen al menos 10 dias de anticipación al momento de crearlas.
-    fecha date constraint chkFecha check (fecha > (current_date + INTERVAL '10 days')::date),
-    hora time not null,
-    estado varchar(10) constraint chkES check (estado in ('abierta','cerrada')),
-    subastador int null,
-    -- direccion donde se desarrolla el evento.
-    ubicacion varchar(350) null,
-    capacidadAsistentes int null,
-    -- caracteristica del lugar donde se hacen las subastas
-    tieneDeposito varchar(2) constraint chkTD check(tieneDeposito in ('si','no')),
-    -- caracteristica del lugar donde se hacen las subastas
-    seguridadPropia varchar(2) constraint chkSP check(seguridadPropia in ('si','no')),
-    categoria varchar(10) constraint chkCS check (categoria in ('comun', 'especial', 'plata', 'oro', 'platino')),
-    constraint pk_subastas primary key (identificador),
-    constraint fk_subastas_subastadores foreign key (subastador) references subastadores(identificador)
+CREATE TABLE public.personas (
+  identificador integer NOT NULL DEFAULT nextval('personas_identificador_seq'::regclass),
+  documento character varying NOT NULL,
+  nombre character varying NOT NULL,
+  direccion character varying,
+  estado character varying CHECK (estado::text = ANY (ARRAY['activo'::character varying, 'inactivo'::character varying]::text[])),
+  fotoFrente character varying,
+  email character varying UNIQUE,
+  password_hash character varying,
+  fotoDorso character varying,
+  CONSTRAINT personas_pkey PRIMARY KEY (identificador)
 );
-
-create table productos(
-    identificador serial not null,
-    fecha date,
-    disponible varchar(2) constraint chkD check (disponible in ('si','no')),
-    -- se obtiene despues que un empleado realiza la revision.
-    descripcionCatalogo varchar(500) null default 'No Posee',
-    -- url que apunta a un documento PDF firmado que contiene la descripción del producto.
-    descripcionCompleta varchar(300) not null,
-    revisor int not null,
-    duenio int not null,
-    seguro varchar(30) null,  
-    constraint pk_productos primary key (identificador),
-    constraint fk_productos_empleados foreign key (revisor) references empleados(identificador),
-    constraint fk_productos_duenios foreign key (duenio) references duenios(identificador)
+CREATE TABLE public.productos (
+  identificador integer NOT NULL DEFAULT nextval('productos_identificador_seq'::regclass),
+  fecha date,
+  disponible character varying CHECK (disponible::text = ANY (ARRAY['si'::character varying, 'no'::character varying]::text[])),
+  descripcioncatalogo character varying DEFAULT 'No Posee'::character varying,
+  descripcioncompleta character varying NOT NULL,
+  revisor integer NOT NULL,
+  duenio integer NOT NULL,
+  seguro character varying,
+  CONSTRAINT productos_pkey PRIMARY KEY (identificador),
+  CONSTRAINT fk_productos_empleados FOREIGN KEY (revisor) REFERENCES public.empleados(identificador),
+  CONSTRAINT fk_productos_duenios FOREIGN KEY (duenio) REFERENCES public.duenios(identificador)
 );
-
-create table fotos(
-    identificador serial not null,
-    producto int not null,
-    url varchar(2048) not null,
-    constraint pk_fotos primary key (identificador),
-    constraint fk_fotos_productos foreign key (producto) references productos(identificador)
+CREATE TABLE public.pujos (
+  identificador integer NOT NULL DEFAULT nextval('pujos_identificador_seq'::regclass),
+  asistente integer NOT NULL,
+  item integer NOT NULL,
+  importe numeric NOT NULL CHECK (importe > 0.01),
+  ganador character varying DEFAULT 'no'::character varying CHECK (ganador::text = ANY (ARRAY['si'::character varying, 'no'::character varying]::text[])),
+  CONSTRAINT pujos_pkey PRIMARY KEY (identificador),
+  CONSTRAINT fk_pujos_asistentes FOREIGN KEY (asistente) REFERENCES public.asistentes(identificador),
+  CONSTRAINT fk_pujos_itemscatalogo FOREIGN KEY (item) REFERENCES public.itemscatalogo(identificador)
 );
-
-create table catalogos(
-    identificador serial not null,
-    descripcion varchar(250) not null,
-    subasta int null,
-    responsable int not null,
-    constraint pk_catalogos primary key (identificador),
-    constraint fk_catalogos_empleados foreign key (responsable) references empleados(identificador),
-    constraint fk_catalogos_subastas foreign key (subasta) references subastas(identificador)
+CREATE TABLE public.registrodesubasta (
+  identificador integer NOT NULL DEFAULT nextval('registrodesubasta_identificador_seq'::regclass),
+  subasta integer NOT NULL,
+  duenio integer NOT NULL,
+  producto integer NOT NULL,
+  cliente integer NOT NULL,
+  importe numeric NOT NULL CHECK (importe > 0.01),
+  comision numeric NOT NULL CHECK (comision > 0.01),
+  CONSTRAINT registrodesubasta_pkey PRIMARY KEY (identificador),
+  CONSTRAINT fk_registrodesubasta_subastas FOREIGN KEY (subasta) REFERENCES public.subastas(identificador),
+  CONSTRAINT fk_registrodesubasta_duenios FOREIGN KEY (duenio) REFERENCES public.duenios(identificador),
+  CONSTRAINT fk_registrodesubasta_producto FOREIGN KEY (producto) REFERENCES public.productos(identificador),
+  CONSTRAINT fk_registrodesubasta_cliente FOREIGN KEY (cliente) REFERENCES public.clientes(identificador)
 );
-
-create table itemsCatalogo(
-    identificador serial not null,
-    catalogo int not null,
-    producto int not null,
-    precioBase numeric(18,2) not null constraint chkPB check (precioBase > 0.01),
-    comision numeric(18,2) not null constraint chkC check (comision > 0.01),
-    subastado varchar(2) constraint chkS check (subastado in ('si','no')),
-    constraint pk_itemsCatalogo primary key (identificador),
-    constraint fk_itemsCatalogo_catalogos foreign key (catalogo) references catalogos(identificador),
-    constraint fk_itemsCatalogo_productos foreign key (producto) references productos(identificador)
+CREATE TABLE public.sectores (
+  identificador integer NOT NULL DEFAULT nextval('sectores_identificador_seq'::regclass),
+  nombresector character varying NOT NULL,
+  codigosector character varying,
+  responsablesector integer,
+  CONSTRAINT sectores_pkey PRIMARY KEY (identificador),
+  CONSTRAINT fk_sectores_empleados FOREIGN KEY (responsablesector) REFERENCES public.empleados(identificador)
 );
-
-create table asistentes(
-    identificador serial not null,
-    numeroPostor int not null,
-    cliente int not null,
-    subasta int not null,
-    constraint pk_asistentes primary key (identificador),
-    constraint fk_asistentes_clientes foreign key (cliente) references clientes(identificador),
-    constraint fk_asistentes_subasta foreign key (subasta) references subastas(identificador)
+CREATE TABLE public.seguros (
+  nropoliza character varying NOT NULL,
+  compania character varying NOT NULL,
+  polizacombinada character varying CHECK (polizacombinada::text = ANY (ARRAY['si'::character varying, 'no'::character varying]::text[])),
+  importe numeric NOT NULL CHECK (importe > 0::numeric),
+  CONSTRAINT seguros_pkey PRIMARY KEY (nropoliza)
 );
-
-create table pujos(
-    identificador serial not null,
-    asistente int not null,
-    item int not null,
-    importe numeric(18,2) not null constraint chkI check (importe > 0.01),
-    ganador varchar(2) constraint chkG check (ganador in ('si','no')) default 'no',
-    constraint pk_pujos primary key (identificador),
-    constraint fk_pujos_asistentes foreign key (asistente) references asistentes(identificador),
-    constraint fk_pujos_itemsCatalogo foreign key (item) references itemsCatalogo(identificador)
+CREATE TABLE public.subastadores (
+  identificador integer NOT NULL,
+  matricula character varying,
+  region character varying,
+  CONSTRAINT subastadores_pkey PRIMARY KEY (identificador),
+  CONSTRAINT fk_subastadores_personas FOREIGN KEY (identificador) REFERENCES public.personas(identificador)
 );
-
-create table registroDeSubasta(
-    identificador serial not null,
-    subasta int not null,
-    duenio int not null,
-    producto int not null,
-    cliente int not null,
-    importe numeric(18,2) not null constraint chkImportePagado check (importe > 0.01),
-    comision numeric(18,2) not null constraint chkComisionPagada check (comision > 0.01),
-    constraint pk_registroDeSubasta primary key (identificador),
-    constraint fk_registroDeSubasta_subastas foreign key (subasta) references subastas(identificador),
-    constraint fk_registroDeSubasta_duenios foreign key (duenio) references duenios(identificador),
-    constraint fk_registroDeSubasta_producto foreign key (producto) references productos(identificador),
-    constraint fk_registroDeSubasta_cliente foreign key (cliente) references clientes(identificador)
+CREATE TABLE public.subastas (
+  identificador integer NOT NULL DEFAULT nextval('subastas_identificador_seq'::regclass),
+  fecha date CHECK (fecha > (CURRENT_DATE + '10 days'::interval)::date),
+  hora time without time zone NOT NULL,
+  estado character varying CHECK (estado::text = ANY (ARRAY['abierta'::character varying, 'cerrada'::character varying]::text[])),
+  subastador integer,
+  ubicacion character varying,
+  capacidadasistentes integer,
+  tienedeposito character varying CHECK (tienedeposito::text = ANY (ARRAY['si'::character varying, 'no'::character varying]::text[])),
+  seguridadpropia character varying CHECK (seguridadpropia::text = ANY (ARRAY['si'::character varying, 'no'::character varying]::text[])),
+  categoria character varying CHECK (categoria::text = ANY (ARRAY['comun'::character varying, 'especial'::character varying, 'plata'::character varying, 'oro'::character varying, 'platino'::character varying]::text[])),
+  CONSTRAINT subastas_pkey PRIMARY KEY (identificador),
+  CONSTRAINT fk_subastas_subastadores FOREIGN KEY (subastador) REFERENCES public.subastadores(identificador)
 );
