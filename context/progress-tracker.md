@@ -32,4 +32,8 @@
 - [x] Spec 09: Cierre de subasta y generación de deuda — **Servicio API listo**.
 - [x] Spec 10: Lógica de Multas (10%) y bloqueos de usuario — **Visualización en Perfil**.
 
+## Misc
+
+- [x] Spec 11: Native Tabs (Expo SDK 54) — **Frontend actualizado**.
+
 > Nota: Se han añadido specs detalladas para los puntos 02 a 10 en `context/specs/`.
