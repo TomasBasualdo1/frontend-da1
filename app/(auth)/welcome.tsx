@@ -1,11 +1,5 @@
 import React from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  Dimensions,
-} from "react-native";
+import { View, Text, Pressable, StyleSheet, Dimensions } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -39,18 +33,9 @@ export default function WelcomeScreen() {
 
         {/* Features */}
         <View style={styles.features}>
-          <FeatureItem
-            icon="trending-up"
-            text="Pujas en tiempo real"
-          />
-          <FeatureItem
-            icon="verified"
-            text="Seguridad garantizada"
-          />
-          <FeatureItem
-            icon="collections"
-            text="Catálogos exclusivos"
-          />
+          <FeatureItem icon="trending-up" text="Pujas en tiempo real" />
+          <FeatureItem icon="verified" text="Seguridad garantizada" />
+          <FeatureItem icon="collections" text="Catálogos exclusivos" />
         </View>
 
         {/* Botones */}
@@ -62,9 +47,15 @@ export default function WelcomeScreen() {
             ]}
             onPress={() => router.push("/(auth)/login")}
           >
-            <Text style={styles.primaryButtonText}>Iniciar Sesión</Text>
-            <MaterialIcons name="arrow-forward" size={20} color="#FFF" />
+            <Text className="text-[#1A1A2E] text-xl font-bold text-center items-center">
+              Iniciar Sesión
+            </Text>
+            {/**
+            <MaterialIcons name="arrow-forward" size={20} />
+            **/}
           </Pressable>
+
+          <Text className="text-center text-[#6B7280]">o</Text>
 
           <Pressable
             style={({ pressed }) => [
@@ -73,16 +64,19 @@ export default function WelcomeScreen() {
             ]}
             onPress={() => router.push("/(auth)/register-step1")}
           >
-            <Text style={styles.secondaryButtonText}>Crear Cuenta</Text>
+            <Text
+              style={styles.secondaryButtonText}
+              className="text-center bg-red"
+            >
+              Crear Cuenta
+            </Text>
           </Pressable>
 
           <Pressable
             style={styles.guestLink}
             onPress={() => router.replace("/(tabs)")}
           >
-            <Text style={styles.guestLinkText}>
-              Explorar sin cuenta →
-            </Text>
+            <Text style={styles.guestLinkText}>Explorar sin cuenta →</Text>
           </Pressable>
         </View>
       </SafeAreaView>
