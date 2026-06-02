@@ -112,17 +112,17 @@ frontend-da1/
 │   ├── consignas.txt
 │   ├── progress-tracker.md
 │   └── specs/                      # 11 specs de funcionalidades
-│       ├── auth-login.md
-│       ├── auth-setup.md
-│       ├── cierre-subasta.md
-│       ├── join-validacion-categorias.md
-│       ├── logica-montos-pujas.md
-│       ├── multas-bloqueos.md
-│       ├── native-tabs.md
-│       ├── perfil-medios-pago.md
-│       ├── publicacion-articulos.md
-│       ├── streaming-sse.md
-│       └── subastas-listado.md
+│       ├── 01-auth-setup.md
+│       ├── 02-auth-login.md
+│       ├── 03-perfil-medios-pago.md
+│       ├── 04-publicacion-articulos.md
+│       ├── 05-subastas-listado.md
+│       ├── 06-join-validacion-categorias.md
+│       ├── 07-logica-montos-pujas.md
+│       ├── 08-streaming-sse.md
+│       ├── 09-cierre-subasta.md
+│       ├── 10-multas-bloqueos.md
+│       └── 11-native-tabs.md
 │
 └── lib/                            # Directorio vacío (para futuros utilities)
 ```
