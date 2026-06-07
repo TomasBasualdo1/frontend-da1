@@ -33,7 +33,7 @@ export const authService = {
     } as unknown as Blob);
 
     await api.post('/auth/registro/paso1', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      headers: { 'Content-Type': undefined },
     });
   },
 

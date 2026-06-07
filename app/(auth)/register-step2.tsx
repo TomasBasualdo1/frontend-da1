@@ -61,7 +61,7 @@ export default function RegisterStep2Screen() {
             <View style={s.form}>
               <View style={s.group}>
                 <Text style={s.label}>Código *</Text>
-                <TextInput style={[s.input, errors.token && s.inputErr]} placeholder="Código del email" placeholderTextColor="#9CA3AF" value={token} onChangeText={setToken} autoCapitalize="none" />
+                <TextInput style={[s.input, errors.token && s.inputErr]} placeholder="Código de 6 dígitos" placeholderTextColor="#9CA3AF" value={token} onChangeText={setToken} keyboardType="numeric" maxLength={6} />
                 {errors.token ? <Text style={s.err}>{errors.token}</Text> : null}
               </View>
               <View style={s.group}>

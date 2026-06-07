@@ -82,18 +82,23 @@ export default function RegisterStep1Screen() {
         fotoDorso: fotoDorso!,
       });
       Alert.alert(
-        "¡Registro enviado!",
-        "Te enviamos un email para completar el paso 2 cuando la empresa verifique tus datos.",
+        "¡Solicitud enviada!",
+        "Te enviamos un email con el código para completar tu registro. Revisá tu bandeja de entrada.",
         [{ text: "OK", onPress: () => router.replace("/(auth)/login") }]
       );
     } catch (error: any) {
       const status = error?.response?.status;
+      console.error("[registro/paso1] status:", status, "| detail:", JSON.stringify(error?.response?.data));
       if (status === 409) {
         Alert.alert("Error", "El documento o email ya se encuentran registrados.");
       } else if (status === 400) {
         Alert.alert("Error", "Datos inválidos. Revisá los campos.");
+      } else if (status === 422) {
+        Alert.alert("Error", `Datos inválidos (422): ${JSON.stringify(error?.response?.data?.detail)}`);
+      } else if (status === 500) {
+        Alert.alert("Error", `Error interno del servidor (500). Revisá los logs del backend.`);
       } else {
-        Alert.alert("Error", "No se pudo conectar. Intentá más tarde.");
+        Alert.alert("Error", `No se pudo conectar (${status ?? "sin respuesta"}). Revisá que el backend esté corriendo en ${process.env.EXPO_PUBLIC_API_URL}.`);
       }
     } finally {
       setLoading(false);

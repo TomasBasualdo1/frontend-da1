@@ -195,6 +195,13 @@ export default function LoginScreen() {
                 <Text style={styles.footerLink}>Registrate</Text>
               </Pressable>
             </View>
+
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>¿Recibiste un código? </Text>
+              <Pressable onPress={() => router.push("/(auth)/register-step2")}>
+                <Text style={styles.footerLink}>Completar registro</Text>
+              </Pressable>
+            </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>

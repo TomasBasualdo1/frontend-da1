@@ -2,12 +2,12 @@
 
 ## Phase 1: Autenticación y Perfil
 
-- [ ] Spec 01: Registro Paso 1 y 2 (Multipart Form Data).
-  - [ ] Backend: Enpoints, subida a Supabase Storage y BD.
-  - [ ] Frontend: UI, selector de imagenes/camara(a confirmar) y consumo de API.
-- [ ] Spec 02: Login y JWT Auth.
+- [x] Spec 01: Registro Paso 1 (Multipart Form Data).
+  - [x] Backend: Endpoint /registro/paso1, StorageService (Supabase Storage), UsuarioRepository (inserts en personas/personas_adicionales/clientes/clientes_adicionales con estadoRegistro: pendiente).
+  - [x] Frontend: RegisterStep1Screen con expo-image-picker y consumo de API.
+- [x] Spec 02: Login y JWT Auth.
   - [x] Backend: Login endpoint, JWT generation, Logout y Blacklist.
-  - [ ] Frontend: UI de Login y almacenamiento seguro del token.
+  - [x] Frontend: LoginScreen, almacenamiento seguro del token (SecureStore), redirect y manejo de errores 400/401/403.
 - [ ] Spec 03: Gestión de Perfil y Medios de Pago.
   - [ ] Backend: Enpoints, actualizacion de datos y metodos de pago.
   - [ ] Frontend: UI de gestion de perfil y consumo de API.
