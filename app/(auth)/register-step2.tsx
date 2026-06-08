@@ -79,7 +79,7 @@ export default function RegisterStep2Screen() {
               </View>
               <View style={s.bars}>{[password.length >= 8, password.length >= 12, /[A-Z]/.test(password) && /[0-9]/.test(password)].map((ok, i) => <View key={i} style={[s.bar, { backgroundColor: ok ? "#059669" : "#E5DDD0" }]} />)}</View>
               <Pressable style={({ pressed }) => [s.btn, pressed && s.pressed, loading && s.dis]} onPress={handleSubmit} disabled={loading}>
-                {loading ? <ActivityIndicator color="#FFF" /> : <><Text style={s.btnText}>Completar Registro</Text><MaterialIcons name="check-circle" size={20} color="#FFF" /></>}
+                {loading ? <ActivityIndicator color="#8B6914" /> : <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><MaterialIcons name="check-circle" size={20} color="#8B6914" /><Text style={s.btnText}>Completar Registro</Text></View>}
               </Pressable>
             </View>
           </ScrollView>
@@ -110,7 +110,7 @@ const s = StyleSheet.create({
   bars: { flexDirection: "row", gap: 6 },
   bar: { flex: 1, height: 4, borderRadius: 2 },
   btn: { flexDirection: "row", backgroundColor: "#8B6914", height: 56, borderRadius: 16, justifyContent: "center", alignItems: "center", gap: 8, marginTop: 12, elevation: 4 },
-  btnText: { color: "#FFF", fontSize: 17, fontWeight: "700" },
+  btnText: { color: "#8B6914", fontSize: 17, fontWeight: "700" },
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   dis: { opacity: 0.7 },
 });

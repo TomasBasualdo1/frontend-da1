@@ -178,12 +178,12 @@ export default function LoginScreen() {
                 disabled={loading}
               >
                 {loading ? (
-                  <ActivityIndicator color="#FFF" />
+                  <ActivityIndicator color="#8B6914" />
                 ) : (
-                  <>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <MaterialIcons name="arrow-forward" size={20} color="#8B6914" />
                     <Text style={styles.loginButtonText}>Ingresar</Text>
-                    <MaterialIcons name="arrow-forward" size={20} color="#FFF" />
-                  </>
+                  </View>
                 )}
               </Pressable>
             </View>
@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   loginButtonText: {
-    color: "#FFFFFF",
+    color: "#8B6914",
     fontSize: 17,
     fontWeight: "700",
   },
