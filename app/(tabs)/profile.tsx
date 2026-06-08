@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Image, TextInput,
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../../src/context/AuthContext";
 import { userService, auctionService } from "../../src/services";
 import { MedioPago, UsuarioMetricas, Multa, Notificacion, Categoria, SubastaListado } from "../../src/types";
@@ -19,8 +20,100 @@ type ProfileTab = "subastas" | "perfil" | "pagos" | "stats";
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, user, logout, refreshUser } = useAuth();
   const [medios, setMedios] = useState<MedioPago[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    nombre: "",
+    apellido: "",
+    direccion: "",
+    telefono: "",
+  });
+  const [editFoto, setEditFoto] = useState<string | null>(null);
+  const [isAvatarDeleted, setIsAvatarDeleted] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const startEditing = () => {
+    setEditForm({
+      nombre: user?.nombre || "",
+      apellido: user?.apellido || "",
+      direccion: user?.direccion || "",
+      telefono: user?.telefono || "",
+    });
+    setEditFoto(null);
+    setIsAvatarDeleted(false);
+    setIsEditing(true);
+  };
+
+  const pickAvatar = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permisos", "Se necesita acceso a la galería.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.8,
+      allowsEditing: true,
+      aspect: [1, 1],
+    });
+    if (!result.canceled && result.assets[0]) {
+      setEditFoto(result.assets[0].uri);
+      setIsAvatarDeleted(false);
+    }
+  };
+
+  const handleDeleteAvatar = () => {
+    Alert.alert(
+      "Eliminar foto de perfil",
+      "¿Estás seguro de que querés eliminar tu foto de perfil?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: () => {
+            setEditFoto(null);
+            setIsAvatarDeleted(true);
+          },
+        },
+      ]
+    );
+  };
+
+  const saveProfile = async () => {
+    if (!editForm.nombre.trim() || !editForm.apellido.trim()) {
+      Alert.alert("Error", "Nombre y Apellido son obligatorios");
+      return;
+    }
+    setSaving(true);
+    try {
+      if (isAvatarDeleted && user?.foto) {
+        await userService.deleteAvatar();
+      }
+
+      const updateData: any = {
+        nombre: editForm.nombre,
+        apellido: editForm.apellido,
+        direccion: editForm.direccion,
+        telefono: editForm.telefono,
+      };
+
+      if (editFoto) {
+        updateData.foto = editFoto;
+      }
+
+      await userService.updateProfile(updateData);
+      await refreshUser();
+      setIsEditing(false);
+      Alert.alert("Éxito", "Perfil actualizado correctamente");
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Error", "Hubo un problema al actualizar el perfil");
+    } finally {
+      setSaving(false);
+    }
+  };
   const [metricas, setMetricas] = useState<UsuarioMetricas | null>(null);
   const [multas, setMultas] = useState<Multa[]>([]);
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
@@ -220,73 +313,180 @@ export default function ProfileScreen() {
           {/* ===== TAB: Perfil ===== */}
           {tab === "perfil" && (
             <View style={s.section}>
-              <View style={s.avatarRow}>
-                <View style={s.avatar}>
-                  {user?.foto ? <Image source={{ uri: user.foto }} style={s.avatarImg} /> : <MaterialIcons name="person" size={36} color="#1A1A2E" />}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.userName}>{user?.nombre} {user?.apellido}</Text>
-                  <Text style={s.userEmail}>{user?.email}</Text>
-                  <View style={s.badgesRow}>
-                    {user?.categoria && (
-                      <View style={[s.badge, { backgroundColor: CATEG_COLORS[user.categoria] + "15" }]}>
-                        <Text style={[s.badgeText, { color: CATEG_COLORS[user.categoria] }]}>{user.categoria.toUpperCase()}</Text>
+              {isEditing ? (
+                // EDITING MODE
+                <View>
+                  <View style={s.avatarEditRow}>
+                    <Pressable style={s.avatarContainerEdit} onPress={pickAvatar}>
+                      {editFoto ? (
+                        <Image source={{ uri: editFoto }} style={s.avatarImgEdit} />
+                      ) : !isAvatarDeleted && user?.foto ? (
+                        <Image source={{ uri: user.foto }} style={s.avatarImgEdit} />
+                      ) : (
+                        <MaterialIcons name="person" size={40} color="#1A1A2E" />
+                      )}
+                      <View style={s.avatarOverlay}>
+                        <MaterialIcons name="camera-alt" size={16} color="#FFF" />
                       </View>
-                    )}
-                    <View style={[s.badge, { backgroundColor: user?.estadoRegistro === "aprobado" ? "#ECFDF5" : "#FEF3C7" }]}>
-                      <Text style={{ fontSize: 11, fontWeight: "600", color: user?.estadoRegistro === "aprobado" ? "#059669" : "#D97706" }}>{user?.estadoRegistro === "aprobado" ? "Aprobado" : "Pendiente"}</Text>
+                    </Pressable>
+                    <View style={s.avatarEditButtons}>
+                      <Pressable style={s.changePhotoBtn} onPress={pickAvatar}>
+                        <Text style={s.changePhotoText}>Cambiar foto</Text>
+                      </Pressable>
+                      {((user?.foto && !isAvatarDeleted) || editFoto) && (
+                        <Pressable style={s.deletePhotoBtn} onPress={handleDeleteAvatar}>
+                          <MaterialIcons name="delete" size={16} color="#DC2626" />
+                          <Text style={s.deletePhotoText}>Eliminar foto</Text>
+                        </Pressable>
+                      )}
                     </View>
                   </View>
-                </View>
-              </View>
 
-              {user?.multaActiva && (
-                <View style={s.multaAlert}><MaterialIcons name="warning" size={16} color="#DC2626" /><Text style={s.multaAlertText}>Multa activa pendiente de pago</Text></View>
-              )}
-
-              <View style={s.infoList}>
-                <InfoRow icon="badge" label="Documento" value={user?.documento || ""} />
-                <InfoRow icon="place" label="Dirección" value={user?.direccion || ""} />
-                <InfoRow icon="phone" label="Teléfono" value={user?.telefono || "—"} />
-              </View>
-
-              <Text style={[s.secTitle, { marginTop: 16 }]}>Notificaciones</Text>
-              {notificaciones.length === 0 ? (
-                <Text style={s.emptyText}>No hay notificaciones</Text>
-              ) : (
-                notificaciones.map((n, idx) => (
-                  <Pressable
-                    key={n.id ?? `notif-${idx}`}
-                    style={[s.notificationCard, n.leida && s.notificationCardRead]}
-                    onPress={() => handleNotificacionPress(n.id)}
-                  >
-                    <View style={s.notificationIcon}>
-                      <MaterialIcons
-                        name={
-                          n.tipo === "pago"
-                            ? "payment"
-                            : n.tipo === "subasta"
-                            ? "gavel"
-                            : "info"
-                        }
-                        size={18}
-                        color="#1A1A2E"
+                  <View style={s.editForm}>
+                    <View style={s.inputGroup}>
+                      <Text style={s.inputLabel}>Nombre</Text>
+                      <TextInput
+                        style={s.textInput}
+                        value={editForm.nombre}
+                        onChangeText={(text) => setEditForm(prev => ({ ...prev, nombre: text }))}
+                        placeholder="Nombre"
+                        placeholderTextColor="#9CA3AF"
                       />
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.notificationText} numberOfLines={2}>
-                        {n.mensaje || "Notificación del sistema"}
-                      </Text>
-                      <Text style={s.notificationMeta}>{formatFecha(n.fechaHora)}</Text>
-                    </View>
-                    {!n.leida && <View style={s.unreadDot} />}
-                  </Pressable>
-                ))
-              )}
 
-              <Pressable style={s.logoutBtn} onPress={() => Alert.alert("Cerrar sesión", "¿Estás seguro?", [{ text: "Cancelar" }, { text: "Salir", style: "destructive", onPress: () => { logout(); router.replace("/(auth)/welcome"); } }])}>
-                <MaterialIcons name="logout" size={18} color="#DC2626" /><Text style={s.logoutText}>Cerrar sesión</Text>
-              </Pressable>
+                    <View style={s.inputGroup}>
+                      <Text style={s.inputLabel}>Apellido</Text>
+                      <TextInput
+                        style={s.textInput}
+                        value={editForm.apellido}
+                        onChangeText={(text) => setEditForm(prev => ({ ...prev, apellido: text }))}
+                        placeholder="Apellido"
+                        placeholderTextColor="#9CA3AF"
+                      />
+                    </View>
+
+                    <View style={s.inputGroup}>
+                      <Text style={s.inputLabel}>Dirección</Text>
+                      <TextInput
+                        style={s.textInput}
+                        value={editForm.direccion}
+                        onChangeText={(text) => setEditForm(prev => ({ ...prev, direccion: text }))}
+                        placeholder="Dirección"
+                        placeholderTextColor="#9CA3AF"
+                      />
+                    </View>
+
+                    <View style={s.inputGroup}>
+                      <Text style={s.inputLabel}>Teléfono</Text>
+                      <TextInput
+                        style={s.textInput}
+                        value={editForm.telefono}
+                        onChangeText={(text) => setEditForm(prev => ({ ...prev, telefono: text }))}
+                        placeholder="Teléfono"
+                        placeholderTextColor="#9CA3AF"
+                        keyboardType="phone-pad"
+                      />
+                    </View>
+                  </View>
+
+                  <View style={s.editActionRow}>
+                    <Pressable 
+                      style={[s.saveBtn, saving && s.saveBtnDisabled]} 
+                      onPress={saveProfile}
+                      disabled={saving}
+                    >
+                      {saving ? (
+                        <ActivityIndicator size="small" color="#FFF" />
+                      ) : (
+                        <Text style={s.saveBtnText}>Guardar</Text>
+                      )}
+                    </Pressable>
+                    <Pressable 
+                      style={s.cancelBtn} 
+                      onPress={() => setIsEditing(false)}
+                      disabled={saving}
+                    >
+                      <Text style={s.cancelBtnText}>Cancelar</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ) : (
+                // VIEW MODE
+                <View>
+                  <View style={s.avatarRow}>
+                    <View style={s.avatar}>
+                      {user?.foto ? <Image source={{ uri: user.foto }} style={s.avatarImg} /> : <MaterialIcons name="person" size={36} color="#1A1A2E" />}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.userName}>{user?.nombre} {user?.apellido}</Text>
+                      <Text style={s.userEmail}>{user?.email}</Text>
+                      <View style={s.badgesRow}>
+                        {user?.categoria && (
+                          <View style={[s.badge, { backgroundColor: CATEG_COLORS[user.categoria] + "15" }]}>
+                            <Text style={[s.badgeText, { color: CATEG_COLORS[user.categoria] }]}>{user.categoria.toUpperCase()}</Text>
+                          </View>
+                        )}
+                        <View style={[s.badge, { backgroundColor: user?.estadoRegistro === "aprobado" ? "#ECFDF5" : "#FEF3C7" }]}>
+                          <Text style={{ fontSize: 11, fontWeight: "600", color: user?.estadoRegistro === "aprobado" ? "#059669" : "#D97706" }}>{user?.estadoRegistro === "aprobado" ? "Aprobado" : "Pendiente"}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+
+                  {user?.multaActiva && (
+                    <View style={s.multaAlert}><MaterialIcons name="warning" size={16} color="#DC2626" /><Text style={s.multaAlertText}>Multa activa pendiente de pago</Text></View>
+                  )}
+
+                  <View style={s.infoList}>
+                    <InfoRow icon="badge" label="Documento" value={user?.documento || ""} />
+                    <InfoRow icon="place" label="Dirección" value={user?.direccion || ""} />
+                    <InfoRow icon="phone" label="Teléfono" value={user?.telefono || "—"} />
+                  </View>
+
+                  <Pressable style={s.editProfileBtn} onPress={startEditing}>
+                    <MaterialIcons name="edit" size={18} color="#1A1A2E" />
+                    <Text style={s.editProfileText}>Editar Perfil</Text>
+                  </Pressable>
+
+                  <Text style={[s.secTitle, { marginTop: 24 }]}>Notificaciones</Text>
+                  {notificaciones.length === 0 ? (
+                    <Text style={s.emptyText}>No hay notificaciones</Text>
+                  ) : (
+                    notificaciones.map((n, idx) => (
+                      <Pressable
+                        key={n.id ?? `notif-${idx}`}
+                        style={[s.notificationCard, n.leida && s.notificationCardRead]}
+                        onPress={() => handleNotificacionPress(n.id)}
+                      >
+                        <View style={s.notificationIcon}>
+                          <MaterialIcons
+                            name={
+                              n.tipo === "pago"
+                                ? "payment"
+                                : n.tipo === "subasta"
+                                ? "gavel"
+                                : "info"
+                            }
+                            size={18}
+                            color="#1A1A2E"
+                          />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.notificationText} numberOfLines={2}>
+                            {n.mensaje || "Notificación del sistema"}
+                          </Text>
+                          <Text style={s.notificationMeta}>{formatFecha(n.fechaHora)}</Text>
+                        </View>
+                        {!n.leida && <View style={s.unreadDot} />}
+                      </Pressable>
+                    ))
+                  )}
+
+                  <Pressable style={s.logoutBtn} onPress={() => Alert.alert("Cerrar sesión", "¿Estás seguro?", [{ text: "Cancelar" }, { text: "Salir", style: "destructive", onPress: () => { logout(); router.replace("/(auth)/welcome"); } }])}>
+                    <MaterialIcons name="logout" size={18} color="#DC2626" /><Text style={s.logoutText}>Cerrar sesión</Text>
+                  </Pressable>
+                </View>
+              )}
             </View>
           )}
 
@@ -633,4 +833,27 @@ const s = StyleSheet.create({
   metricRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 10, borderTopWidth: 1, borderTopColor: "#F3EDE4" },
   metricLabel: { fontSize: 14, color: "#6B7280" },
   metricVal: { fontSize: 14, fontWeight: "700", color: "#1A1A2E" },
+
+  // Edit Profile styles
+  editProfileBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, marginTop: 16, backgroundColor: "#F5F1EC", borderRadius: 12, borderWidth: 1, borderColor: "#F0EBE3" },
+  editProfileText: { fontSize: 14, color: "#1A1A2E", fontWeight: "700" },
+  avatarEditRow: { flexDirection: "row", alignItems: "center", gap: 16, marginBottom: 20 },
+  avatarContainerEdit: { width: 80, height: 80, borderRadius: 24, backgroundColor: "#F5F1EC", justifyContent: "center", alignItems: "center", overflow: "hidden", position: "relative" },
+  avatarImgEdit: { width: 80, height: 80, borderRadius: 24 },
+  avatarOverlay: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.5)", height: 24, justifyContent: "center", alignItems: "center" },
+  avatarEditButtons: { flex: 1, gap: 8 },
+  changePhotoBtn: { alignSelf: "flex-start", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: "#1A1A2E" },
+  changePhotoText: { color: "#FFF", fontSize: 12, fontWeight: "700" },
+  deletePhotoBtn: { alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: "#DC2626" },
+  deletePhotoText: { color: "#DC2626", fontSize: 12, fontWeight: "700" },
+  editForm: { gap: 12, marginBottom: 20 },
+  inputGroup: { marginBottom: 12 },
+  inputLabel: { fontSize: 13, fontWeight: "600", color: "#1A1A2E", marginBottom: 4 },
+  textInput: { backgroundColor: "#FFF8F0", borderWidth: 1.5, borderColor: "#E5DDD0", borderRadius: 12, height: 48, paddingHorizontal: 16, fontSize: 15, color: "#1A1A2E" },
+  editActionRow: { flexDirection: "row", gap: 12, marginTop: 12 },
+  saveBtn: { flex: 1, height: 48, borderRadius: 12, backgroundColor: "#1A1A2E", justifyContent: "center", alignItems: "center" },
+  saveBtnDisabled: { opacity: 0.7 },
+  saveBtnText: { color: "#FFF", fontSize: 15, fontWeight: "700" },
+  cancelBtn: { flex: 1, height: 48, borderRadius: 12, borderWidth: 1.5, borderColor: "#E5DDD0", justifyContent: "center", alignItems: "center", backgroundColor: "#FFF" },
+  cancelBtnText: { color: "#6B7280", fontSize: 15, fontWeight: "700" },
 });

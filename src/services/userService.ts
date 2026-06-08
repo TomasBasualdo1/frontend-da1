@@ -81,6 +81,11 @@ export const userService = {
     });
   },
 
+  /** Eliminar foto de perfil */
+  async deleteAvatar(): Promise<void> {
+    await api.delete('/usuarios/me/foto');
+  },
+
   /** Listar medios de pago */
   async getMediosPago(): Promise<MedioPago[]> {
     const response = await api.get('/usuarios/me/medios-pago');
