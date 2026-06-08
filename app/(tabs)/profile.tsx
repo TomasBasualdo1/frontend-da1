@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Image, TextInput } from "react-native";
+import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Image, TextInput, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -28,6 +28,17 @@ export default function ProfileScreen() {
   const [tab, setTab] = useState<ProfileTab>("subastas");
   const [searchMis, setSearchMis] = useState("");
 
+  // Payment form states
+  const [showAddPago, setShowAddPago] = useState(false);
+  const [newPagoTipo, setNewPagoTipo] = useState<"tarjeta_credito" | "cuenta_bancaria" | "cheque_certificado">("tarjeta_credito");
+  const [newPagoMoneda, setNewPagoMoneda] = useState<"ARS" | "USD">("ARS");
+  const [newPagoDatos, setNewPagoDatos] = useState("");
+  const [newPagoLimite, setNewPagoLimite] = useState("");
+  const [newPagoPais, setNewPagoPais] = useState<"AR" | "US" | null>(null);
+  const [showNewPaisPicker, setShowNewPaisPicker] = useState(false);
+  const [newPagoReceptora, setNewPagoReceptora] = useState(false);
+  const [addingPago, setAddingPago] = useState(false);
+
   useEffect(() => {
     if (!isAuthenticated) return;
     userService.getMediosPago().then(setMedios).catch(() => {});
@@ -36,6 +47,65 @@ export default function ProfileScreen() {
     userService.getNotificaciones().then(setNotificaciones).catch(() => {});
     auctionService.getSubastas().then(setMisSubastas).catch(() => {});
   }, [isAuthenticated]);
+
+  const handleAddMedioPago = async () => {
+    if (!newPagoDatos.trim()) {
+      Alert.alert("Error", "Por favor ingresá los datos del medio de pago.");
+      return;
+    }
+    if (newPagoTipo === "tarjeta_credito") {
+      const cleanCard = newPagoDatos.replace(/\D/g, "");
+      if (cleanCard.length !== 16) {
+        Alert.alert("Error", "El número de tarjeta debe tener exactamente 16 dígitos.");
+        return;
+      }
+    }
+    if (newPagoTipo !== "cheque_certificado" && !newPagoPais) {
+      Alert.alert("Error", "Por favor seleccioná el país del banco.");
+      return;
+    }
+    setAddingPago(true);
+    try {
+      await userService.addMedioPago({
+        tipo: newPagoTipo,
+        datos_encriptados: newPagoDatos.trim(),
+        moneda: newPagoMoneda,
+        limiteReservado: newPagoLimite ? parseFloat(newPagoLimite) : undefined,
+        paisBanco: newPagoPais || undefined,
+        esCuentaReceptora: newPagoReceptora,
+      });
+      Alert.alert("Éxito", "Medio de pago registrado correctamente.");
+      setShowAddPago(false);
+      setNewPagoDatos("");
+      setNewPagoLimite("");
+      setNewPagoPais(null);
+      setNewPagoReceptora(false);
+      const freshMedios = await userService.getMediosPago();
+      setMedios(freshMedios);
+    } catch {
+      Alert.alert("Error", "No se pudo registrar el medio de pago.");
+    } finally {
+      setAddingPago(false);
+    }
+  };
+
+  const handleDeleteMedio = (id: number) => {
+    Alert.alert("Eliminar", "¿Seguro que querés eliminar este medio de pago?", [
+      { text: "Cancelar" },
+      {
+        text: "Eliminar",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await userService.deleteMedioPago(id);
+            setMedios((prev) => prev.filter((m) => m.id !== id));
+          } catch {
+            Alert.alert("Error", "No se pudo eliminar el medio de pago.");
+          }
+        },
+      },
+    ]);
+  };
 
   const formatFecha = (value?: string) => (value ? new Date(value).toLocaleString() : "—");
 
@@ -223,7 +293,169 @@ export default function ProfileScreen() {
           {/* ===== TAB: Pagos ===== */}
           {tab === "pagos" && (
             <View style={s.section}>
-              <Text style={s.secTitle}>Medios de Pago</Text>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <Text style={[s.secTitle, { marginTop: 0 }]}>Medios de Pago</Text>
+                <Pressable
+                  style={{ backgroundColor: "#1A1A2E", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+                  onPress={() => setShowAddPago(!showAddPago)}
+                >
+                  <Text style={{ color: "#FFF", fontSize: 12, fontWeight: "700" }}>
+                    {showAddPago ? "Cancelar" : "Agregar"}
+                  </Text>
+                </Pressable>
+              </View>
+
+              {showAddPago && (
+                <View style={{ gap: 12, backgroundColor: "#F5F1EC", padding: 14, borderRadius: 12, marginBottom: 16 }}>
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: "#1A1A2E" }}>Nuevo Medio de Pago</Text>
+                  
+                  <View style={{ gap: 4 }}>
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: "#1A1A2E" }}>Tipo *</Text>
+                    <View style={{ flexDirection: "row", gap: 6 }}>
+                      {(["tarjeta_credito", "cuenta_bancaria", "cheque_certificado"] as const).map((t) => (
+                        <Pressable
+                          key={t}
+                          style={[{ flex: 1, height: 36, borderRadius: 8, backgroundColor: "#FFF", borderWidth: 1, borderColor: "#E5DDD0", justifyContent: "center", alignItems: "center" }, newPagoTipo === t && { borderColor: "#1A1A2E", backgroundColor: "#E5DDD0" }]}
+                          onPress={() => {
+                            setNewPagoTipo(t);
+                            setNewPagoDatos("");
+                          }}
+                        >
+                          <Text style={[{ fontSize: 11, color: "#6B7280" }, newPagoTipo === t && { color: "#1A1A2E", fontWeight: "700" }]}>
+                            {t === "tarjeta_credito" ? "Tarjeta" : t === "cuenta_bancaria" ? "Cuenta" : "Cheque"}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+
+                  <View style={{ gap: 4 }}>
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: "#1A1A2E" }}>Moneda *</Text>
+                    <View style={{ flexDirection: "row", gap: 6 }}>
+                      {(["ARS", "USD"] as const).map((m) => (
+                        <Pressable
+                          key={m}
+                          style={[{ flex: 1, height: 36, borderRadius: 8, backgroundColor: "#FFF", borderWidth: 1, borderColor: "#E5DDD0", justifyContent: "center", alignItems: "center" }, newPagoMoneda === m && { borderColor: "#1A1A2E", backgroundColor: "#E5DDD0" }]}
+                          onPress={() => setNewPagoMoneda(m)}
+                        >
+                          <Text style={[{ fontSize: 11, color: "#6B7280" }, newPagoMoneda === m && { color: "#1A1A2E", fontWeight: "700" }]}>
+                            {m}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+
+                  <View style={{ gap: 4 }}>
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: "#1A1A2E" }}>Datos *</Text>
+                    <TextInput
+                      style={{ backgroundColor: "#FFF", borderWidth: 1, borderColor: "#E5DDD0", borderRadius: 8, height: 40, paddingHorizontal: 12, fontSize: 14 }}
+                      placeholder={
+                        newPagoTipo === "tarjeta_credito"
+                          ? "Número de Tarjeta (16 dígitos)"
+                          : newPagoTipo === "cuenta_bancaria"
+                          ? "CBU / Alias / Nro Cuenta"
+                          : "Código/Número del Cheque"
+                      }
+                      value={newPagoDatos}
+                      onChangeText={(val) => {
+                        if (newPagoTipo === "tarjeta_credito") {
+                          const cleanVal = val.replace(/\D/g, "");
+                          if (cleanVal.length <= 16) {
+                            setNewPagoDatos(cleanVal);
+                          }
+                        } else {
+                          setNewPagoDatos(val);
+                        }
+                      }}
+                      maxLength={newPagoTipo === "tarjeta_credito" ? 16 : 1000}
+                      keyboardType={newPagoTipo === "tarjeta_credito" ? "numeric" : "default"}
+                    />
+                  </View>
+
+                  <View style={{ flexDirection: "row", gap: 10 }}>
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <Text style={{ fontSize: 12, fontWeight: "600", color: "#1A1A2E" }}>Límite ($)</Text>
+                      <TextInput
+                        style={{ backgroundColor: "#FFF", borderWidth: 1, borderColor: "#E5DDD0", borderRadius: 8, height: 40, paddingHorizontal: 12, fontSize: 14 }}
+                        placeholder="Ej: 50000"
+                        keyboardType="numeric"
+                        value={newPagoLimite}
+                        onChangeText={setNewPagoLimite}
+                      />
+                    </View>
+
+                    {newPagoTipo !== "cheque_certificado" && (
+                      <View style={{ flex: 1, gap: 4, position: 'relative', zIndex: 100 }}>
+                        <Text style={{ fontSize: 12, fontWeight: "600", color: "#1A1A2E" }}>País del Banco *</Text>
+                        <Pressable
+                          style={[{ height: 36, borderRadius: 8, backgroundColor: "#FFF", borderWidth: 1, borderColor: "#E5DDD0", justifyContent: "center", alignItems: "center" }]}
+                          onPress={() => setShowNewPaisPicker(!showNewPaisPicker)}
+                        >
+                          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", width: "100%", paddingHorizontal: 8 }}>
+                            <Text style={{ fontSize: 11, color: newPagoPais ? "#1A1A2E" : "#9CA3AF", fontWeight: newPagoPais ? "700" : "400" }}>
+                              {newPagoPais ? (newPagoPais === "AR" ? "AR (Nacional)" : "US (Extranjero)") : "Seleccionar"}
+                            </Text>
+                            <MaterialIcons name={showNewPaisPicker ? "keyboard-arrow-up" : "keyboard-arrow-down"} size={14} color="#9CA3AF" />
+                          </View>
+                        </Pressable>
+                        {showNewPaisPicker && (
+                          <View style={{
+                            position: 'absolute',
+                            top: 58,
+                            left: 0,
+                            right: 0,
+                            backgroundColor: 'rgba(60, 60, 60, 0.98)',
+                            borderRadius: 12,
+                            padding: 6,
+                            zIndex: 999,
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 4 },
+                            shadowOpacity: 0.25,
+                            shadowRadius: 8,
+                            elevation: 5,
+                            gap: 2,
+                          }}>
+                            {(["AR", "US"] as const).map((p) => (
+                              <Pressable
+                                key={p}
+                                style={{
+                                  height: 34,
+                                  borderRadius: 8,
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  paddingHorizontal: 10,
+                                  backgroundColor: newPagoPais === p ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                }}
+                                onPress={() => {
+                                  setNewPagoPais(p);
+                                  setShowNewPaisPicker(false);
+                                }}
+                              >
+                                <Text style={{ fontSize: 11, color: '#FFF', fontWeight: '600', flex: 1 }}>
+                                  {p === "AR" ? "AR (Nacional)" : "US (Extranjero)"}
+                                </Text>
+                                {newPagoPais === p && (
+                                  <MaterialIcons name="check" size={14} color="#FFF" />
+                                )}
+                              </Pressable>
+                            ))}
+                          </View>
+                        )}
+                      </View>
+                    )}
+                  </View>
+
+                  <Pressable
+                    style={[{ backgroundColor: "#1A1A2E", height: 44, borderRadius: 10, justifyContent: "center", alignItems: "center", marginTop: 6 }, addingPago && { opacity: 0.7 }]}
+                    onPress={handleAddMedioPago}
+                    disabled={addingPago}
+                  >
+                    {addingPago ? <ActivityIndicator color="#FFF" /> : <Text style={{ color: "#FFF", fontSize: 14, fontWeight: "700" }}>Registrar Medio de Pago</Text>}
+                  </Pressable>
+                </View>
+              )}
+
               {medios.length === 0 ? <Text style={s.emptyText}>No tenés medios de pago</Text> :
                 medios.map((m) => (
                   <View key={m.id ?? `${m.tipo}-${m.ultimos_digitos}`} style={s.payCard}>
@@ -256,6 +488,11 @@ export default function ProfileScreen() {
                         {m.estadoVerificacion === "validado" ? "✓" : "⏳"}
                       </Text>
                     </View>
+                    {m.id != null && (
+                      <Pressable style={{ marginLeft: 8 }} onPress={() => handleDeleteMedio(m.id!)}>
+                        <MaterialIcons name="delete" size={18} color="#DC2626" />
+                      </Pressable>
+                    )}
                   </View>
                 ))}
               {multas.length > 0 && <>

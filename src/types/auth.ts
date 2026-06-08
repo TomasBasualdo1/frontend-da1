@@ -14,6 +14,11 @@ export interface RegistroPaso1 {
 export interface RegistroPaso2 {
   token: string;
   password: string;
+  paymentTipo?: string;
+  paymentDatos?: string;
+  paymentMoneda?: string;
+  paymentLimite?: number;
+  paymentPais?: string;
 }
 
 // --- Login ---
