@@ -8,9 +8,9 @@
 - [x] Spec 02: Login y JWT Auth.
   - [x] Backend: Login endpoint, JWT generation, Logout y Blacklist.
   - [x] Frontend: LoginScreen, almacenamiento seguro del token (SecureStore), redirect y manejo de errores 400/401/403.
-- [ ] Spec 03: Gestión de Perfil y Medios de Pago.
-  - [ ] Backend: Enpoints, actualizacion de datos y metodos de pago.
-  - [ ] Frontend: UI de gestion de perfil y consumo de API.
+- [x] Spec 03: Gestión de Perfil y Medios de Pago.
+  - [x] Backend: Enpoints, actualizacion de datos y metodos de pago.
+  - [x] Frontend: UI de gestion de perfil y consumo de API.
 
 ## Phase 2: Catálogo y Consignación
 
