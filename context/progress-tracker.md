@@ -15,25 +15,37 @@
 ## Phase 2: Catálogo y Consignación
 
 - [ ] Spec 04: Publicación de Artículos por el usuario.
-  - [ ] Backend: Enpoints, creacion y validacion de JWT.
-  - [ ] Frontend: UI de gestion de perfil y consumo de API.
+  - [ ] Backend: Endpoints de consignación (POST /articulos, GET /articulos/mis-publicaciones, etc.) e integración de almacenamiento.
+  - [x] Frontend: Wizard de publicación de artículos de 4 pasos (ConsignarScreen).
 - [ ] Spec 05: Listado Público y Privado de Subastas.
-  - [ ] Backend: Enpoints, creacion y validacion de JWT.
-  - [ ] Frontend: UI de gestion de perfil y consumo de API.
+  - [ ] Backend: Endpoints para listar subastas públicas (sin auth) y privadas (autenticado) y sus detalles.
+  - [x] Frontend: Pantalla de listado de subastas (SubastasScreen) con filtros y búsqueda, y detalle de catálogo.
 
 ## Phase 3: Motor de Pujas (Core)
 
-- [x] Spec 06: Unión a subasta (`/join`) y validación de categorías — **Frontend completo**.
-- [x] Spec 07: Lógica de validación de montos (1% - 20%) — **Servicio API listo**.
-- [x] Spec 08: Integración de Streaming (SSE) — **Pantalla Live con puja completa**.
+- [/] Spec 06: Unión a subasta (`/join`) y validación de categorías.
+  - [ ] Backend: Endpoint /subastas/{id}/join y validación de reglas de ingreso (categoría y medios de pago).
+  - [x] Frontend: Flujo de conexión en LiveScreen.
+- [ ] Spec 07: Lógica de validación de montos (1% - 20%).
+  - [ ] Backend: Validación de montos de pujas (+1% mínimo, +20% máximo) en endpoint place_bid.
+  - [x] Frontend: Botones de pujo rápido (+1%/+5%/+10%/+20%) e input en LiveScreen.
+- [ ] Spec 08: Integración de Streaming (SSE).
+  - [ ] Backend: Servicio SSE en /subastas/{id}/stream para notificar pujas y items.
+  - [ ] Frontend: Escucha de eventos de streaming y actualización en tiempo real en LiveScreen.
 
 ## Phase 4: Pagos y Multas
 
-- [x] Spec 09: Cierre de subasta y generación de deuda — **Servicio API listo**.
-- [x] Spec 10: Lógica de Multas (10%) y bloqueos de usuario — **Visualización en Perfil**.
+- [ ] Spec 09: Cierre de subasta y generación de deuda.
+  - [ ] Backend: Lógica de cierre (/cerrar), asignación de ganador, comisiones y multas.
+  - [ ] Frontend: Visualización de deudas pendientes e interfaz de pago en perfil.
+- [/] Spec 10: Lógica de Multas (10%) y bloqueos de usuario.
+  - [x] Backend: Endpoints para consultar y pagar multas (/me/multas).
+  - [x] Frontend: Visualización en Perfil y funcionalidad de pago.
+  - [ ] Backend: Restricción y bloqueo de participación para usuarios sancionados.
 
 ## Misc
 
 - [x] Spec 11: Native Tabs (Expo SDK 54) — **Frontend actualizado**.
 
 > Nota: Se han añadido specs detalladas para los puntos 02 a 10 en `context/specs/`.
+
