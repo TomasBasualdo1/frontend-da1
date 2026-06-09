@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -33,6 +33,24 @@ export default function RegisterStep1Screen() {
   const [fotoFrente, setFotoFrente] = useState<string | null>(null);
   const [fotoDorso, setFotoDorso] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [paises, setPaises] = useState<{ numero: number; nombre: string }[]>([]);
+  const [showPaisPicker, setShowPaisPicker] = useState(false);
+
+  useEffect(() => {
+    authService.getPaises()
+      .then((data) => {
+        if (data && data.length > 0) {
+          setPaises(data);
+          setForm((prev) => ({ ...prev, numeroPais: String(data[0].numero) }));
+        } else {
+          setPaises([{ numero: 1, nombre: "Argentina" }]);
+        }
+      })
+      .catch((err) => {
+        console.error("Error cargando países:", err);
+        setPaises([{ numero: 1, nombre: "Argentina" }]);
+      });
+  }, []);
 
   const updateField = (key: string, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -211,6 +229,39 @@ export default function RegisterStep1Screen() {
                 />
                 {errors.direccion ? <Text style={styles.errorText}>{errors.direccion}</Text> : null}
               </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>País de Origen *</Text>
+                <Pressable
+                  style={styles.pickerButton}
+                  onPress={() => setShowPaisPicker(!showPaisPicker)}
+                >
+                  <Text style={{ color: form.numeroPais ? "#1A1A2E" : "#9CA3AF" }}>
+                    {paises.find((p) => String(p.numero) === form.numeroPais)?.nombre || "Seleccionar país"}
+                  </Text>
+                  <MaterialIcons
+                    name={showPaisPicker ? "arrow-drop-up" : "arrow-drop-down"}
+                    size={24}
+                    color="#6B7280"
+                  />
+                </Pressable>
+                {showPaisPicker && (
+                  <View style={styles.dropdown}>
+                    {paises.map((p) => (
+                      <Pressable
+                        key={p.numero}
+                        style={styles.dropdownItem}
+                        onPress={() => {
+                          updateField("numeroPais", String(p.numero));
+                          setShowPaisPicker(false);
+                        }}
+                      >
+                        <Text style={styles.dropdownText}>{p.nombre}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
+              </View>
             </View>
 
             {/* Fotos del documento */}
@@ -386,4 +437,33 @@ const styles = StyleSheet.create({
   footer: { flexDirection: "row", justifyContent: "center", marginTop: 24 },
   footerText: { fontSize: 15, color: "#6B7280" },
   footerLink: { fontSize: 15, color: "#8B6914", fontWeight: "700" },
+  pickerButton: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#FFF8F0",
+    borderWidth: 1.5,
+    borderColor: "#E5DDD0",
+    borderRadius: 12,
+    height: 48,
+    paddingHorizontal: 16,
+  },
+  dropdown: {
+    backgroundColor: "#FFF",
+    borderWidth: 1,
+    borderColor: "#E5DDD0",
+    borderRadius: 12,
+    marginTop: 4,
+    overflow: "hidden",
+  },
+  dropdownItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0EBE3",
+  },
+  dropdownText: {
+    fontSize: 15,
+    color: "#1A1A2E",
+  },
 });

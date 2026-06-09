@@ -62,4 +62,11 @@ export const authService = {
   async resetPassword(data: ResetPasswordRequest): Promise<void> {
     await api.post('/auth/reset-password', data);
   },
+
+  /** Obtener listado de países */
+  async getPaises(): Promise<{ numero: number; nombre: string; capital?: string }[]> {
+    const response = await api.get('/paises');
+    return Array.isArray(response.data) ? response.data : [];
+  },
 };
+
