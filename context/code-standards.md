@@ -5,6 +5,7 @@
 - Usar Functional Components y Hooks.
 - Tipado estricto con TypeScript para todas las interfaces que coincidan con los esquemas de Swagger (ej. `Usuario`, `ItemCatalogo`, `Puja`).
 - Gestión de estado global mínima; preferir React Query o SWR para consumir el backend FastAPI y manejar la caché de catálogos.
+- usar NativeWind para estilos, evitando el uso de hojas de estilo tradicionales. Se deben seguir las convenciones de Tailwind CSS para mantener la consistencia visual.
 
 ## FastAPI
 
