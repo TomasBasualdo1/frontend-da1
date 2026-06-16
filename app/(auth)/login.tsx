@@ -5,55 +5,74 @@ import {
   TextInput,
   Pressable,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from "react-native";
+import type { AxiosError } from "axios";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../src/context/AuthContext";
+
+type LoginFormErrors = { documento?: string; password?: string };
+type BackendErrorData = { detail?: string | unknown[] };
+
+const getLoginErrorMessage = (error: unknown) => {
+  const axiosError =
+    typeof error === "object" && error !== null
+      ? (error as AxiosError<BackendErrorData>)
+      : undefined;
+  const status = axiosError?.response?.status;
+
+  if (status === 401) {
+    return "Documento o contraseña incorrectos.";
+  }
+
+  if (status === 403) {
+    return "Tu cuenta no está disponible para iniciar sesión.";
+  }
+
+  if (status === 400 || status === 422) {
+    return "No pudimos iniciar sesión. Verificá tus datos e intentá nuevamente.";
+  }
+
+  if (!axiosError?.response) {
+    return "No pudimos conectar con el servidor. Intentá nuevamente en unos minutos.";
+  }
+
+  return "No pudimos iniciar sesión. Verificá tus datos e intentá nuevamente.";
+};
 
 export default function LoginScreen() {
   const [documento, setDocumento] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ documento?: string; password?: string }>({});
+  const [errors, setErrors] = useState<LoginFormErrors>({});
+  const [formError, setFormError] = useState("");
   const router = useRouter();
   const { login } = useAuth();
 
   const validate = () => {
-    const newErrors: typeof errors = {};
+    const newErrors: LoginFormErrors = {};
     if (!documento.trim()) newErrors.documento = "Ingrese su documento";
     if (!password.trim()) newErrors.password = "Ingrese su contraseña";
-    else if (password.length < 6) newErrors.password = "Mínimo 6 caracteres";
+    else if (password.length < 8) newErrors.password = "Mínimo 8 caracteres";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleLogin = async () => {
+    setFormError("");
     if (!validate()) return;
     setLoading(true);
     try {
       await login({ documento: documento.trim(), password });
       router.replace("/(tabs)");
-    } catch (error: any) {
-      const status = error?.response?.status;
-      if (status === 401) {
-        Alert.alert("Error", "Documento o contraseña incorrectos.");
-      } else if (status === 403) {
-        Alert.alert(
-          "Cuenta no disponible",
-          "Su cuenta está pendiente de aprobación o se encuentra bloqueada."
-        );
-      } else if (status === 400) {
-        Alert.alert("Error", "Datos inválidos. Revise los campos.");
-      } else {
-        Alert.alert("Error", "No se pudo conectar al servidor. Intente más tarde.");
-      }
+    } catch (error: unknown) {
+      setFormError(getLoginErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -110,6 +129,7 @@ export default function LoginScreen() {
                     value={documento}
                     onChangeText={(t) => {
                       setDocumento(t);
+                      if (formError) setFormError("");
                       if (errors.documento) setErrors((e) => ({ ...e, documento: undefined }));
                     }}
                     autoCapitalize="none"
@@ -142,6 +162,7 @@ export default function LoginScreen() {
                     value={password}
                     onChangeText={(t) => {
                       setPassword(t);
+                      if (formError) setFormError("");
                       if (errors.password) setErrors((e) => ({ ...e, password: undefined }));
                     }}
                   />
@@ -167,6 +188,13 @@ export default function LoginScreen() {
               >
                 <Text style={styles.forgotLinkText}>¿Olvidaste tu contraseña?</Text>
               </Pressable>
+
+              {formError ? (
+                <View style={styles.formErrorContainer}>
+                  <MaterialIcons name="error-outline" size={18} color="#DC2626" />
+                  <Text style={styles.formErrorText}>{formError}</Text>
+                </View>
+              ) : null}
 
               <Pressable
                 style={({ pressed }) => [
@@ -306,6 +334,24 @@ const styles = StyleSheet.create({
     color: "#DC2626",
     marginLeft: 4,
     marginTop: 2,
+  },
+  formErrorContainer: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FCA5A5",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  formErrorText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    color: "#B91C1C",
+    fontWeight: "600",
   },
   forgotLink: {
     alignSelf: "flex-end",
