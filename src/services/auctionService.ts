@@ -9,6 +9,10 @@ import {
   PujaResponse,
   Pago,
   PagoRequest,
+  SubastaCreate,
+  SubastaCreated,
+  CatalogoItemInput,
+  CatalogoItemCreated,
 } from "../types";
 
 export const auctionService = {
@@ -35,6 +39,24 @@ export const auctionService = {
   /** Detalle de subasta con catálogo (autenticado) */
   async getDetalle(id: number): Promise<SubastaDetalle> {
     const response = await api.get<SubastaDetalle>(`/subastas/${id}`);
+    return response.data;
+  },
+
+  /** Crear subasta desde administracion */
+  async createSubasta(data: SubastaCreate): Promise<SubastaCreated> {
+    const response = await api.post<SubastaCreated>("/admin/subastas", data);
+    return response.data;
+  },
+
+  /** Agregar item al catalogo de una subasta */
+  async addCatalogItem(
+    subastaId: number,
+    data: CatalogoItemInput,
+  ): Promise<CatalogoItemCreated> {
+    const response = await api.post<CatalogoItemCreated>(
+      `/admin/subastas/${subastaId}/catalogo/items`,
+      data,
+    );
     return response.data;
   },
 
