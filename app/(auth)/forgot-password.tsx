@@ -35,6 +35,9 @@ export default function ForgotPasswordScreen() {
           <View style={s.icon}><MaterialIcons name="mark-email-read" size={48} color="#059669" /></View>
           <Text style={s.title}>¡Email enviado!</Text>
           <Text style={s.sub}>Revisá tu casilla de correo para recuperar tu contraseña.</Text>
+          <Pressable style={[s.btn, s.secondaryBtn]} onPress={() => router.push("/(auth)/reset-password")}>
+            <Text style={[s.btnText, s.secondaryBtnText]}>Tengo un código</Text>
+          </Pressable>
           <Pressable style={s.btn} onPress={() => router.replace("/(auth)/login")}>
             <Text style={s.btnText}>Volver al Login</Text>
           </Pressable>
@@ -59,6 +62,9 @@ export default function ForgotPasswordScreen() {
         <Pressable style={({ pressed }) => [s.btn, pressed && s.pressed, loading && s.dis]} onPress={handleSubmit} disabled={loading}>
           {loading ? <ActivityIndicator color="#FFF" /> : <Text style={s.btnText}>Enviar enlace</Text>}
         </Pressable>
+        <Pressable style={s.codeLink} onPress={() => router.push("/(auth)/reset-password")}>
+          <Text style={s.codeLinkText}>Ya tengo un código</Text>
+        </Pressable>
       </SafeAreaView>
     </View>
   );
@@ -76,6 +82,10 @@ const s = StyleSheet.create({
   input: { backgroundColor: "#FFFCF7", borderWidth: 1.5, borderColor: "#E5DDD0", borderRadius: 14, height: 52, paddingHorizontal: 16, fontSize: 15, color: "#1A1A2E" },
   btn: { flexDirection: "row", backgroundColor: "#8B6914", height: 56, borderRadius: 16, justifyContent: "center", alignItems: "center", gap: 8, elevation: 4 },
   btnText: { color: "#FFF", fontSize: 17, fontWeight: "700" },
+  secondaryBtn: { backgroundColor: "#FFFCF7", borderWidth: 1.5, borderColor: "#E5DDD0", marginBottom: 12 },
+  secondaryBtnText: { color: "#8B6914" },
+  codeLink: { alignItems: "center", marginTop: 18 },
+  codeLinkText: { color: "#8B6914", fontSize: 15, fontWeight: "700" },
   pressed: { opacity: 0.85 },
   dis: { opacity: 0.7 },
 });
