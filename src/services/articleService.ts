@@ -1,5 +1,6 @@
 import api from './api';
 import { Articulo, ArticuloInput } from '../types';
+import { Platform } from 'react-native';
 
 const normalizeArticulo = (data: any): Articulo => ({
   id: data?.id ?? data?.identificador,
@@ -20,7 +21,7 @@ const normalizeArticulo = (data: any): Articulo => ({
 
 export const articleService = {
   /** Publicar un artículo para subasta (multipart) */
-  async publicar(data: ArticuloInput): Promise<void> {
+  async publicar(data: ArticuloInput): Promise<Articulo> {
     const formData = new FormData();
     formData.append('descripcion', data.descripcion);
     if (data.historia) formData.append('historia', data.historia);
@@ -29,27 +30,46 @@ export const articleService = {
     formData.append('esPropietario', String(data.esPropietario));
     formData.append('declaraOrigenLicito', String(data.declaraOrigenLicito));
 
-    data.fotos.forEach((uri, i) => {
-      formData.append('fotos', {
-        uri,
-        name: `foto_${i}.jpg`,
-        type: 'image/jpeg',
-      } as unknown as Blob);
-    });
-
-    if (data.documentacionOrigen) {
-      data.documentacionOrigen.forEach((uri, i) => {
-        formData.append('documentacionOrigen', {
+    for (const [i, uri] of data.fotos.entries()) {
+      const name = `foto_${i}.jpg`;
+      if (Platform.OS === 'web') {
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        formData.append('fotos', blob, name);
+      } else {
+        formData.append('fotos', {
           uri,
-          name: `doc_${i}.pdf`,
-          type: 'application/pdf',
+          name,
+          type: 'image/jpeg',
         } as unknown as Blob);
-      });
+      }
     }
 
-    await api.post('/articulos', formData, {
+    if (data.documentacionOrigen) {
+      for (const [i, uri] of data.documentacionOrigen.entries()) {
+        const name = `doc_${i}.pdf`;
+        if (Platform.OS === 'web') {
+          const response = await fetch(uri);
+          const blob = await response.blob();
+          formData.append('documentacionOrigen', blob, name);
+        } else {
+          formData.append('documentacionOrigen', {
+            uri,
+            name,
+            type: 'application/pdf',
+          } as unknown as Blob);
+        }
+      }
+    }
+
+    const response = await api.post('/articulos', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
+    const articulo = normalizeArticulo(response.data);
+    if (!articulo.id) {
+      throw new Error('La API no devolvió el artículo creado.');
+    }
+    return articulo;
   },
 
   /** Listar artículos publicados por el usuario */
