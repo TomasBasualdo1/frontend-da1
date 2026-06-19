@@ -29,6 +29,7 @@ export default function ConsignarScreen() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Form state
   const [titulo, setTitulo] = useState("");
@@ -67,6 +68,7 @@ export default function ConsignarScreen() {
   };
 
   const handleNext = () => {
+    setSubmitError(null);
     if (step === 1) {
       if (!titulo.trim() || !categoria || !descripcion.trim()) {
         Alert.alert(
@@ -95,6 +97,7 @@ export default function ConsignarScreen() {
   };
 
   const handleBack = () => {
+    setSubmitError(null);
     if (step > 1) setStep((prev) => prev - 1);
   };
 
@@ -105,6 +108,7 @@ export default function ConsignarScreen() {
     }
 
     setLoading(true);
+    setSubmitError(null);
     try {
       await articleService.publicar({
         descripcion: `${titulo} - ${descripcion}`,
@@ -118,7 +122,10 @@ export default function ConsignarScreen() {
       // Move to success step
       setStep(4);
     } catch (e) {
-      Alert.alert("Error", "No se pudo enviar el artículo.");
+      const message =
+        e instanceof Error ? e.message : "No se pudo enviar el artículo.";
+      setSubmitError(message);
+      Alert.alert("Error", message);
     } finally {
       setLoading(false);
     }
@@ -361,6 +368,12 @@ export default function ConsignarScreen() {
                   ))}
                 </ScrollView>
               )}
+
+              {submitError && (
+                <View style={st.errorBanner}>
+                  <Text style={st.errorText}>{submitError}</Text>
+                </View>
+              )}
             </View>
           )}
 
@@ -540,6 +553,21 @@ const st = StyleSheet.create({
     color: "#1A1A2E",
     fontWeight: "600",
     lineHeight: 18,
+  },
+  errorBanner: {
+    backgroundColor: "#FEE2E2",
+    borderWidth: 1,
+    borderColor: "#FCA5A5",
+    borderRadius: 8,
+    marginTop: 18,
+    padding: 12,
+  },
+  errorText: {
+    color: "#991B1B",
+    fontSize: 13,
+    fontWeight: "600",
+    lineHeight: 18,
+    textAlign: "center",
   },
   uploadBox: {
     height: 140,
