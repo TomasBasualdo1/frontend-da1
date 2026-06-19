@@ -10,6 +10,39 @@ export interface SubastaListado {
   moneda: Moneda;
 }
 
+export interface SubastaCreate {
+  fecha: string;
+  hora: string;
+  categoria: Categoria;
+  moneda: Moneda;
+  subastadorId?: number;
+  ubicacion?: string;
+  capacidadAsistentes?: number;
+  tieneDeposito?: boolean;
+  seguridadPropia?: boolean;
+}
+
+export interface SubastaCreated extends SubastaListado {
+  catalogoId?: number;
+}
+
+export interface CatalogoItemInput {
+  productoId?: number;
+  articuloId?: number;
+  precioBase: number;
+  comision: number;
+}
+
+export interface CatalogoItemCreated {
+  id: number;
+  subastaId: number;
+  catalogoId: number;
+  productoId: number;
+  precioBase: number;
+  comision: number;
+  subastado: 'si' | 'no';
+}
+
 export interface ItemCatalogo {
   id: number;
   descripcion: string;
