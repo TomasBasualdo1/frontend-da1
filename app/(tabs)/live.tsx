@@ -104,11 +104,16 @@ export default function LiveScreen() {
       } : null);
       setCustomBid("");
       // Add to local historial
-      setHistorial((prev) => [{
-        id: res.pujaId, usuarioId: 0, itemId: currentItem.id,
-        importe, moneda: res.moneda, fechaHora: new Date().toISOString(),
-        esGanadoraParcial: res.esGanadoraParcial,
-      }, ...prev]);
+      setHistorial((prev) => {
+        const updatedPrev = res.esGanadoraParcial
+          ? prev.map((p) => ({ ...p, esGanadoraParcial: false }))
+          : prev;
+        return [{
+          id: res.pujaId, usuarioId: 0, itemId: currentItem.id,
+          importe, moneda: res.moneda, fechaHora: new Date().toISOString(),
+          esGanadoraParcial: res.esGanadoraParcial,
+        }, ...updatedPrev];
+      });
       if (res.esGanadoraParcial) Alert.alert("¡Puja líder!", "Tu oferta es la más alta por ahora.");
     } catch (e: any) {
       const s = e?.response?.status;
@@ -345,7 +350,7 @@ export default function LiveScreen() {
                 <View key={puja.id || i} style={[st.feedItem, i === 0 && st.feedItemTop]}>
                   <View style={st.feedUser}>
                     <Text style={st.feedUserName}>
-                      {puja.usuarioId === 0 ? "Vos" : `Usuario ${puja.usuarioId}`}
+                      {(puja.usuarioId === 0 || (user && puja.usuarioId === user.id)) ? "Vos" : `Usuario ${puja.usuarioId}`}
                     </Text>
                     {puja.esGanadoraParcial && (
                       <View style={st.winningBadge}>
