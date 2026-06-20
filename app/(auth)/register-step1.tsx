@@ -101,8 +101,8 @@ export default function RegisterStep1Screen() {
       });
       Alert.alert(
         "¡Solicitud enviada!",
-        "Te enviamos un email con el código para completar tu registro. Revisá tu bandeja de entrada.",
-        [{ text: "OK", onPress: () => router.replace("/(auth)/register-step2") }]
+        "La empresa revisará tus datos y, si sos aprobado, vas a recibir un email con el código para completar el registro.",
+        [{ text: "OK", onPress: () => router.replace("/(auth)/login") }]
       );
     } catch (error: any) {
       const status = error?.response?.status;
