@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Image, TextInput, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Image, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -233,7 +233,17 @@ export default function ProfileScreen() {
   return (
     <View style={s.container}>
       <SafeAreaView style={{ flex: 1 }}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
+        >
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={s.scroll}
+            keyboardDismissMode="on-drag"
+            keyboardShouldPersistTaps="handled"
+            alwaysBounceVertical={true}
+          >
           {/* Header */}
           <View style={s.profileHeader}>
             <Text style={s.headerTitle}>
@@ -729,9 +739,10 @@ export default function ProfileScreen() {
             </View>
           )}
         </ScrollView>
-      </SafeAreaView>
-    </View>
-  );
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  </View>
+);
 }
 
 function InfoRow({ icon, label, value }: { icon: string; label: string; value: string }) {
