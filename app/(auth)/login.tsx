@@ -89,6 +89,7 @@ export default function LoginScreen() {
             contentContainerStyle={styles.scroll}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
           >
             {/* Header */}
             <Pressable style={styles.backButton} onPress={() => router.back()}>

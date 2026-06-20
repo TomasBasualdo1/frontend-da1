@@ -134,6 +134,7 @@ export default function RegisterStep1Screen() {
             contentContainerStyle={styles.scroll}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
           >
             {/* Header */}
             <View style={styles.headerRow}>

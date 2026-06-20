@@ -105,6 +105,7 @@ export default function RegisterStep2Screen() {
           <ScrollView
             contentContainerStyle={s.scroll}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
           >
             <View style={s.headerRow}>
               <Pressable style={s.back} onPress={() => router.back()}>

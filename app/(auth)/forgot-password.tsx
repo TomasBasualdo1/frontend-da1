@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, Alert, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, Alert, ActivityIndicator, TouchableWithoutFeedback, Keyboard, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -47,31 +47,47 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <View style={s.container}>
-      <SafeAreaView style={{ flex: 1, paddingHorizontal: 28 }}>
-        <Pressable style={s.back} onPress={() => router.back()}>
-          <MaterialIcons name="arrow-back" size={24} color="#1A1A2E" />
-        </Pressable>
-        <View style={s.icon}><MaterialIcons name="email" size={36} color="#8B6914" /></View>
-        <Text style={s.title}>Recuperar Contraseña</Text>
-        <Text style={s.sub}>Ingresá tu email y te enviaremos un enlace para restablecer tu contraseña</Text>
-        <View style={s.group}>
-          <Text style={s.label}>Email</Text>
-          <TextInput style={s.input} placeholder="tu@email.com" placeholderTextColor="#9CA3AF" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} />
-        </View>
-        <Pressable style={({ pressed }) => [s.btn, pressed && s.pressed, loading && s.dis]} onPress={handleSubmit} disabled={loading}>
-          {loading ? <ActivityIndicator color="#FFF" /> : <Text style={s.btnText}>Enviar enlace</Text>}
-        </Pressable>
-        <Pressable style={s.codeLink} onPress={() => router.push("/(auth)/reset-password")}>
-          <Text style={s.codeLinkText}>Ya tengo un código</Text>
-        </Pressable>
-      </SafeAreaView>
-    </View>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={s.container}>
+        <SafeAreaView style={{ flex: 1 }}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={{ flex: 1 }}
+          >
+            <ScrollView
+              contentContainerStyle={s.scroll}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              alwaysBounceVertical={true}
+              showsVerticalScrollIndicator={false}
+            >
+              <Pressable style={s.back} onPress={() => router.back()}>
+                <MaterialIcons name="arrow-back" size={24} color="#1A1A2E" />
+              </Pressable>
+              <View style={s.icon}><MaterialIcons name="email" size={36} color="#8B6914" /></View>
+              <Text style={s.title}>Recuperar Contraseña</Text>
+              <Text style={s.sub}>Ingresá tu email y te enviaremos un enlace para restablecer tu contraseña</Text>
+              <View style={s.group}>
+                <Text style={s.label}>Email</Text>
+                <TextInput style={s.input} placeholder="tu@email.com" placeholderTextColor="#9CA3AF" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} />
+              </View>
+              <Pressable style={({ pressed }) => [s.btn, pressed && s.pressed, loading && s.dis]} onPress={handleSubmit} disabled={loading}>
+                {loading ? <ActivityIndicator color="#FFF" /> : <Text style={s.btnText}>Enviar enlace</Text>}
+              </Pressable>
+              <Pressable style={s.codeLink} onPress={() => router.push("/(auth)/reset-password")}>
+                <Text style={s.codeLinkText}>Ya tengo un código</Text>
+              </Pressable>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF8F0" },
+  scroll: { flexGrow: 1, paddingHorizontal: 28, paddingBottom: 40 },
   center: { flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 28 },
   back: { width: 44, height: 44, borderRadius: 14, backgroundColor: "#FFFCF7", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "#F0EBE3", marginTop: 8, marginBottom: 32 },
   icon: { width: 72, height: 72, borderRadius: 22, backgroundColor: "rgba(139,105,20,0.08)", justifyContent: "center", alignItems: "center", alignSelf: "center", marginBottom: 20, borderWidth: 1, borderColor: "rgba(139,105,20,0.12)" },

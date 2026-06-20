@@ -76,6 +76,7 @@ export default function ResetPasswordScreen() {
             contentContainerStyle={s.scroll}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
+            keyboardDismissMode="on-drag"
           >
             <Pressable style={s.back} onPress={() => router.back()}>
               <MaterialIcons name="arrow-back" size={24} color="#1A1A2E" />
