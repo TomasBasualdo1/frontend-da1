@@ -214,6 +214,8 @@ export default function SubastasScreen() {
           renderItem={renderCard}
           contentContainerStyle={st.list}
           showsVerticalScrollIndicator={false}
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
