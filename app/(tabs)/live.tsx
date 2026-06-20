@@ -14,10 +14,37 @@ const QUICK_BIDS = [
   { label: "+20%", pct: 0.20 },
 ];
 
+const CATEG_LABELS: Record<string, string> = {
+  comun: "Común",
+  especial: "Especial",
+  plata: "Plata",
+  oro: "Oro",
+  platino: "Platino",
+};
+
+const CATEG_COLORS: Record<string, string> = {
+  comun: "#6B7280",
+  especial: "#2563EB",
+  plata: "#94A3B8",
+  oro: "#D97706",
+  platino: "#7C3AED",
+};
+
+const CATEG_PESO: Record<string, number> = {
+  comun: 1,
+  especial: 2,
+  plata: 3,
+  oro: 4,
+  platino: 5,
+};
+
 export default function LiveScreen() {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [subastas, setSubastas] = useState<SubastaListado[]>([]);
+  
+  const userCategory = (user?.categoria || "comun").toLowerCase();
+  const userWeight = CATEG_PESO[userCategory] || 1;
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [detalle, setDetalle] = useState<SubastaDetalle | null>(null);
   const [currentItem, setCurrentItem] = useState<ItemCatalogo | null>(null);
@@ -47,7 +74,9 @@ export default function LiveScreen() {
       auctionService.getHistorial(id).then(setHistorial).catch(() => {});
     } catch (e: any) {
       const s = e?.response?.status;
-      if (s === 403) Alert.alert("Acceso denegado", "No cumplís los requisitos para esta subasta.");
+      const detail = e?.response?.data?.detail;
+      const errorMsg = typeof detail === "string" ? detail : "No cumplís los requisitos para esta subasta.";
+      if (s === 403) Alert.alert("Acceso denegado", errorMsg);
       else if (s === 409) Alert.alert("Error", "Ya estás conectado a otra subasta.");
       else Alert.alert("Error", "No se pudo conectar a la subasta.");
     }
@@ -83,8 +112,10 @@ export default function LiveScreen() {
       if (res.esGanadoraParcial) Alert.alert("¡Puja líder!", "Tu oferta es la más alta por ahora.");
     } catch (e: any) {
       const s = e?.response?.status;
+      const detail = e?.response?.data?.detail;
+      const errorMsg = typeof detail === "string" ? detail : "No cumplís los requisitos.";
       if (s === 400) Alert.alert("Puja inválida", "El monto está fuera de los límites permitidos.");
-      else if (s === 403) Alert.alert("No autorizado", "No cumplís los requisitos.");
+      else if (s === 403) Alert.alert("No autorizado", errorMsg);
       else if (s === 409) Alert.alert("Conflicto", "Otra puja en proceso. Reintentá.");
       else Alert.alert("Error", "No se pudo enviar la puja.");
     } finally { setSending(false); }
@@ -135,19 +166,53 @@ export default function LiveScreen() {
             data={subastas}
             keyExtractor={(i) => String(i.id)}
             contentContainerStyle={st.lobbyList}
-            renderItem={({ item }) => (
-              <Pressable
-                style={({ pressed }) => [st.lobbyCard, pressed && { opacity: 0.9 }]}
-                onPress={() => joinSubasta(item.id)}
-              >
-                <View style={st.lobbyDot} />
-                <View style={{ flex: 1 }}>
-                  <Text style={st.lobbyCardTitle}>Subasta #{item.id}</Text>
-                  <Text style={st.lobbyCardSub}>{item.fecha} · {item.hora} · {item.moneda}</Text>
-                </View>
-                <MaterialIcons name="play-circle-outline" size={32} color="#1A1A2E" />
-              </Pressable>
-            )}
+            renderItem={({ item }) => {
+              const subastaCategory = (item.categoria || "comun").toLowerCase();
+              const subastaWeight = CATEG_PESO[subastaCategory] || 1;
+              const isLocked = userWeight < subastaWeight;
+
+              return (
+                <Pressable
+                  style={({ pressed }) => [st.lobbyPressable, pressed && { opacity: 0.7 }]}
+                  onPress={() => {
+                    if (isLocked) {
+                      Alert.alert(
+                        "Categoría Insuficiente",
+                        `Esta subasta requiere nivel ${CATEG_LABELS[subastaCategory] || subastaCategory}.\nTu nivel actual es ${CATEG_LABELS[userCategory] || userCategory}.`
+                      );
+                    } else {
+                      joinSubasta(item.id);
+                    }
+                  }}
+                >
+                  <View style={st.lobbyRow}>
+                    <View style={[st.lobbyDot, { backgroundColor: isLocked ? "#9CA3AF" : "#059669" }]} />
+                    
+                    <View style={st.lobbyTextContainer}>
+                      <View style={st.lobbyTitleRow}>
+                        <Text style={[st.lobbyCardTitle, isLocked && { color: "#6B7280" }]}>
+                          Subasta #{item.id}
+                        </Text>
+                        <View style={[st.categBadge, { backgroundColor: CATEG_COLORS[subastaCategory] + "15" }]}>
+                          <Text style={[st.categBadgeText, { color: CATEG_COLORS[subastaCategory] }]}>
+                            {CATEG_LABELS[subastaCategory] || item.categoria}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={st.lobbyCardSub}>{item.fecha} · {item.hora} · {item.moneda}</Text>
+                    </View>
+
+                    <View style={st.lobbyIconContainer}>
+                      {isLocked ? (
+                        <MaterialIcons name="lock-outline" size={24} color="#9CA3AF" />
+                      ) : (
+                        <MaterialIcons name="play-circle-outline" size={32} color="#1A1A2E" />
+                      )}
+                    </View>
+                  </View>
+                </Pressable>
+              );
+            }}
             ListEmptyComponent={
               <View style={st.center}>
                 <MaterialIcons name="event-busy" size={48} color="#E5DDD0" />
@@ -313,11 +378,52 @@ const st = StyleSheet.create({
   lobbyHeader: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 12 },
   lobbyTitle: { fontSize: 24, fontWeight: "800", color: "#1A1A2E" },
   lobbySub: { fontSize: 14, color: "#6B7280", marginTop: 4 },
-  lobbyList: { paddingHorizontal: 24, gap: 12 },
-  lobbyCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFF", borderRadius: 16, padding: 18, borderWidth: 1, borderColor: "#F0EBE3", gap: 14 },
-  lobbyDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#059669" },
-  lobbyCardTitle: { fontSize: 16, fontWeight: "700", color: "#1A1A2E" },
-  lobbyCardSub: { fontSize: 13, color: "#6B7280", marginTop: 2 },
+  lobbyList: { paddingHorizontal: 24, gap: 16 },
+  lobbyPressable: {
+    paddingVertical: 8,
+  },
+  lobbyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  lobbyDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  lobbyTextContainer: {
+    flex: 1,
+    gap: 4,
+  },
+  lobbyTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  lobbyCardTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1A1A2E",
+  },
+  categBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  categBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  lobbyCardSub: {
+    fontSize: 13,
+    color: "#6B7280",
+  },
+  lobbyIconContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+    width: 40,
+  },
 
   // Live header
   liveHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingVertical: 12 },
@@ -372,7 +478,7 @@ const st = StyleSheet.create({
   feedCount: { flexDirection: "row", alignItems: "center", gap: 4 },
   feedCountText: { fontSize: 13, color: "#6B7280" },
   feedEmpty: { fontSize: 13, color: "#9CA3AF", textAlign: "center", paddingVertical: 20 },
-  feedItem: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#F0EBE3" },
+  feedItem: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#F0EBE3", marginBottom: 8 },
   feedItemTop: { backgroundColor: "#F0FDF4", marginHorizontal: -20, paddingHorizontal: 20, borderRadius: 10 },
   feedUser: { flexDirection: "row", alignItems: "center", gap: 8 },
   feedUserName: { fontSize: 14, fontWeight: "600", color: "#1A1A2E" },
