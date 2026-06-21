@@ -104,11 +104,16 @@ export default function LiveScreen() {
       } : null);
       setCustomBid("");
       // Add to local historial
-      setHistorial((prev) => [{
-        id: res.pujaId, usuarioId: 0, itemId: currentItem.id,
-        importe, moneda: res.moneda, fechaHora: new Date().toISOString(),
-        esGanadoraParcial: res.esGanadoraParcial,
-      }, ...prev]);
+      setHistorial((prev) => {
+        const updatedPrev = res.esGanadoraParcial
+          ? prev.map((p) => p.itemId === currentItem.id ? { ...p, esGanadoraParcial: false } : p)
+          : prev;
+        return [{
+          id: res.pujaId, usuarioId: 0, itemId: currentItem.id,
+          importe, moneda: res.moneda, fechaHora: new Date().toISOString(),
+          esGanadoraParcial: res.esGanadoraParcial,
+        }, ...updatedPrev];
+      });
       if (res.esGanadoraParcial) Alert.alert("¡Puja líder!", "Tu oferta es la más alta por ahora.");
     } catch (e: any) {
       const s = e?.response?.status;
@@ -334,18 +339,23 @@ export default function LiveScreen() {
               <Text style={st.feedTitle}>Pujas en Tiempo Real</Text>
               <View style={st.feedCount}>
                 <MaterialIcons name="trending-up" size={14} color="#6B7280" />
-                <Text style={st.feedCountText}>{historial.length} pujas</Text>
+                <Text style={st.feedCountText}>
+                  {historial.filter((p) => p.itemId === currentItem?.id).length} pujas
+                </Text>
               </View>
             </View>
 
-            {historial.length === 0 ? (
+            {historial.filter((p) => p.itemId === currentItem?.id).length === 0 ? (
               <Text style={st.feedEmpty}>Aún no hay pujas para este ítem</Text>
             ) : (
-              historial.slice(0, 10).map((puja, i) => (
+              historial
+                .filter((p) => p.itemId === currentItem?.id)
+                .slice(0, 10)
+                .map((puja, i) => (
                 <View key={puja.id || i} style={[st.feedItem, i === 0 && st.feedItemTop]}>
                   <View style={st.feedUser}>
                     <Text style={st.feedUserName}>
-                      {puja.usuarioId === 0 ? "Vos" : `Usuario ${puja.usuarioId}`}
+                      {(puja.usuarioId === 0 || (user && puja.usuarioId === user.id)) ? "Vos" : `Usuario ${puja.usuarioId}`}
                     </Text>
                     {puja.esGanadoraParcial && (
                       <View style={st.winningBadge}>
