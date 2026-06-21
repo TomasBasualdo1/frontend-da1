@@ -1,28 +1,27 @@
-import React, { useState, useEffect, useRef } from "react";
+import { MaterialIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  Image,
   ActivityIndicator,
-  ScrollView,
   Animated,
   Dimensions,
+  Image,
   Platform,
+  Pressable,
+  ScrollView,
   StatusBar,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../../../src/context/AuthContext";
 import { auctionService } from "../../../src/services";
 import {
+  Categoria,
   SubastaDetalle,
   SubastaDetallePublica,
-  ItemCatalogo,
-  Categoria,
 } from "../../../src/types";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -35,7 +34,10 @@ const CATEG_LABELS: Record<Categoria, string> = {
   platino: "Platino",
 };
 
-const CATEG_COLORS: Record<Categoria, { bg: string; text: string; border: string }> = {
+const CATEG_COLORS: Record<
+  Categoria,
+  { bg: string; text: string; border: string }
+> = {
   comun: { bg: "#F3F4F6", text: "#374151", border: "#E5E7EB" },
   especial: { bg: "#EFF6FF", text: "#1D4ED8", border: "#BFDBFE" },
   plata: { bg: "#F1F5F9", text: "#475569", border: "#CBD5E1" },
@@ -63,13 +65,28 @@ function LiveDot() {
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1.6, duration: 800, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: true }),
-      ])
+        Animated.timing(pulse, {
+          toValue: 1.6,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]),
     ).start();
   }, [pulse]);
   return (
-    <View style={{ width: 12, height: 12, justifyContent: "center", alignItems: "center" }}>
+    <View
+      style={{
+        width: 12,
+        height: 12,
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
       <Animated.View
         style={{
           position: "absolute",
@@ -80,7 +97,14 @@ function LiveDot() {
           transform: [{ scale: pulse }],
         }}
       />
-      <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: "#EF4444" }} />
+      <View
+        style={{
+          width: 7,
+          height: 7,
+          borderRadius: 3.5,
+          backgroundColor: "#EF4444",
+        }}
+      />
     </View>
   );
 }
@@ -88,7 +112,11 @@ function LiveDot() {
 function formatDate(fecha: string): string {
   try {
     const d = new Date(fecha);
-    return d.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
+    return d.toLocaleDateString("es-AR", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
   } catch {
     return fecha;
   }
@@ -107,7 +135,9 @@ export default function SubastaDetalleScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isAuthenticated } = useAuth();
-  const [subasta, setSubasta] = useState<SubastaDetalle | SubastaDetallePublica | null>(null);
+  const [subasta, setSubasta] = useState<
+    SubastaDetalle | SubastaDetallePublica | null
+  >(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -118,7 +148,10 @@ export default function SubastaDetalleScreen() {
           ? await auctionService.getDetalle(Number(id))
           : await auctionService.getPublicaDetalle(Number(id));
         setSubasta(data);
-      } catch {} finally { setLoading(false); }
+      } catch {
+      } finally {
+        setLoading(false);
+      }
     };
     load();
   }, [id, isAuthenticated]);
@@ -149,12 +182,19 @@ export default function SubastaDetalleScreen() {
 
   return (
     <View style={st.container}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      
+      <StatusBar
+        barStyle="light-content"
+        translucent
+        backgroundColor="transparent"
+      />
+
       {/* ── Fixed Premium Header (Overlay) ── */}
       <SafeAreaView style={st.headerSafeArea} edges={["top"]}>
         <View style={st.headerRow}>
-          <Pressable onPress={() => router.back()} style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
+          <Pressable
+            onPress={() => router.back()}
+            style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+          >
             <View style={st.backBtnCircle}>
               <MaterialIcons name="arrow-back" size={22} color="#1A1A2E" />
             </View>
@@ -164,7 +204,10 @@ export default function SubastaDetalleScreen() {
         </View>
       </SafeAreaView>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={st.scrollContainer}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={st.scrollContainer}
+      >
         {/* ── Cover Hero Image ── */}
         <View style={st.heroWrap}>
           <Image source={{ uri: coverImg }} style={st.heroImg} />
@@ -183,8 +226,20 @@ export default function SubastaDetalleScreen() {
           <View style={st.infoCard}>
             <View style={st.cardHeaderRow}>
               {/* Category */}
-              <View style={[st.categChip, { backgroundColor: catColors.bg, borderColor: catColors.border }]}>
-                <MaterialIcons name={CATEG_ICONS[subasta.categoria] as any} size={11} color={catColors.text} />
+              <View
+                style={[
+                  st.categChip,
+                  {
+                    backgroundColor: catColors.bg,
+                    borderColor: catColors.border,
+                  },
+                ]}
+              >
+                <MaterialIcons
+                  name={CATEG_ICONS[subasta.categoria] as any}
+                  size={11}
+                  color={catColors.text}
+                />
                 <Text style={[st.categText, { color: catColors.text }]}>
                   {CATEG_LABELS[subasta.categoria]}
                 </Text>
@@ -233,7 +288,11 @@ export default function SubastaDetalleScreen() {
 
               <View style={st.detailItem}>
                 <View style={st.iconContainer}>
-                  <MaterialIcons name="monetization-on" size={18} color="#8B6914" />
+                  <MaterialIcons
+                    name="monetization-on"
+                    size={18}
+                    color="#8B6914"
+                  />
                 </View>
                 <View>
                   <Text style={st.detailLabel}>Moneda de Ofertas</Text>
@@ -252,22 +311,34 @@ export default function SubastaDetalleScreen() {
         {/* ── Catalog Section ── */}
         <View style={st.catalogSection}>
           <Text style={st.sectionTitle}>
-            Catálogo de Piezas <Text style={st.sectionTitleCount}>({subasta.catalogo?.length || 0})</Text>
+            Catálogo de Piezas{" "}
+            <Text style={st.sectionTitleCount}>
+              ({subasta.catalogo?.length || 0})
+            </Text>
           </Text>
 
           {subasta.catalogo?.map((item: any, index: number) => {
             const hasPhotos = item.fotos && item.fotos.length > 0;
-            const itemImg = hasPhotos ? item.fotos[0] : COVER_IMAGES[index % COVER_IMAGES.length];
+            const itemImg = hasPhotos
+              ? item.fotos[0]
+              : COVER_IMAGES[index % COVER_IMAGES.length];
             return (
               <View key={item.id} style={st.itemCard}>
                 {/* Product Photo Slider or Single Photo */}
                 <View style={st.itemPhotoWrap}>
                   <Image source={{ uri: itemImg }} style={st.itemPhoto} />
                   {/* Status Badge on Photo */}
-                  <View style={[
-                    st.itemStatusTag,
-                    { backgroundColor: item.subastado === "si" ? "rgba(239,68,68,0.9)" : "rgba(16,185,129,0.9)" }
-                  ]}>
+                  <View
+                    style={[
+                      st.itemStatusTag,
+                      {
+                        backgroundColor:
+                          item.subastado === "si"
+                            ? "rgba(239,68,68,0.9)"
+                            : "rgba(16,185,129,0.9)",
+                      },
+                    ]}
+                  >
                     <Text style={st.itemStatusTagText}>
                       {item.subastado === "si" ? "VENDIDO" : "DISPONIBLE"}
                     </Text>
@@ -285,19 +356,20 @@ export default function SubastaDetalleScreen() {
                       <View style={st.priceCol}>
                         <Text style={st.priceLabel}>PRECIO BASE</Text>
                         <Text style={st.priceVal}>
-                          {subasta.moneda === "USD" ? "USD" : "$"} {item.precioBase.toLocaleString("es-AR")}
+                          {subasta.moneda === "USD" ? "USD" : "$"}{" "}
+                          {item.precioBase.toLocaleString("es-AR")}
                         </Text>
                       </View>
                     )}
 
                     <View style={st.priceCol}>
-                      <Text style={[st.priceLabel, { color: "#8B6914" }]}>MEJOR OFERTA</Text>
+                      <Text style={[st.priceLabel, { color: "#8B6914" }]}>
+                        MEJOR OFERTA
+                      </Text>
                       <Text style={[st.priceVal, st.priceOfferVal]}>
-                        {item.mejorOfertaActual != null ? (
-                          `${subasta.moneda === "USD" ? "USD" : "$"} ${item.mejorOfertaActual.toLocaleString("es-AR")}`
-                        ) : (
-                          "—"
-                        )}
+                        {item.mejorOfertaActual != null
+                          ? `${subasta.moneda === "USD" ? "USD" : "$"} ${item.mejorOfertaActual.toLocaleString("es-AR")}`
+                          : "—"}
                       </Text>
                     </View>
                   </View>
@@ -315,16 +387,11 @@ export default function SubastaDetalleScreen() {
             onPress={() => router.push("/(tabs)/live")}
             style={({ pressed }) => [pressed && { opacity: 0.9 }]}
           >
-            <LinearGradient
-              colors={["#8B6914", "#B8941C"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={st.joinBtnGrad}
-            >
+            <View style={st.joinBtn}>
               <MaterialIcons name="live-tv" size={20} color="#FFF" />
               <Text style={st.joinBtnText}>Ingresar a la Sala en Vivo</Text>
               <LiveDot />
-            </LinearGradient>
+            </View>
           </Pressable>
         </SafeAreaView>
       )}
@@ -357,9 +424,26 @@ const SHADOW_LIGHT = Platform.select({
 
 const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF8F0" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FFF8F0", padding: 24 },
-  err: { fontSize: 16, color: "#1A1A2E", fontWeight: "700", marginTop: 12, marginBottom: 20 },
-  backBtnSimple: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10, backgroundColor: "#8B6914" },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FFF8F0",
+    padding: 24,
+  },
+  err: {
+    fontSize: 16,
+    color: "#1A1A2E",
+    fontWeight: "700",
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  backBtnSimple: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: "#8B6914",
+  },
   backBtnSimpleText: { color: "#FFF", fontWeight: "700" },
 
   /* ── Header ── */
@@ -466,7 +550,7 @@ const st = StyleSheet.create({
     gap: 4,
   },
   categText: { fontSize: 11, fontWeight: "700" },
-  
+
   liveStatusBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -479,7 +563,7 @@ const st = StyleSheet.create({
     gap: 6,
   },
   liveStatusText: { fontSize: 10, fontWeight: "800", color: "#EF4444" },
-  
+
   closedStatusBadge: {
     backgroundColor: "#F3F4F6",
     paddingHorizontal: 10,
@@ -508,10 +592,25 @@ const st = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#FEF3E2",
   },
-  detailLabel: { fontSize: 11, color: "#9CA3AF", fontWeight: "600", textTransform: "uppercase" },
-  detailValue: { fontSize: 14, color: "#1A1A2E", fontWeight: "700", marginTop: 2 },
-  
-  currencyRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", marginTop: 2 },
+  detailLabel: {
+    fontSize: 11,
+    color: "#9CA3AF",
+    fontWeight: "600",
+    textTransform: "uppercase",
+  },
+  detailValue: {
+    fontSize: 14,
+    color: "#1A1A2E",
+    fontWeight: "700",
+    marginTop: 2,
+  },
+
+  currencyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    marginTop: 2,
+  },
   currencyChip: {
     backgroundColor: "#EFF6FF",
     paddingHorizontal: 6,
@@ -625,7 +724,7 @@ const st = StyleSheet.create({
     paddingBottom: Platform.OS === "ios" ? 8 : 16,
     backgroundColor: "transparent",
   },
-  joinBtnGrad: {
+  joinBtn: {
     height: 56,
     borderRadius: 28,
     flexDirection: "row",
@@ -633,6 +732,7 @@ const st = StyleSheet.create({
     alignItems: "center",
     gap: 10,
     paddingHorizontal: 24,
+    backgroundColor: "#9c7616",
     ...SHADOW,
   },
   joinBtnText: {

@@ -8,7 +8,27 @@ import {
 
 export default function TabLayout() {
   return (
-    <NativeTabs>
+    <NativeTabs
+      backgroundColor="#FFFFFF"
+      labelVisibilityMode="labeled"
+      rippleColor="rgba(184, 148, 28, 0.1)"
+      indicatorColor="rgba(184, 148, 28, 0.15)"
+      iconColor={{
+        default: "#6B7280",
+        selected: "#8B6914",
+      }}
+      labelStyle={{
+        default: {
+          color: "#6B7280",
+          fontSize: 12,
+        },
+        selected: {
+          color: "#8B6914",
+          fontSize: 12,
+          fontWeight: "600",
+        },
+      }}
+    >
       <NativeTabs.Trigger name="index">
         <Label>Inicio</Label>
         <Icon
