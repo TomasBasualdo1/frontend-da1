@@ -102,7 +102,7 @@ export interface Pago {
   costoEnvio: number;
   totalFinal: number;
   moneda: Moneda;
-  modoEntrega: 'envio' | 'retiro';
+  modoEntrega?: 'envio' | 'retiro' | null;
   estado: 'pendiente' | 'pagado' | 'vencido';
   fechaLimitePago: string;
 }

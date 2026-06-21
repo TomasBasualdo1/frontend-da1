@@ -395,6 +395,20 @@ export default function SubastaDetalleScreen() {
           </Pressable>
         </SafeAreaView>
       )}
+
+      {!isLive && isAuthenticated && (
+        <SafeAreaView style={st.stickyBottomArea} edges={["bottom"]}>
+          <Pressable
+            onPress={() => router.push(`/pagos/${subasta.id}` as any)}
+            style={({ pressed }) => [pressed && { opacity: 0.9 }]}
+          >
+            <View style={st.payBtn}>
+              <MaterialIcons name="receipt-long" size={20} color="#FFF" />
+              <Text style={st.joinBtnText}>Ver deuda y pagar</Text>
+            </View>
+          </Pressable>
+        </SafeAreaView>
+      )}
     </View>
   );
 }
@@ -740,5 +754,16 @@ const st = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     letterSpacing: 0.3,
+  },
+  payBtn: {
+    height: 56,
+    borderRadius: 28,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 24,
+    backgroundColor: "#1A1A2E",
+    ...SHADOW,
   },
 });
