@@ -10,11 +10,13 @@ import {
   TextInput,
   Switch,
   Platform,
+  Modal,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { auctionService } from "../../src/services";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { auctionService, adminService } from "../../src/services";
 import { Categoria, Moneda, SubastaListado } from "../../src/types";
 
 const SHADOW = Platform.select({
@@ -37,12 +39,123 @@ const CATEG_COLORS: Record<Categoria, string> = {
   platino: "#7C3AED",
 };
 
+interface DropdownItem {
+  value: string | number;
+  label: string;
+}
+
+interface CustomDropdownProps {
+  label: string;
+  selectedValue: string | number;
+  selectedLabel: string;
+  items: DropdownItem[];
+  onSelect: (value: any) => void;
+  placeholder?: string;
+}
+
+function CustomDropdown({
+  label,
+  selectedValue,
+  selectedLabel,
+  items,
+  onSelect,
+  placeholder = "Seleccionar...",
+}: CustomDropdownProps) {
+  const [modalVisible, setModalVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredItems = items.filter((item) =>
+    item.label.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  return (
+    <View style={s.dropdownContainer}>
+      <Text style={s.formLabel}>{label}</Text>
+      <Pressable onPress={() => setModalVisible(true)}>
+        <View style={s.dropdownSelectBox}>
+          <Text style={[s.dropdownText, !selectedValue && s.dropdownPlaceholderText]}>
+            {selectedLabel || placeholder}
+          </Text>
+          <MaterialIcons name="arrow-drop-down" size={24} color="#8B6914" />
+        </View>
+      </Pressable>
+
+      <Modal visible={modalVisible} animationType="fade" transparent={true}>
+        <View style={s.modalOverlay}>
+          <View style={s.modalContent}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalHeaderTitle}>{label}</Text>
+              <Pressable
+                onPress={() => {
+                  setModalVisible(false);
+                  setSearchQuery("");
+                }}
+              >
+                <MaterialIcons name="close" size={20} color="#8B6914" />
+              </Pressable>
+            </View>
+
+            {items.length > 5 && (
+              <TextInput
+                placeholder="Buscar..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                style={s.searchInput}
+                placeholderTextColor="#9CA3AF"
+              />
+            )}
+
+            <ScrollView 
+              style={{ marginTop: 4 }} 
+              contentContainerStyle={{ paddingBottom: 8 }}
+            >
+              {filteredItems.length === 0 ? (
+                <Text style={s.emptyDropdownText}>No se encontraron resultados.</Text>
+              ) : (
+                filteredItems.map((item) => {
+                  const isSelected = item.value === selectedValue;
+                  return (
+                    <Pressable
+                      key={item.value}
+                      onPress={() => {
+                        onSelect(item.value);
+                        setModalVisible(false);
+                        setSearchQuery("");
+                      }}
+                    >
+                      <View style={[s.dropdownOption, isSelected && s.dropdownOptionActive]}>
+                        <Text style={[s.dropdownOptionText, isSelected && s.dropdownOptionTextActive]}>
+                          {item.label}
+                        </Text>
+                        {isSelected && <MaterialIcons name="check" size={16} color="#8B6914" />}
+                      </View>
+                    </Pressable>
+                  );
+                })
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
 export default function AdminAuctionsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<"list" | "create" | "catalog">("list");
   const [auctions, setAuctions] = useState<SubastaListado[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Picker States
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
+  // Dropdown Options State
+  const [subastadores, setSubastadores] = useState<any[]>([]);
+  const [approvedArticles, setApprovedArticles] = useState<any[]>([]);
 
   // Create Form States
   const [fecha, setFecha] = useState(() => {
@@ -79,11 +192,75 @@ export default function AdminAuctionsScreen() {
     }
   };
 
+  const loadInitialOptions = async () => {
+    try {
+      const subList = await adminService.getSubastadores();
+      setSubastadores(subList);
+      const artList = await adminService.getApprovedNonCatalogedArticles();
+      setApprovedArticles(artList);
+    } catch (error) {
+      console.error("Error loading dropdown data:", error);
+    }
+  };
+
+  useEffect(() => {
+    loadInitialOptions();
+    loadData();
+  }, []);
+
   useEffect(() => {
     if (activeTab === "list") {
       loadData();
+    } else if (activeTab === "catalog" || activeTab === "create") {
+      loadInitialOptions();
     }
   }, [activeTab]);
+
+  const handleSelectArticle = (artId: number) => {
+    setArticuloIdInput(artId.toString());
+    const selectedArt = approvedArticles.find((a) => a.id === artId);
+    if (selectedArt) {
+      if (selectedArt.precioBasePropuesto) {
+        setPrecioBaseInput(selectedArt.precioBasePropuesto.toString());
+      }
+      if (selectedArt.comisionPropuesta) {
+        setComisionInput(selectedArt.comisionPropuesta.toString());
+      }
+    }
+  };
+
+  // Dropdown Label/Item Selectors
+  const subastadoresDropdownItems = subastadores.map((s) => ({
+    value: s.id,
+    label: `${s.nombre} (Matrícula: ${s.matricula || "N/A"}, Región: ${s.region || "N/A"})`,
+  }));
+
+  const subastasDropdownItems = auctions
+    .filter((a) => a.estado !== "cerrada")
+    .map((a) => ({
+      value: a.id,
+      label: `Subasta #${a.id} - ${a.fecha} (${a.ubicacion || "Virtual"})`,
+    }));
+
+  const articlesDropdownItems = approvedArticles.map((a) => ({
+    value: a.id,
+    label: `Artículo #${a.id} - ${a.descripcion}`,
+  }));
+
+  const selectedSubastadorObj = subastadores.find((s) => s.id === parseInt(subastadorId));
+  const selectedSubastadorLabel = selectedSubastadorObj 
+    ? selectedSubastadorObj.nombre 
+    : "";
+
+  const selectedSubastaObj = auctions.find((a) => a.id === parseInt(subastaIdInput));
+  const selectedSubastaLabel = selectedSubastaObj 
+    ? `Subasta #${selectedSubastaObj.id} (${selectedSubastaObj.fecha})` 
+    : "";
+
+  const selectedArticleObj = approvedArticles.find((a) => a.id === parseInt(articuloIdInput));
+  const selectedArticleLabel = selectedArticleObj 
+    ? `Artículo #${selectedArticleObj.id} - ${selectedArticleObj.descripcion}` 
+    : "";
 
   const handleCreateAuction = async () => {
     if (!fecha || !hora) {
@@ -301,26 +478,104 @@ export default function AdminAuctionsScreen() {
           <Text style={s.formTitle}>Registrar Nueva Subasta</Text>
 
           <View style={s.formGroup}>
-            <Text style={s.formLabel}>Fecha de Evento (YYYY-MM-DD) *:</Text>
-            <TextInput
-              placeholder="Ej. 2026-07-15"
-              value={fecha}
-              onChangeText={setFecha}
-              style={s.input}
-              placeholderTextColor="#9CA3AF"
-            />
+            <Text style={s.formLabel}>Fecha de Evento *:</Text>
+            {Platform.OS === "web" ? (
+              <input
+                type="date"
+                value={fecha}
+                onChange={(e) => setFecha(e.target.value)}
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#E5DDD0",
+                  borderRadius: 10,
+                  padding: 12,
+                  fontSize: 14,
+                  color: "#1A1A2E",
+                  backgroundColor: "#FFFFFF",
+                  fontFamily: "inherit",
+                }}
+              />
+            ) : (
+              <>
+                <Pressable onPress={() => setShowDatePicker(true)}>
+                  <View style={s.pickerTriggerBox}>
+                    <Text style={s.pickerTriggerText}>{fecha || "Seleccionar Fecha"}</Text>
+                    <MaterialIcons name="calendar-today" size={20} color="#8B6914" />
+                  </View>
+                </Pressable>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={(() => {
+                      if (!fecha) return new Date();
+                      const [y, m, d] = fecha.split("-").map(Number);
+                      return new Date(y, m - 1, d);
+                    })()}
+                    mode="date"
+                    display="default"
+                    onChange={(event, selectedDate) => {
+                      setShowDatePicker(false);
+                      if (selectedDate) {
+                        setFecha(selectedDate.toISOString().split("T")[0]);
+                      }
+                    }}
+                  />
+                )}
+              </>
+            )}
             <Text style={s.inputHelp}>Debe ser posterior a 10 días a partir de hoy.</Text>
           </View>
 
           <View style={s.formGroup}>
-            <Text style={s.formLabel}>Hora de Inicio (HH:MM:SS) *:</Text>
-            <TextInput
-              placeholder="Ej. 18:00:00"
-              value={hora}
-              onChangeText={setHora}
-              style={s.input}
-              placeholderTextColor="#9CA3AF"
-            />
+            <Text style={s.formLabel}>Hora de Inicio *:</Text>
+            {Platform.OS === "web" ? (
+              <input
+                type="time"
+                step="1"
+                value={hora}
+                onChange={(e) => setHora(e.target.value)}
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#E5DDD0",
+                  borderRadius: 10,
+                  padding: 12,
+                  fontSize: 14,
+                  color: "#1A1A2E",
+                  backgroundColor: "#FFFFFF",
+                  fontFamily: "inherit",
+                }}
+              />
+            ) : (
+              <>
+                <Pressable onPress={() => setShowTimePicker(true)}>
+                  <View style={s.pickerTriggerBox}>
+                    <Text style={s.pickerTriggerText}>
+                      {hora?.substring(0, 5) || "Seleccionar Hora"} hs
+                    </Text>
+                    <MaterialIcons name="access-time" size={20} color="#8B6914" />
+                  </View>
+                </Pressable>
+                {showTimePicker && (
+                  <DateTimePicker
+                    value={(() => {
+                      const today = new Date();
+                      const [h, min, sec] = (hora || "18:00:00").split(":").map(Number);
+                      today.setHours(h, min, sec || 0);
+                      return today;
+                    })()}
+                    mode="time"
+                    display="default"
+                    is24Hour={true}
+                    onChange={(event, selectedTime) => {
+                      setShowTimePicker(false);
+                      if (selectedTime) {
+                        const timeStr = selectedTime.toTimeString().split(" ")[0]; // HH:MM:SS
+                        setHora(timeStr);
+                      }
+                    }}
+                  />
+                )}
+              </>
+            )}
           </View>
 
           <View style={s.formGroup}>
@@ -352,14 +607,13 @@ export default function AdminAuctionsScreen() {
           </View>
 
           <View style={s.formGroup}>
-            <Text style={s.formLabel}>ID del Subastador (Martillero) - Opcional:</Text>
-            <TextInput
-              placeholder="Ej. 900002"
-              keyboardType="numeric"
-              value={subastadorId}
-              onChangeText={setSubastadorId}
-              style={s.input}
-              placeholderTextColor="#9CA3AF"
+            <CustomDropdown
+              label="Subastador (Martillero) - Opcional:"
+              selectedValue={subastadorId ? parseInt(subastadorId) : ""}
+              selectedLabel={selectedSubastadorLabel}
+              items={subastadoresDropdownItems}
+              onSelect={(val) => setSubastadorId(val ? val.toString() : "")}
+              placeholder="Seleccione un martillero..."
             />
           </View>
 
@@ -416,26 +670,24 @@ export default function AdminAuctionsScreen() {
           </Text>
 
           <View style={s.formGroup}>
-            <Text style={s.formLabel}>ID de la Subasta *:</Text>
-            <TextInput
-              placeholder="Ej. 1"
-              keyboardType="numeric"
-              value={subastaIdInput}
-              onChangeText={setSubastaIdInput}
-              style={s.input}
-              placeholderTextColor="#9CA3AF"
+            <CustomDropdown
+              label="Subasta Destino *"
+              selectedValue={subastaIdInput ? parseInt(subastaIdInput) : ""}
+              selectedLabel={selectedSubastaLabel}
+              items={subastasDropdownItems}
+              onSelect={(val) => setSubastaIdInput(val ? val.toString() : "")}
+              placeholder="Seleccione la subasta..."
             />
           </View>
 
           <View style={s.formGroup}>
-            <Text style={s.formLabel}>ID del Artículo Aprobado *:</Text>
-            <TextInput
-              placeholder="Ej. 5"
-              keyboardType="numeric"
-              value={articuloIdInput}
-              onChangeText={setArticuloIdInput}
-              style={s.input}
-              placeholderTextColor="#9CA3AF"
+            <CustomDropdown
+              label="Artículo Aprobado *"
+              selectedValue={articuloIdInput ? parseInt(articuloIdInput) : ""}
+              selectedLabel={selectedArticleLabel}
+              items={articlesDropdownItems}
+              onSelect={handleSelectArticle}
+              placeholder="Seleccione el artículo..."
             />
             <Text style={s.inputHelp}>El artículo debe estar aprobado y con tasación aceptada.</Text>
           </View>
@@ -771,5 +1023,108 @@ const s = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     color: "#FFFFFF",
+  },
+  dropdownContainer: {
+    gap: 6,
+  },
+  dropdownSelectBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "#E5DDD0",
+    borderRadius: 10,
+    padding: 12,
+    backgroundColor: "#FFFFFF",
+  },
+  dropdownText: {
+    fontSize: 14,
+    color: "#1A1A2E",
+  },
+  dropdownPlaceholderText: {
+    color: "#9CA3AF",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    justifyContent: "center",
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#E5DDD0",
+    maxHeight: "75%",
+    padding: 20,
+    ...SHADOW,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0EBE3",
+    marginBottom: 12,
+  },
+  modalHeaderTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#1A1A2E",
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: "#E5DDD0",
+    borderRadius: 10,
+    padding: 10,
+    fontSize: 14,
+    color: "#1A1A2E",
+    backgroundColor: "#FFF8F0",
+    marginBottom: 12,
+  },
+  dropdownOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#E5DDD0",
+    padding: 14,
+    marginBottom: 8,
+  },
+  dropdownOptionActive: {
+    borderColor: "#B8941C",
+    backgroundColor: "#FDF6EC",
+  },
+  dropdownOptionText: {
+    fontSize: 13,
+    color: "#1A1A2E",
+    fontWeight: "500",
+  },
+  dropdownOptionTextActive: {
+    color: "#8B6914",
+    fontWeight: "700",
+  },
+  emptyDropdownText: {
+    fontSize: 13,
+    color: "#9CA3AF",
+    textAlign: "center",
+    marginTop: 16,
+  },
+  pickerTriggerBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "#E5DDD0",
+    borderRadius: 10,
+    padding: 12,
+    backgroundColor: "#FFFFFF",
+  },
+  pickerTriggerText: {
+    fontSize: 14,
+    color: "#1A1A2E",
   },
 });

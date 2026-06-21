@@ -118,4 +118,16 @@ export const adminService = {
   async verifyPaymentMethod(id: number, data: MedioPagoVerificacionInput): Promise<void> {
     await api.post(`/admin/medios-pago/${id}/verificar`, data);
   },
+
+  /** Listar subastadores disponibles */
+  async getSubastadores(): Promise<any[]> {
+    const response = await api.get('/admin/subastadores');
+    return Array.isArray(response.data) ? response.data : [];
+  },
+
+  /** Listar artículos aprobados y no catalogados */
+  async getApprovedNonCatalogedArticles(): Promise<any[]> {
+    const response = await api.get('/admin/articulos/aprobados-no-catalogados');
+    return Array.isArray(response.data) ? response.data : [];
+  },
 };
