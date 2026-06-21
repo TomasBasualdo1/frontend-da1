@@ -1,10 +1,11 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -28,20 +29,107 @@ import {
   UsuarioMetricas,
 } from "../../src/types";
 
-const CATEG_COLORS: Record<Categoria, string> = {
-  comun: "#6B7280",
-  especial: "#2563EB",
-  plata: "#94A3B8",
-  oro: "#D97706",
-  platino: "#7C3AED",
+const CATEG_LABELS: Record<Categoria, string> = {
+  comun: "Común",
+  especial: "Especial",
+  plata: "Plata",
+  oro: "Oro",
+  platino: "Platino",
+};
+
+const CATEG_COLORS: Record<
+  Categoria,
+  { bg: string; text: string; border: string }
+> = {
+  comun: { bg: "#F3F4F6", text: "#374151", border: "#E5E7EB" },
+  especial: { bg: "#EFF6FF", text: "#1D4ED8", border: "#BFDBFE" },
+  plata: { bg: "#F1F5F9", text: "#475569", border: "#CBD5E1" },
+  oro: { bg: "#FEF3C7", text: "#B45309", border: "#FDE68A" },
+  platino: { bg: "#F5F3FF", text: "#6D28D9", border: "#DDD6FE" },
+};
+
+const CATEG_ICONS: Record<Categoria, string> = {
+  comun: "local-offer",
+  especial: "star",
+  plata: "workspace-premium",
+  oro: "emoji-events",
+  platino: "diamond",
 };
 
 const PLACEHOLDER_IMAGES = [
-  "https://images.unsplash.com/photo-1599643478518-a784e5dc3f25?w=200&h=150&fit=crop",
-  "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=200&h=150&fit=crop",
+  "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80",
+  "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80",
+  "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&q=80",
 ];
 
 type ProfileTab = "subastas" | "perfil" | "pagos" | "stats";
+
+/* ── Pulsating Live Dot ─────────────────────────────────── */
+function LiveDot() {
+  const pulse = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1.6,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+  }, [pulse]);
+  return (
+    <View
+      style={{
+        width: 10,
+        height: 10,
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
+      <Animated.View
+        style={{
+          position: "absolute",
+          width: 10,
+          height: 10,
+          borderRadius: 5,
+          backgroundColor: "rgba(239,68,68,0.3)",
+          transform: [{ scale: pulse }],
+        }}
+      />
+      <View
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: 3,
+          backgroundColor: "#EF4444",
+        }}
+      />
+    </View>
+  );
+}
+
+function formatFecha(fecha?: string): string {
+  if (!fecha) return "";
+  try {
+    const d = new Date(fecha);
+    return (
+      d.toLocaleDateString("es-AR", {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      }) + " hs"
+    );
+  } catch {
+    return fecha;
+  }
+}
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -140,11 +228,12 @@ export default function ProfileScreen() {
       setSaving(false);
     }
   };
+
   const [metricas, setMetricas] = useState<UsuarioMetricas | null>(null);
   const [multas, setMultas] = useState<Multa[]>([]);
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [misSubastas, setMisSubastas] = useState<SubastaListado[]>([]);
-  const [tab, setTab] = useState<ProfileTab>("subastas");
+  const [tab, setTab] = useState<ProfileTab>("perfil");
   const [searchMis, setSearchMis] = useState("");
 
   // Payment form states
@@ -157,22 +246,29 @@ export default function ProfileScreen() {
   const [newPagoLimite, setNewPagoLimite] = useState("");
   const [newPagoPais, setNewPagoPais] = useState<"AR" | "US" | null>(null);
   const [showNewPaisPicker, setShowNewPaisPicker] = useState(false);
-  const [newPagoReceptora, setNewPagoReceptora] = useState(false);
   const [addingPago, setAddingPago] = useState(false);
 
   const loadAllData = async () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) {
+      setRefreshing(false);
+      return;
+    }
     try {
-      await Promise.all([
-        refreshUser(),
-        userService.getMediosPago().then(setMedios),
-        userService.getMetricas().then(setMetricas),
-        userService.getMultas().then(setMultas),
-        userService.getNotificaciones().then(setNotificaciones),
-        auctionService.getSubastas().then(setMisSubastas),
-      ]);
-    } catch (error) {
-      console.error("Error loading profile data:", error);
+      const [dataMedios, dataMultas, dataNotifs, dataMetricas, dataSubastas] =
+        await Promise.all([
+          userService.getMediosPago(),
+          userService.getMultas(),
+          userService.getNotificaciones(),
+          userService.getMetricas(),
+          auctionService.getSubastas(),
+        ]);
+      setMedios(dataMedios);
+      setMultas(dataMultas);
+      setNotificaciones(dataNotifs);
+      setMetricas(dataMetricas);
+      setMisSubastas(dataSubastas);
+    } catch (err) {
+      console.error("Error loading profile data:", err);
     } finally {
       setRefreshing(false);
     }
@@ -184,68 +280,67 @@ export default function ProfileScreen() {
 
   const handleAddMedioPago = async () => {
     if (!newPagoDatos.trim()) {
-      Alert.alert("Error", "Por favor ingresá los datos del medio de pago.");
+      Alert.alert("Error", "Los datos del medio de pago son obligatorios");
       return;
     }
-    if (newPagoTipo === "tarjeta_credito") {
-      const cleanCard = newPagoDatos.replace(/\D/g, "");
-      if (cleanCard.length !== 16) {
-        Alert.alert(
-          "Error",
-          "El número de tarjeta debe tener exactamente 16 dígitos.",
-        );
-        return;
-      }
+    if (newPagoTipo === "tarjeta_credito" && newPagoDatos.length < 16) {
+      Alert.alert("Error", "La tarjeta debe tener 16 dígitos");
+      return;
+    }
+    const limiteNum = Number(newPagoLimite);
+    if (!newPagoLimite || isNaN(limiteNum) || limiteNum <= 0) {
+      Alert.alert("Error", "Ingrese un límite de compra válido mayor a 0");
+      return;
     }
     if (newPagoTipo !== "cheque_certificado" && !newPagoPais) {
-      Alert.alert("Error", "Por favor seleccioná el país del banco.");
+      Alert.alert("Error", "Debe seleccionar el país del banco");
       return;
     }
+
     setAddingPago(true);
     try {
       await userService.addMedioPago({
         tipo: newPagoTipo,
-        datos_encriptados: newPagoDatos.trim(),
         moneda: newPagoMoneda,
-        limiteReservado: newPagoLimite ? parseFloat(newPagoLimite) : undefined,
-        paisBanco: newPagoPais || undefined,
-        esCuentaReceptora: newPagoReceptora,
+        datos_encriptados: newPagoDatos,
+        limiteReservado: limiteNum,
+        paisBanco:
+          newPagoTipo === "cheque_certificado" ? undefined : newPagoPais!,
       });
-      Alert.alert("Éxito", "Medio de pago registrado correctamente.");
+      Alert.alert("Éxito", "Medio de pago registrado correctamente");
       setShowAddPago(false);
       setNewPagoDatos("");
       setNewPagoLimite("");
       setNewPagoPais(null);
-      setNewPagoReceptora(false);
-      const freshMedios = await userService.getMediosPago();
-      setMedios(freshMedios);
-    } catch {
-      Alert.alert("Error", "No se pudo registrar el medio de pago.");
+      loadAllData();
+    } catch (err) {
+      Alert.alert("Error", "No se pudo registrar el medio de pago");
     } finally {
       setAddingPago(false);
     }
   };
 
-  const handleDeleteMedio = (id: number) => {
-    Alert.alert("Eliminar", "¿Seguro que querés eliminar este medio de pago?", [
-      { text: "Cancelar" },
-      {
-        text: "Eliminar",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await userService.deleteMedioPago(id);
-            setMedios((prev) => prev.filter((m) => m.id !== id));
-          } catch {
-            Alert.alert("Error", "No se pudo eliminar el medio de pago.");
-          }
+  const handleDeleteMedio = async (id: number) => {
+    Alert.alert(
+      "Eliminar medio de pago",
+      "¿Seguro que querés eliminar este medio de pago?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await userService.deleteMedioPago(id);
+              loadAllData();
+            } catch {
+              Alert.alert("Error", "No se pudo eliminar el medio de pago");
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
-
-  const formatFecha = (value?: string) =>
-    value ? new Date(value).toLocaleString() : "—";
 
   const handleNotificacionPress = async (id?: number) => {
     if (!id) return;
@@ -266,18 +361,35 @@ export default function ProfileScreen() {
     return { total, enVivo, proximas };
   }, [misSubastas]);
 
+  const filteredMisSubastas = useMemo(() => {
+    if (!searchMis.trim()) return misSubastas;
+    const q = searchMis.toLowerCase();
+    return misSubastas.filter(
+      (s) =>
+        s.ubicacion?.toLowerCase().includes(q) ||
+        s.categoria.toLowerCase().includes(q) ||
+        String(s.id).includes(q),
+    );
+  }, [misSubastas, searchMis]);
+
   if (!isAuthenticated) {
     return (
       <View style={s.container}>
         <SafeAreaView style={s.center}>
-          <MaterialIcons name="person-outline" size={56} color="#E5DDD0" />
+          <View style={s.emptyIconContainer}>
+            <MaterialIcons name="person-outline" size={48} color="#C4B898" />
+          </View>
           <Text style={s.emptyTitle}>Mi Perfil</Text>
-          <Text style={s.emptyText}>Iniciá sesión para ver tu perfil</Text>
+          <Text style={s.emptyText}>
+            Iniciá sesión para ver tu perfil y gestionar tus subastas
+          </Text>
           <Pressable
-            style={s.loginBtn}
+            style={({ pressed }) => [pressed && { opacity: 0.9 }]}
             onPress={() => router.push("/(auth)/welcome")}
           >
-            <Text style={s.loginBtnText}>Iniciar Sesión</Text>
+            <View style={s.loginBtn}>
+              <Text style={s.loginBtnText}>Iniciar Sesión</Text>
+            </View>
           </Pressable>
         </SafeAreaView>
       </View>
@@ -286,14 +398,70 @@ export default function ProfileScreen() {
 
   return (
     <View style={s.container}>
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={{ flex: 1 }}
         >
+          {/* Header */}
+          <View style={[s.profileHeader, { paddingHorizontal: 24 }]}>
+            <Text style={s.headerTitle}>
+              {tab === "subastas"
+                ? "Mis Subastas"
+                : tab === "pagos"
+                  ? "Pagos y Multas"
+                  : tab === "stats"
+                    ? "Métricas"
+                    : "Mi Perfil"}
+            </Text>
+          </View>
+
+          {/* Navigation Tabs (Glassmorphism layout wrapper) */}
+          <View style={[s.tabsWrapper, { paddingHorizontal: 24 }]}>
+            <View style={s.tabs}>
+              {(["perfil", "subastas", "pagos", "stats"] as ProfileTab[]).map(
+                (t) => (
+                  <Pressable
+                    key={t}
+                    style={({ pressed }) => [
+                      pressed && { opacity: 0.8 },
+                      { flex: 1 },
+                    ]}
+                    onPress={() => setTab(t)}
+                  >
+                    <View style={[s.tabBtn, tab === t && s.tabActive]}>
+                      <MaterialIcons
+                        name={
+                          t === "subastas"
+                            ? "gavel"
+                            : t === "perfil"
+                              ? "person"
+                              : t === "pagos"
+                                ? "payment"
+                                : "bar-chart"
+                        }
+                        size={13}
+                        color={tab === t ? "#8B6914" : "#9CA3AF"}
+                      />
+                      <Text style={[s.tabText, tab === t && s.tabTextActive]}>
+                        {t === "subastas"
+                          ? "Subastas"
+                          : t === "perfil"
+                            ? "Perfil"
+                            : t === "pagos"
+                              ? "Pagos"
+                              : "Métricas"}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ),
+              )}
+            </View>
+          </View>
+
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={s.scroll}
+            contentContainerStyle={[s.scroll, { paddingHorizontal: 24 }]}
             keyboardDismissMode="on-drag"
             keyboardShouldPersistTaps="handled"
             alwaysBounceVertical={true}
@@ -304,77 +472,31 @@ export default function ProfileScreen() {
                   setRefreshing(true);
                   loadAllData();
                 }}
-                tintColor="#1A1A2E"
-                colors={["#1A1A2E"]}
-                titleColor="#1A1A2E"
+                tintColor="#8B6914"
               />
             }
           >
-            {/* Header */}
-            <View style={s.profileHeader}>
-              <Text style={s.headerTitle}>
-                {tab === "subastas"
-                  ? "Mis Subastas"
-                  : tab === "pagos"
-                    ? "Pagos"
-                    : tab === "stats"
-                      ? "Métricas"
-                      : "Mi Perfil"}
-              </Text>
-            </View>
-
-            {/* Tabs */}
-            <View style={s.tabs}>
-              {(["subastas", "perfil", "pagos", "stats"] as ProfileTab[]).map(
-                (t) => (
-                  <Pressable
-                    key={t}
-                    style={[s.tabBtn, tab === t && s.tabActive]}
-                    onPress={() => setTab(t)}
-                  >
-                    <MaterialIcons
-                      name={
-                        t === "subastas"
-                          ? "gavel"
-                          : t === "perfil"
-                            ? "person"
-                            : t === "pagos"
-                              ? "payment"
-                              : "bar-chart"
-                      }
-                      size={18}
-                      color={tab === t ? "#1A1A2E" : "#9CA3AF"}
-                    />
-                    <Text style={[s.tabText, tab === t && s.tabTextActive]}>
-                      {t === "subastas"
-                        ? "Subastas"
-                        : t === "perfil"
-                          ? "Perfil"
-                          : t === "pagos"
-                            ? "Pagos"
-                            : "Métricas"}
-                    </Text>
-                  </Pressable>
-                ),
-              )}
-            </View>
-
             {/* ===== TAB: Mis Subastas ===== */}
             {tab === "subastas" && (
-              <View>
-                {/* Search */}
+              <View style={s.tabContent}>
+                {/* Search Row */}
                 <View style={s.searchBar}>
-                  <MaterialIcons name="search" size={20} color="#9CA3AF" />
+                  <MaterialIcons name="search" size={20} color="#8B6914" />
                   <TextInput
                     style={s.searchInput}
-                    placeholder="Buscar subastas.."
+                    placeholder="Buscar subastas en las que participás.."
                     placeholderTextColor="#9CA3AF"
                     value={searchMis}
                     onChangeText={setSearchMis}
                   />
+                  {searchMis.length > 0 && (
+                    <Pressable onPress={() => setSearchMis("")}>
+                      <MaterialIcons name="close" size={18} color="#9CA3AF" />
+                    </Pressable>
+                  )}
                 </View>
 
-                {/* Stats */}
+                {/* Stats Card */}
                 <View style={s.statsRow}>
                   <View style={s.statItem}>
                     <Text style={s.statNum}>{misSubastasStats.total}</Text>
@@ -382,9 +504,12 @@ export default function ProfileScreen() {
                   </View>
                   <View style={s.statDiv} />
                   <View style={s.statItem}>
-                    <Text style={[s.statNum, { color: "#DC2626" }]}>
-                      {misSubastasStats.enVivo}
-                    </Text>
+                    <View style={s.statLiveRow}>
+                      <LiveDot />
+                      <Text style={[s.statNum, { color: "#DC2626" }]}>
+                        {misSubastasStats.enVivo}
+                      </Text>
+                    </View>
                     <Text style={s.statLbl}>En Vivo</Text>
                   </View>
                   <View style={s.statDiv} />
@@ -394,75 +519,134 @@ export default function ProfileScreen() {
                   </View>
                 </View>
 
-                {/* Cards */}
-                {misSubastas.length === 0 ? (
+                {/* Subastas list */}
+                {filteredMisSubastas.length === 0 ? (
                   <View style={s.emptySection}>
-                    <MaterialIcons name="inbox" size={48} color="#E5DDD0" />
+                    <View style={s.emptyIconWrap}>
+                      <MaterialIcons name="inbox" size={36} color="#C4B898" />
+                    </View>
                     <Text style={s.emptyText}>
-                      No estás inscripto en ninguna subasta
+                      {searchMis
+                        ? "No se encontraron subastas inscritas"
+                        : "No estás inscripto en ninguna subasta"}
                     </Text>
                   </View>
                 ) : (
-                  misSubastas.map((item, idx) => (
-                    <Pressable
-                      key={item.id}
-                      style={s.misCard}
-                      onPress={() => router.push(`/subasta/${item.id}` as any)}
-                    >
-                      <Image
-                        source={{
-                          uri: PLACEHOLDER_IMAGES[
-                            idx % PLACEHOLDER_IMAGES.length
-                          ],
-                        }}
-                        style={s.misThumb}
-                      />
-                      <View style={s.misInfo}>
-                        <Text style={s.misTitle} numberOfLines={2}>
-                          Subasta #{item.id}
-                        </Text>
-                        <View
-                          style={[
-                            s.misCateg,
-                            {
-                              backgroundColor:
-                                CATEG_COLORS[item.categoria] + "15",
-                            },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              s.misCategText,
-                              { color: CATEG_COLORS[item.categoria] },
-                            ]}
-                          >
-                            {item.categoria.charAt(0).toUpperCase() +
-                              item.categoria.slice(1)}
-                          </Text>
+                  filteredMisSubastas.map((item, idx) => {
+                    const catColors = CATEG_COLORS[item.categoria];
+                    const isLive = item.estado === "abierta";
+                    return (
+                      <Pressable
+                        key={item.id}
+                        onPress={() =>
+                          router.push(`/subasta/${item.id}` as any)
+                        }
+                        style={({ pressed }) => [pressed && { opacity: 0.9 }]}
+                      >
+                        <View style={s.misCard}>
+                          <Image
+                            source={{
+                              uri: PLACEHOLDER_IMAGES[
+                                idx % PLACEHOLDER_IMAGES.length
+                              ],
+                            }}
+                            style={s.misThumb}
+                          />
+                          <View style={s.misInfo}>
+                            <Text style={s.misTitle} numberOfLines={1}>
+                              Subasta #{item.id}
+                            </Text>
+
+                            <View style={s.cardMetaRow}>
+                              <View
+                                style={[
+                                  s.categChip,
+                                  {
+                                    backgroundColor: catColors.bg,
+                                    borderColor: catColors.border,
+                                  },
+                                ]}
+                              >
+                                <MaterialIcons
+                                  name={CATEG_ICONS[item.categoria] as any}
+                                  size={10}
+                                  color={catColors.text}
+                                />
+                                <Text
+                                  style={[
+                                    s.categText,
+                                    { color: catColors.text },
+                                  ]}
+                                >
+                                  {CATEG_LABELS[item.categoria]}
+                                </Text>
+                              </View>
+
+                              {isLive ? (
+                                <View style={s.liveTagBadge}>
+                                  <LiveDot />
+                                  <Text style={s.liveTagText}>VIVO</Text>
+                                </View>
+                              ) : (
+                                <View style={s.closedTagBadge}>
+                                  <Text style={s.closedTagText}>Cerrada</Text>
+                                </View>
+                              )}
+                            </View>
+
+                            <View style={s.dateRow}>
+                              <MaterialIcons
+                                name="event"
+                                size={13}
+                                color="#9CA3AF"
+                              />
+                              <Text style={s.dateText}>
+                                {formatFecha(item.fecha)}
+                              </Text>
+                            </View>
+                          </View>
+                          <View style={s.cardArrow}>
+                            <MaterialIcons
+                              name="chevron-right"
+                              size={22}
+                              color="#C4B898"
+                            />
+                          </View>
                         </View>
-                        <Text style={s.misPrice}>Precio Base</Text>
-                        <Text style={s.misPriceVal}>${item.moneda}</Text>
-                      </View>
-                    </Pressable>
-                  ))
+                      </Pressable>
+                    );
+                  })
                 )}
 
-                {/* Agregar Artículo button */}
+                {/* Agregar Artículo Button */}
                 <Pressable
-                  style={s.addArticleBtn}
                   onPress={() => router.push("/consignar")}
+                  style={({ pressed }) => [pressed && { opacity: 0.9 }]}
                 >
-                  <Text style={s.addArticleBtnText}>Agregar Artículo</Text>
+                  <View style={s.addArticleBtn}>
+                    <MaterialIcons
+                      name="add-circle-outline"
+                      size={18}
+                      color="#FFF"
+                    />
+                    <Text style={s.addArticleBtnText}>
+                      Consignar / Agregar Artículo
+                    </Text>
+                  </View>
                 </Pressable>
               </View>
             )}
 
             {/* ===== TAB: Perfil ===== */}
             {tab === "perfil" && (
-              <View style={s.section}>
+              <View style={s.tabContent}>
                 {isEditing ? (
                   // EDITING MODE
-                  <View>
+                  <View style={s.section}>
+                    <Text style={s.sectionTitle}>
+                      Editar Información Personal
+                    </Text>
+
                     <View style={s.avatarEditRow}>
                       <Pressable
                         style={s.avatarContainerEdit}
@@ -482,7 +666,7 @@ export default function ProfileScreen() {
                           <MaterialIcons
                             name="person"
                             size={40}
-                            color="#1A1A2E"
+                            color="#8B6914"
                           />
                         )}
                         <View style={s.avatarOverlay}>
@@ -495,22 +679,30 @@ export default function ProfileScreen() {
                       </Pressable>
                       <View style={s.avatarEditButtons}>
                         <Pressable
-                          style={s.changePhotoBtn}
                           onPress={pickAvatar}
+                          style={({ pressed }) => [pressed && { opacity: 0.8 }]}
                         >
-                          <Text style={s.changePhotoText}>Cambiar foto</Text>
+                          <View style={s.changePhotoBtn}>
+                            <Text style={s.changePhotoText}>Subir Foto</Text>
+                          </View>
                         </Pressable>
                         {((user?.foto && !isAvatarDeleted) || editFoto) && (
                           <Pressable
-                            style={s.deletePhotoBtn}
                             onPress={handleDeleteAvatar}
+                            style={({ pressed }) => [
+                              pressed && { opacity: 0.8 },
+                            ]}
                           >
-                            <MaterialIcons
-                              name="delete"
-                              size={16}
-                              color="#DC2626"
-                            />
-                            <Text style={s.deletePhotoText}>Eliminar foto</Text>
+                            <View style={s.deletePhotoBtn}>
+                              <MaterialIcons
+                                name="delete"
+                                size={14}
+                                color="#DC2626"
+                              />
+                              <Text style={s.deletePhotoText}>
+                                Eliminar foto
+                              </Text>
+                            </View>
                           </Pressable>
                         )}
                       </View>
@@ -576,206 +768,286 @@ export default function ProfileScreen() {
 
                     <View style={s.editActionRow}>
                       <Pressable
-                        style={[s.saveBtn, saving && s.saveBtnDisabled]}
+                        style={({ pressed }) => [
+                          s.saveBtn,
+                          pressed && { opacity: 0.9 },
+                          saving && s.saveBtnDisabled,
+                        ]}
                         onPress={saveProfile}
                         disabled={saving}
                       >
-                        {saving ? (
-                          <ActivityIndicator size="small" color="#FFF" />
-                        ) : (
-                          <Text style={s.saveBtnText}>Guardar</Text>
-                        )}
+                        <View style={s.saveBtnInner}>
+                          {saving ? (
+                            <ActivityIndicator size="small" color="#FFF" />
+                          ) : (
+                            <Text style={s.saveBtnText}>Guardar</Text>
+                          )}
+                        </View>
                       </Pressable>
+
                       <Pressable
-                        style={s.cancelBtn}
+                        style={({ pressed }) => [
+                          s.cancelBtn,
+                          pressed && { opacity: 0.8 },
+                        ]}
                         onPress={() => setIsEditing(false)}
                         disabled={saving}
                       >
-                        <Text style={s.cancelBtnText}>Cancelar</Text>
+                        <View style={s.cancelBtnInner}>
+                          <Text style={s.cancelBtnText}>Cancelar</Text>
+                        </View>
                       </Pressable>
                     </View>
                   </View>
                 ) : (
                   // VIEW MODE
                   <View>
-                    <View style={s.avatarRow}>
-                      <View style={s.avatar}>
-                        {user?.foto ? (
-                          <Image
-                            source={{ uri: user.foto }}
-                            style={s.avatarImg}
-                          />
-                        ) : (
-                          <MaterialIcons
-                            name="person"
-                            size={36}
-                            color="#1A1A2E"
-                          />
-                        )}
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={s.userName}>
-                          {user?.nombre} {user?.apellido}
-                        </Text>
-                        <Text style={s.userEmail}>{user?.email}</Text>
-                        <View style={s.badgesRow}>
-                          {user?.categoria && (
+                    {/* User profile card */}
+                    <View style={s.section}>
+                      <View style={s.avatarRow}>
+                        <View style={s.avatar}>
+                          {user?.foto ? (
+                            <Image
+                              source={{ uri: user.foto }}
+                              style={s.avatarImg}
+                            />
+                          ) : (
+                            <MaterialIcons
+                              name="person"
+                              size={36}
+                              color="#8B6914"
+                            />
+                          )}
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.userName}>
+                            {user?.nombre} {user?.apellido}
+                          </Text>
+                          <Text style={s.userEmail}>{user?.email}</Text>
+
+                          <View style={s.badgesRow}>
+                            {user?.categoria && (
+                              <View
+                                style={[
+                                  s.badge,
+                                  {
+                                    backgroundColor:
+                                      CATEG_COLORS[user.categoria].bg,
+                                    borderColor:
+                                      CATEG_COLORS[user.categoria].border,
+                                  },
+                                ]}
+                              >
+                                <MaterialIcons
+                                  name={CATEG_ICONS[user.categoria] as any}
+                                  size={10}
+                                  color={CATEG_COLORS[user.categoria].text}
+                                />
+                                <Text
+                                  style={[
+                                    s.badgeText,
+                                    {
+                                      color: CATEG_COLORS[user.categoria].text,
+                                    },
+                                  ]}
+                                >
+                                  {user.categoria.toUpperCase()}
+                                </Text>
+                              </View>
+                            )}
                             <View
                               style={[
                                 s.badge,
                                 {
                                   backgroundColor:
-                                    CATEG_COLORS[user.categoria] + "15",
+                                    user?.estadoRegistro === "aprobado"
+                                      ? "#E8F5E9"
+                                      : "#FFF3E0",
+                                  borderColor:
+                                    user?.estadoRegistro === "aprobado"
+                                      ? "#C8E6C9"
+                                      : "#FFE0B2",
                                 },
                               ]}
                             >
                               <Text
-                                style={[
-                                  s.badgeText,
-                                  { color: CATEG_COLORS[user.categoria] },
-                                ]}
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: "700",
+                                  color:
+                                    user?.estadoRegistro === "aprobado"
+                                      ? "#2E7D32"
+                                      : "#E65100",
+                                }}
                               >
-                                {user.categoria.toUpperCase()}
+                                {user?.estadoRegistro === "aprobado"
+                                  ? "✓ Aprobado"
+                                  : "⏳ Pendiente"}
                               </Text>
                             </View>
-                          )}
-                          <View
-                            style={[
-                              s.badge,
-                              {
-                                backgroundColor:
-                                  user?.estadoRegistro === "aprobado"
-                                    ? "#ECFDF5"
-                                    : "#FEF3C7",
-                              },
-                            ]}
-                          >
-                            <Text
-                              style={{
-                                fontSize: 11,
-                                fontWeight: "600",
-                                color:
-                                  user?.estadoRegistro === "aprobado"
-                                    ? "#059669"
-                                    : "#D97706",
-                              }}
-                            >
-                              {user?.estadoRegistro === "aprobado"
-                                ? "Aprobado"
-                                : "Pendiente"}
-                            </Text>
                           </View>
                         </View>
                       </View>
-                    </View>
 
-                    {user?.multaActiva && (
-                      <View style={s.multaAlert}>
-                        <MaterialIcons
-                          name="warning"
-                          size={16}
-                          color="#DC2626"
+                      {user?.multaActiva && (
+                        <View style={s.multaAlert}>
+                          <MaterialIcons
+                            name="warning"
+                            size={16}
+                            color="#DC2626"
+                          />
+                          <Text style={s.multaAlertText}>
+                            Tenés una multa activa pendiente de pago.
+                          </Text>
+                        </View>
+                      )}
+
+                      <View style={s.infoList}>
+                        <InfoRow
+                          icon="badge"
+                          label="Documento de Identidad"
+                          value={user?.documento || ""}
                         />
-                        <Text style={s.multaAlertText}>
-                          Multa activa pendiente de pago
-                        </Text>
+                        <InfoRow
+                          icon="place"
+                          label="Dirección de Envío"
+                          value={user?.direccion || "No registrada"}
+                        />
+                        <InfoRow
+                          icon="phone"
+                          label="Número de Teléfono"
+                          value={user?.telefono || "—"}
+                        />
                       </View>
-                    )}
 
-                    <View style={s.infoList}>
-                      <InfoRow
-                        icon="badge"
-                        label="Documento"
-                        value={user?.documento || ""}
-                      />
-                      <InfoRow
-                        icon="place"
-                        label="Dirección"
-                        value={user?.direccion || ""}
-                      />
-                      <InfoRow
-                        icon="phone"
-                        label="Teléfono"
-                        value={user?.telefono || "—"}
-                      />
+                      <Pressable
+                        onPress={startEditing}
+                        style={({ pressed }) => [pressed && { opacity: 0.85 }]}
+                      >
+                        <View style={s.editProfileBtn}>
+                          <MaterialIcons
+                            name="edit"
+                            size={16}
+                            color="#1A1A2E"
+                          />
+                          <Text style={s.editProfileText}>Editar Perfil</Text>
+                        </View>
+                      </Pressable>
                     </View>
 
-                    <Pressable style={s.editProfileBtn} onPress={startEditing}>
-                      <MaterialIcons name="edit" size={18} color="#1A1A2E" />
-                      <Text style={s.editProfileText}>Editar Perfil</Text>
-                    </Pressable>
-
-                    <Text style={[s.secTitle, { marginTop: 24 }]}>
-                      Notificaciones
-                    </Text>
-                    {notificaciones.length === 0 ? (
-                      <Text style={s.emptyText}>No hay notificaciones</Text>
-                    ) : (
-                      notificaciones.map((n, idx) => (
-                        <Pressable
-                          key={n.id ?? `notif-${idx}`}
-                          style={[
-                            s.notificationCard,
-                            n.leida && s.notificationCardRead,
-                          ]}
-                          onPress={() => handleNotificacionPress(n.id)}
-                        >
-                          <View style={s.notificationIcon}>
-                            <MaterialIcons
-                              name={
-                                n.tipo === "pago"
-                                  ? "payment"
-                                  : n.tipo === "subasta"
-                                    ? "gavel"
-                                    : "info"
-                              }
-                              size={18}
-                              color="#1A1A2E"
-                            />
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={s.notificationText} numberOfLines={2}>
-                              {n.mensaje || "Notificación del sistema"}
-                            </Text>
-                            <Text style={s.notificationMeta}>
-                              {formatFecha(n.fechaHora)}
-                            </Text>
-                          </View>
-                          {!n.leida && <View style={s.unreadDot} />}
-                        </Pressable>
-                      ))
-                    )}
-
+                    {/* Admin Access Panel (If user is Administrator ID 12) */}
                     {user?.id === 12 && (
                       <Pressable
-                        style={{ width: "100%" }}
+                        style={{ width: "100%", marginBottom: 16 }}
                         onPress={() => router.push("/admin")}
                       >
                         <View style={s.adminBtn}>
-                          <MaterialIcons name="admin-panel-settings" size={20} color="#8B6914" />
-                          <Text style={s.adminText}>Panel de Administración</Text>
+                          <MaterialIcons
+                            name="admin-panel-settings"
+                            size={22}
+                            color="#8B6914"
+                          />
+                          <Text style={s.adminText}>
+                            Panel de Administración
+                          </Text>
                         </View>
                       </Pressable>
                     )}
 
+                    {/* Notifications section */}
+                    <Text style={[s.secTitle, { marginTop: 16 }]}>
+                      Notificaciones del Sistema
+                    </Text>
+
+                    <View style={s.section}>
+                      {notificaciones.length === 0 ? (
+                        <View
+                          style={{ alignItems: "center", paddingVertical: 16 }}
+                        >
+                          <MaterialIcons
+                            name="notifications-none"
+                            size={32}
+                            color="#C4B898"
+                          />
+                          <Text style={[s.emptyText, { marginTop: 8 }]}>
+                            No tenés notificaciones pendientes
+                          </Text>
+                        </View>
+                      ) : (
+                        notificaciones.map((n, idx) => (
+                          <Pressable
+                            key={n.id ?? `notif-${idx}`}
+                            onPress={() => handleNotificacionPress(n.id)}
+                            style={({ pressed }) => [
+                              pressed && { opacity: 0.8 },
+                            ]}
+                          >
+                            <View
+                              style={[
+                                s.notificationCard,
+                                n.leida && s.notificationCardRead,
+                              ]}
+                            >
+                              <View style={s.notificationIcon}>
+                                <MaterialIcons
+                                  name={
+                                    n.tipo === "pago"
+                                      ? "payment"
+                                      : n.tipo === "subasta"
+                                        ? "gavel"
+                                        : "info"
+                                  }
+                                  size={18}
+                                  color="#8B6914"
+                                />
+                              </View>
+                              <View style={{ flex: 1 }}>
+                                <Text
+                                  style={s.notificationText}
+                                  numberOfLines={2}
+                                >
+                                  {n.mensaje || "Notificación del sistema"}
+                                </Text>
+                                <Text style={s.notificationMeta}>
+                                  {formatFecha(n.fechaHora)}
+                                </Text>
+                              </View>
+                              {!n.leida && <View style={s.unreadDot} />}
+                            </View>
+                          </Pressable>
+                        ))
+                      )}
+                    </View>
+
+                    {/* Cerrar Sesión (Logout) */}
                     <Pressable
-                      style={s.logoutBtn}
                       onPress={() =>
-                        Alert.alert("Cerrar sesión", "¿Estás seguro?", [
-                          { text: "Cancelar" },
-                          {
-                            text: "Salir",
-                            style: "destructive",
-                            onPress: () => {
-                              logout();
-                              router.replace("/(auth)/welcome");
+                        Alert.alert(
+                          "Cerrar sesión",
+                          "¿Estás seguro que querés salir?",
+                          [
+                            { text: "Cancelar", style: "cancel" },
+                            {
+                              text: "Salir",
+                              style: "destructive",
+                              onPress: () => {
+                                logout();
+                                router.replace("/(auth)/welcome");
+                              },
                             },
-                          },
-                        ])
+                          ],
+                        )
                       }
+                      style={({ pressed }) => [pressed && { opacity: 0.85 }]}
                     >
-                      <MaterialIcons name="logout" size={18} color="#DC2626" />
-                      <Text style={s.logoutText}>Cerrar sesión</Text>
+                      <View style={s.logoutBtn}>
+                        <MaterialIcons
+                          name="logout"
+                          size={16}
+                          color="#DC2626"
+                        />
+                        <Text style={s.logoutText}>Cerrar Sesión</Text>
+                      </View>
                     </Pressable>
                   </View>
                 )}
@@ -784,66 +1056,49 @@ export default function ProfileScreen() {
 
             {/* ===== TAB: Pagos ===== */}
             {tab === "pagos" && (
-              <View style={s.section}>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: 12,
-                  }}
-                >
-                  <Text style={[s.secTitle, { marginTop: 0 }]}>
-                    Medios de Pago
-                  </Text>
+              <View style={s.tabContent}>
+                {/* Header section with add trigger */}
+                <View style={s.paymentsHeaderRow}>
+                  <Text style={s.secTitle}>Medios de Pago</Text>
+
                   <Pressable
-                    style={{
-                      backgroundColor: "#1A1A2E",
-                      paddingHorizontal: 12,
-                      paddingVertical: 6,
-                      borderRadius: 8,
-                    }}
                     onPress={() => setShowAddPago(!showAddPago)}
+                    style={({ pressed }) => [pressed && { opacity: 0.9 }]}
                   >
-                    <Text
-                      style={{ color: "#FFF", fontSize: 12, fontWeight: "700" }}
+                    <View
+                      style={[
+                        s.addPagoToggle,
+                        showAddPago && s.addPagoToggleActive,
+                      ]}
                     >
-                      {showAddPago ? "Cancelar" : "Agregar"}
-                    </Text>
+                      <MaterialIcons
+                        name={showAddPago ? "close" : "add"}
+                        size={16}
+                        color={showAddPago ? "#FFF" : "#8B6914"}
+                      />
+                      <Text
+                        style={[
+                          s.addPagoToggleText,
+                          showAddPago && { color: "#FFF" },
+                        ]}
+                      >
+                        {showAddPago ? "Cancelar" : "Agregar"}
+                      </Text>
+                    </View>
                   </Pressable>
                 </View>
 
+                {/* Form to add Payment Method */}
                 {showAddPago && (
-                  <View
-                    style={{
-                      gap: 12,
-                      backgroundColor: "#F5F1EC",
-                      padding: 14,
-                      borderRadius: 12,
-                      marginBottom: 16,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 14,
-                        fontWeight: "700",
-                        color: "#1A1A2E",
-                      }}
-                    >
-                      Nuevo Medio de Pago
-                    </Text>
+                  <View style={s.addPagoForm}>
+                    <Text style={s.addPagoFormTitle}>Nuevo Medio de Pago</Text>
 
-                    <View style={{ gap: 4 }}>
-                      <Text
-                        style={{
-                          fontSize: 12,
-                          fontWeight: "600",
-                          color: "#1A1A2E",
-                        }}
-                      >
-                        Tipo *
+                    {/* Method type Selection */}
+                    <View style={s.formGroup}>
+                      <Text style={s.formLabel}>
+                        Tipo de cuenta o crédito *
                       </Text>
-                      <View style={{ flexDirection: "row", gap: 6 }}>
+                      <View style={s.formButtonRow}>
                         {(
                           [
                             "tarjeta_credito",
@@ -853,34 +1108,20 @@ export default function ProfileScreen() {
                         ).map((t) => (
                           <Pressable
                             key={t}
-                            style={[
-                              {
-                                flex: 1,
-                                height: 36,
-                                borderRadius: 8,
-                                backgroundColor: "#FFF",
-                                borderWidth: 1,
-                                borderColor: "#E5DDD0",
-                                justifyContent: "center",
-                                alignItems: "center",
-                              },
-                              newPagoTipo === t && {
-                                borderColor: "#1A1A2E",
-                                backgroundColor: "#E5DDD0",
-                              },
-                            ]}
                             onPress={() => {
                               setNewPagoTipo(t);
                               setNewPagoDatos("");
                             }}
+                            style={({ pressed }) => [
+                              s.formRadioBtn,
+                              newPagoTipo === t && s.formRadioBtnActive,
+                              pressed && { opacity: 0.8 },
+                            ]}
                           >
                             <Text
                               style={[
-                                { fontSize: 11, color: "#6B7280" },
-                                newPagoTipo === t && {
-                                  color: "#1A1A2E",
-                                  fontWeight: "700",
-                                },
+                                s.formRadioText,
+                                newPagoTipo === t && s.formRadioTextActive,
                               ]}
                             >
                               {t === "tarjeta_credito"
@@ -894,45 +1135,24 @@ export default function ProfileScreen() {
                       </View>
                     </View>
 
-                    <View style={{ gap: 4 }}>
-                      <Text
-                        style={{
-                          fontSize: 12,
-                          fontWeight: "600",
-                          color: "#1A1A2E",
-                        }}
-                      >
-                        Moneda *
-                      </Text>
-                      <View style={{ flexDirection: "row", gap: 6 }}>
+                    {/* Currency Selection */}
+                    <View style={s.formGroup}>
+                      <Text style={s.formLabel}>Moneda *</Text>
+                      <View style={s.formButtonRow}>
                         {(["ARS", "USD"] as const).map((m) => (
                           <Pressable
                             key={m}
-                            style={[
-                              {
-                                flex: 1,
-                                height: 36,
-                                borderRadius: 8,
-                                backgroundColor: "#FFF",
-                                borderWidth: 1,
-                                borderColor: "#E5DDD0",
-                                justifyContent: "center",
-                                alignItems: "center",
-                              },
-                              newPagoMoneda === m && {
-                                borderColor: "#1A1A2E",
-                                backgroundColor: "#E5DDD0",
-                              },
-                            ]}
                             onPress={() => setNewPagoMoneda(m)}
+                            style={({ pressed }) => [
+                              s.formRadioBtn,
+                              newPagoMoneda === m && s.formRadioBtnActive,
+                              pressed && { opacity: 0.8 },
+                            ]}
                           >
                             <Text
                               style={[
-                                { fontSize: 11, color: "#6B7280" },
-                                newPagoMoneda === m && {
-                                  color: "#1A1A2E",
-                                  fontWeight: "700",
-                                },
+                                s.formRadioText,
+                                newPagoMoneda === m && s.formRadioTextActive,
                               ]}
                             >
                               {m}
@@ -942,33 +1162,19 @@ export default function ProfileScreen() {
                       </View>
                     </View>
 
-                    <View style={{ gap: 4 }}>
-                      <Text
-                        style={{
-                          fontSize: 12,
-                          fontWeight: "600",
-                          color: "#1A1A2E",
-                        }}
-                      >
-                        Datos *
-                      </Text>
+                    {/* Account details input */}
+                    <View style={s.formGroup}>
+                      <Text style={s.formLabel}>Datos / Identificación *</Text>
                       <TextInput
-                        style={{
-                          backgroundColor: "#FFF",
-                          borderWidth: 1,
-                          borderColor: "#E5DDD0",
-                          borderRadius: 8,
-                          height: 40,
-                          paddingHorizontal: 12,
-                          fontSize: 14,
-                        }}
+                        style={s.formInput}
                         placeholder={
                           newPagoTipo === "tarjeta_credito"
-                            ? "Número de Tarjeta (16 dígitos)"
+                            ? "Número de Tarjeta (16 dígitos sin espacios)"
                             : newPagoTipo === "cuenta_bancaria"
-                              ? "CBU / Alias / Nro Cuenta"
-                              : "Código/Número del Cheque"
+                              ? "CBU / Alias de la Cuenta Bancaria"
+                              : "Número / Código del Cheque Certificado"
                         }
+                        placeholderTextColor="#9CA3AF"
                         value={newPagoDatos}
                         onChangeText={(val) => {
                           if (newPagoTipo === "tarjeta_credito") {
@@ -980,9 +1186,7 @@ export default function ProfileScreen() {
                             setNewPagoDatos(val);
                           }
                         }}
-                        maxLength={
-                          newPagoTipo === "tarjeta_credito" ? 16 : 1000
-                        }
+                        maxLength={newPagoTipo === "tarjeta_credito" ? 16 : 500}
                         keyboardType={
                           newPagoTipo === "tarjeta_credito"
                             ? "numeric"
@@ -991,28 +1195,14 @@ export default function ProfileScreen() {
                       />
                     </View>
 
-                    <View style={{ flexDirection: "row", gap: 10 }}>
+                    {/* Limit and Country row */}
+                    <View style={{ flexDirection: "row", gap: 12 }}>
                       <View style={{ flex: 1, gap: 4 }}>
-                        <Text
-                          style={{
-                            fontSize: 12,
-                            fontWeight: "600",
-                            color: "#1A1A2E",
-                          }}
-                        >
-                          Límite ($)
-                        </Text>
+                        <Text style={s.formLabel}>Límite de Compra ($) *</Text>
                         <TextInput
-                          style={{
-                            backgroundColor: "#FFF",
-                            borderWidth: 1,
-                            borderColor: "#E5DDD0",
-                            borderRadius: 8,
-                            height: 40,
-                            paddingHorizontal: 12,
-                            fontSize: 14,
-                          }}
-                          placeholder="Ej: 50000"
+                          style={s.formInput}
+                          placeholder="Ej: 150000"
+                          placeholderTextColor="#9CA3AF"
                           keyboardType="numeric"
                           value={newPagoLimite}
                           onChangeText={setNewPagoLimite}
@@ -1028,46 +1218,24 @@ export default function ProfileScreen() {
                             zIndex: 100,
                           }}
                         >
-                          <Text
-                            style={{
-                              fontSize: 12,
-                              fontWeight: "600",
-                              color: "#1A1A2E",
-                            }}
-                          >
-                            País del Banco *
-                          </Text>
+                          <Text style={s.formLabel}>País del Banco *</Text>
                           <Pressable
-                            style={[
-                              {
-                                height: 36,
-                                borderRadius: 8,
-                                backgroundColor: "#FFF",
-                                borderWidth: 1,
-                                borderColor: "#E5DDD0",
-                                justifyContent: "center",
-                                alignItems: "center",
-                              },
-                            ]}
                             onPress={() =>
                               setShowNewPaisPicker(!showNewPaisPicker)
                             }
+                            style={({ pressed }) => [
+                              pressed && { opacity: 0.85 },
+                            ]}
                           >
-                            <View
-                              style={{
-                                flexDirection: "row",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                width: "100%",
-                                paddingHorizontal: 8,
-                              }}
-                            >
+                            <View style={s.selectTrigger}>
                               <Text
-                                style={{
-                                  fontSize: 11,
-                                  color: newPagoPais ? "#1A1A2E" : "#9CA3AF",
-                                  fontWeight: newPagoPais ? "700" : "400",
-                                }}
+                                style={[
+                                  s.selectTriggerText,
+                                  newPagoPais && {
+                                    color: "#1A1A2E",
+                                    fontWeight: "700",
+                                  },
+                                ]}
                               >
                                 {newPagoPais
                                   ? newPagoPais === "AR"
@@ -1081,56 +1249,33 @@ export default function ProfileScreen() {
                                     ? "keyboard-arrow-up"
                                     : "keyboard-arrow-down"
                                 }
-                                size={14}
-                                color="#9CA3AF"
+                                size={18}
+                                color="#8B6914"
                               />
                             </View>
                           </Pressable>
                           {showNewPaisPicker && (
-                            <View
-                              style={{
-                                position: "absolute",
-                                top: 58,
-                                left: 0,
-                                right: 0,
-                                backgroundColor: "rgba(60, 60, 60, 0.98)",
-                                borderRadius: 12,
-                                padding: 6,
-                                zIndex: 999,
-                                shadowColor: "#000",
-                                shadowOffset: { width: 0, height: 4 },
-                                shadowOpacity: 0.25,
-                                shadowRadius: 8,
-                                elevation: 5,
-                                gap: 2,
-                              }}
-                            >
+                            <View style={s.dropdownList}>
                               {(["AR", "US"] as const).map((p) => (
                                 <Pressable
                                   key={p}
-                                  style={{
-                                    height: 34,
-                                    borderRadius: 8,
-                                    flexDirection: "row",
-                                    alignItems: "center",
-                                    paddingHorizontal: 10,
-                                    backgroundColor:
-                                      newPagoPais === p
-                                        ? "rgba(255,255,255,0.1)"
-                                        : "transparent",
-                                  }}
                                   onPress={() => {
                                     setNewPagoPais(p);
                                     setShowNewPaisPicker(false);
                                   }}
+                                  style={({ pressed }) => [
+                                    s.dropdownItem,
+                                    newPagoPais === p && s.dropdownItemActive,
+                                    pressed && { opacity: 0.8 },
+                                  ]}
                                 >
                                   <Text
-                                    style={{
-                                      fontSize: 11,
-                                      color: "#FFF",
-                                      fontWeight: "600",
-                                      flex: 1,
-                                    }}
+                                    style={[
+                                      s.dropdownItemText,
+                                      newPagoPais === p && {
+                                        fontWeight: "700",
+                                      },
+                                    ]}
                                   >
                                     {p === "AR"
                                       ? "AR (Nacional)"
@@ -1140,7 +1285,7 @@ export default function ProfileScreen() {
                                     <MaterialIcons
                                       name="check"
                                       size={14}
-                                      color="#FFF"
+                                      color="#8B6914"
                                     />
                                   )}
                                 </Pressable>
@@ -1151,159 +1296,185 @@ export default function ProfileScreen() {
                       )}
                     </View>
 
+                    {/* Submit Add method */}
                     <Pressable
-                      style={[
-                        {
-                          backgroundColor: "#1A1A2E",
-                          height: 44,
-                          borderRadius: 10,
-                          justifyContent: "center",
-                          alignItems: "center",
-                          marginTop: 6,
-                        },
-                        addingPago && { opacity: 0.7 },
-                      ]}
                       onPress={handleAddMedioPago}
                       disabled={addingPago}
+                      style={({ pressed }) => [pressed && { opacity: 0.9 }]}
                     >
-                      {addingPago ? (
-                        <ActivityIndicator color="#FFF" />
-                      ) : (
-                        <Text
-                          style={{
-                            color: "#FFF",
-                            fontSize: 14,
-                            fontWeight: "700",
-                          }}
-                        >
-                          Registrar Medio de Pago
-                        </Text>
-                      )}
+                      <View style={s.registerPayBtn}>
+                        {addingPago ? (
+                          <ActivityIndicator color="#FFF" />
+                        ) : (
+                          <>
+                            <MaterialIcons name="save" size={18} color="#FFF" />
+                            <Text style={s.registerPayBtnText}>
+                              Registrar Medio de Pago
+                            </Text>
+                          </>
+                        )}
+                      </View>
                     </Pressable>
                   </View>
                 )}
 
-                {medios.length === 0 ? (
-                  <Text style={s.emptyText}>No tenés medios de pago</Text>
-                ) : (
-                  medios.map((m) => (
-                    <View
-                      key={m.id ?? `${m.tipo}-${m.ultimos_digitos}`}
-                      style={s.payCard}
-                    >
-                      <MaterialIcons
-                        name={
-                          m.tipo === "tarjeta_credito"
-                            ? "credit-card"
-                            : m.tipo === "cheque_certificado"
-                              ? "receipt"
-                              : "account-balance"
-                        }
-                        size={22}
-                        color="#1A1A2E"
-                      />
-                      <View style={{ flex: 1 }}>
-                        <Text style={s.payType}>
-                          {m.tipo === "tarjeta_credito"
-                            ? "Tarjeta"
-                            : m.tipo === "cuenta_bancaria"
-                              ? "Cuenta"
-                              : m.tipo === "cheque_certificado"
-                                ? "Cheque"
-                                : "Medio de pago"}
-                          {m.ultimos_digitos ? ` ···${m.ultimos_digitos}` : ""}
-                        </Text>
-                        <Text style={s.payInfo}>{m.moneda || ""}</Text>
-                      </View>
-                      <View
-                        style={[
-                          s.verifBadge,
-                          {
-                            backgroundColor:
-                              m.estadoVerificacion === "validado"
-                                ? "#ECFDF5"
-                                : "#FEF3C7",
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={{
-                            fontSize: 11,
-                            fontWeight: "600",
-                            color:
-                              m.estadoVerificacion === "validado"
-                                ? "#059669"
-                                : "#D97706",
-                          }}
-                        >
-                          {m.estadoVerificacion === "validado" ? "✓" : "⏳"}
-                        </Text>
-                      </View>
-                      {m.id != null && (
-                        <Pressable
-                          style={{ marginLeft: 8 }}
-                          onPress={() => handleDeleteMedio(m.id!)}
-                        >
-                          <MaterialIcons
-                            name="delete"
-                            size={18}
-                            color="#DC2626"
-                          />
-                        </Pressable>
-                      )}
+                {/* List of current payment methods */}
+                <View style={s.section}>
+                  {medios.length === 0 ? (
+                    <View style={{ alignItems: "center", paddingVertical: 12 }}>
+                      <MaterialIcons name="payment" size={32} color="#C4B898" />
+                      <Text style={[s.emptyText, { marginTop: 6 }]}>
+                        No tenés medios de pago registrados
+                      </Text>
                     </View>
-                  ))
-                )}
-                {multas.length > 0 && (
-                  <>
-                    <Text style={[s.secTitle, { marginTop: 20 }]}>Multas</Text>
-                    {multas.map((m) => (
+                  ) : (
+                    medios.map((m) => (
                       <View
-                        key={m.id ?? `${m.importe}-${m.estado}`}
+                        key={m.id ?? `${m.tipo}-${m.ultimos_digitos}`}
                         style={s.payCard}
                       >
-                        <View style={{ flex: 1 }}>
-                          <Text
-                            style={{
-                              fontSize: 15,
-                              fontWeight: "700",
-                              color: "#DC2626",
-                            }}
-                          >
-                            {m.importe != null
-                              ? `$${m.importe.toLocaleString()}`
-                              : "—"}
+                        <View style={s.payCardIconContainer}>
+                          <MaterialIcons
+                            name={
+                              m.tipo === "tarjeta_credito"
+                                ? "credit-card"
+                                : m.tipo === "cheque_certificado"
+                                  ? "receipt"
+                                  : "account-balance"
+                            }
+                            size={20}
+                            color="#8B6914"
+                          />
+                        </View>
+                        <View style={{ flex: 1, gap: 2 }}>
+                          <Text style={s.payType}>
+                            {m.tipo === "tarjeta_credito"
+                              ? "Tarjeta"
+                              : m.tipo === "cuenta_bancaria"
+                                ? "Cuenta"
+                                : m.tipo === "cheque_certificado"
+                                  ? "Cheque Certificado"
+                                  : "Medio de pago"}
+                            {m.ultimos_digitos
+                              ? ` (··· ${m.ultimos_digitos})`
+                              : ""}
                           </Text>
                           <Text style={s.payInfo}>
-                            {m.motivo || "Sin detalle"}
+                            Límite: {m.moneda}{" "}
+                            {m.limiteReservado?.toLocaleString("es-AR") || "0"}
                           </Text>
                         </View>
+
                         <View
                           style={[
                             s.verifBadge,
                             {
                               backgroundColor:
-                                m.estado === "pendiente"
-                                  ? "#FEF2F2"
-                                  : "#ECFDF5",
+                                m.estadoVerificacion === "validado"
+                                  ? "#E8F5E9"
+                                  : "#FFF3E0",
+                              borderColor:
+                                m.estadoVerificacion === "validado"
+                                  ? "#C8E6C9"
+                                  : "#FFE0B2",
                             },
                           ]}
                         >
                           <Text
                             style={{
-                              fontSize: 11,
-                              fontWeight: "600",
+                              fontSize: 10,
+                              fontWeight: "700",
                               color:
-                                m.estado === "pendiente"
-                                  ? "#DC2626"
-                                  : "#059669",
+                                m.estadoVerificacion === "validado"
+                                  ? "#2E7D32"
+                                  : "#E65100",
                             }}
                           >
-                            {m.estado || "pendiente"}
+                            {m.estadoVerificacion === "validado"
+                              ? "✓ Validado"
+                              : "⏳ Pendiente"}
                           </Text>
                         </View>
+
+                        {m.id != null && (
+                          <Pressable
+                            onPress={() => handleDeleteMedio(m.id!)}
+                            style={({ pressed }) => [
+                              pressed && { opacity: 0.7 },
+                            ]}
+                          >
+                            <View style={s.deletePayBtn}>
+                              <MaterialIcons
+                                name="delete-outline"
+                                size={18}
+                                color="#DC2626"
+                              />
+                            </View>
+                          </Pressable>
+                        )}
                       </View>
-                    ))}
+                    ))
+                  )}
+                </View>
+
+                {/* Multas section */}
+                {multas.length > 0 && (
+                  <>
+                    <Text style={s.secTitle}>Multas Activas</Text>
+                    <View style={s.section}>
+                      {multas.map((m) => (
+                        <View
+                          key={m.id ?? `${m.importe}-${m.estado}`}
+                          style={s.payCard}
+                        >
+                          <View style={s.payCardIconContainer}>
+                            <MaterialIcons
+                              name="gavel"
+                              size={20}
+                              color="#DC2626"
+                            />
+                          </View>
+                          <View style={{ flex: 1, gap: 2 }}>
+                            <Text style={[s.payType, { color: "#DC2626" }]}>
+                              Importe: $
+                              {m.importe?.toLocaleString("es-AR") || "0"}
+                            </Text>
+                            <Text style={s.payInfo}>
+                              {m.motivo || "Sin detalle de la multa"}
+                            </Text>
+                          </View>
+                          <View
+                            style={[
+                              s.verifBadge,
+                              {
+                                backgroundColor:
+                                  m.estado === "pendiente"
+                                    ? "#FEF2F2"
+                                    : "#ECFDF5",
+                                borderColor:
+                                  m.estado === "pendiente"
+                                    ? "#FEE2E2"
+                                    : "#D1FAE5",
+                              },
+                            ]}
+                          >
+                            <Text
+                              style={{
+                                fontSize: 10,
+                                fontWeight: "700",
+                                color:
+                                  m.estado === "pendiente"
+                                    ? "#DC2626"
+                                    : "#059669",
+                                textTransform: "uppercase",
+                              }}
+                            >
+                              {m.estado || "pendiente"}
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
                   </>
                 )}
               </View>
@@ -1311,8 +1482,9 @@ export default function ProfileScreen() {
 
             {/* ===== TAB: Métricas ===== */}
             {tab === "stats" && metricas && (
-              <View style={s.section}>
+              <View style={s.tabContent}>
                 <Text style={s.secTitle}>Métricas de Participación</Text>
+
                 <View style={s.metricsGrid}>
                   <MetricBox
                     label="Subastas"
@@ -1335,17 +1507,32 @@ export default function ProfileScreen() {
                     icon="touch-app"
                   />
                 </View>
-                <View style={s.metricRow}>
-                  <Text style={s.metricLabel}>Total Ofertado</Text>
-                  <Text style={s.metricVal}>
-                    ${metricas.montoTotalOfertado.toLocaleString()}
-                  </Text>
-                </View>
-                <View style={s.metricRow}>
-                  <Text style={s.metricLabel}>Total Pagado</Text>
-                  <Text style={s.metricVal}>
-                    ${metricas.montoTotalPagado.toLocaleString()}
-                  </Text>
+
+                <View style={s.section}>
+                  <View style={s.metricRow}>
+                    <View style={s.metricRowLeft}>
+                      <MaterialIcons name="toll" size={16} color="#8B6914" />
+                      <Text style={s.metricLabel}>Monto Total Ofertado</Text>
+                    </View>
+                    <Text style={s.metricVal}>
+                      ${metricas.montoTotalOfertado.toLocaleString("es-AR")}
+                    </Text>
+                  </View>
+
+                  <View
+                    style={[
+                      s.metricRow,
+                      { borderBottomWidth: 0, paddingBottom: 0 },
+                    ]}
+                  >
+                    <View style={s.metricRowLeft}>
+                      <MaterialIcons name="payment" size={16} color="#8B6914" />
+                      <Text style={s.metricLabel}>Monto Total Pagado</Text>
+                    </View>
+                    <Text style={[s.metricVal, { color: "#059669" }]}>
+                      ${metricas.montoTotalPagado.toLocaleString("es-AR")}
+                    </Text>
+                  </View>
                 </View>
               </View>
             )}
@@ -1367,10 +1554,12 @@ function InfoRow({
 }) {
   return (
     <View style={s.infoRow}>
-      <MaterialIcons name={icon as any} size={18} color="#9CA3AF" />
-      <View style={{ flex: 1 }}>
+      <View style={s.infoRowIconWrap}>
+        <MaterialIcons name={icon as any} size={16} color="#8B6914" />
+      </View>
+      <View style={{ flex: 1, gap: 1 }}>
         <Text style={s.infoLabel}>{label}</Text>
-        <Text style={s.infoValue}>{value}</Text>
+        <Text style={s.infoValue}>{value || "—"}</Text>
       </View>
     </View>
   );
@@ -1387,12 +1576,27 @@ function MetricBox({
 }) {
   return (
     <View style={s.metricBox}>
-      <MaterialIcons name={icon as any} size={20} color="#1A1A2E" />
+      <View style={s.metricBoxIconWrap}>
+        <MaterialIcons name={icon as any} size={18} color="#8B6914" />
+      </View>
       <Text style={s.metricBoxVal}>{value}</Text>
       <Text style={s.metricBoxLabel}>{label}</Text>
     </View>
   );
 }
+
+/* ═══════════════════════════════════════════════════════════
+   STYLES
+   ═══════════════════════════════════════════════════════════ */
+const SHADOW_LIGHT = Platform.select({
+  ios: {
+    shadowColor: "rgba(139,105,20,0.08)",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+  },
+  android: { elevation: 3 },
+}) as any;
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF8F0" },
@@ -1400,146 +1604,267 @@ const s = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    gap: 12,
+    gap: 14,
     paddingHorizontal: 40,
   },
-  scroll: { paddingHorizontal: 20, paddingBottom: 40 },
-  emptyTitle: { fontSize: 20, fontWeight: "700", color: "#1A1A2E" },
-  emptyText: { fontSize: 14, color: "#9CA3AF", textAlign: "center" },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 28,
+    backgroundColor: "#FEF3E2",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  scroll: { paddingHorizontal: 24, paddingBottom: 115 },
+  emptyTitle: { fontSize: 22, fontWeight: "800", color: "#1A1A2E" },
+  emptyText: {
+    fontSize: 14,
+    color: "#9CA3AF",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+
   loginBtn: {
     backgroundColor: "#1A1A2E",
     paddingHorizontal: 28,
     paddingVertical: 14,
     borderRadius: 14,
-    marginTop: 8,
+    marginTop: 12,
+    ...SHADOW_LIGHT,
   },
-  loginBtnText: { color: "#FFF", fontSize: 16, fontWeight: "700" },
+  loginBtnText: { color: "#FFF", fontSize: 15, fontWeight: "700" },
 
-  profileHeader: { alignItems: "center", paddingVertical: 14 },
-  headerTitle: { fontSize: 20, fontWeight: "700", color: "#1A1A2E" },
+  profileHeader: {
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 12,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#1A1A2E",
+    letterSpacing: -0.5,
+  },
 
-  tabs: { flexDirection: "row", gap: 4, marginBottom: 16 },
+  /* ── Navigation Tabs ── */
+  tabsWrapper: {
+    paddingHorizontal: 24,
+    marginBottom: 16,
+  },
+  tabs: {
+    flexDirection: "row",
+    alignSelf: "stretch",
+    gap: 3,
+    backgroundColor: "#FEF3E2",
+    borderRadius: 16,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: "#E5DDD0",
+  },
   tabBtn: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: "#FFF",
-    borderWidth: 1,
-    borderColor: "#F0EBE3",
+    gap: 3,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 12,
   },
-  tabActive: { borderColor: "#1A1A2E", backgroundColor: "#F5F1EC" },
-  tabText: { fontSize: 11, fontWeight: "600", color: "#9CA3AF" },
-  tabTextActive: { color: "#1A1A2E" },
+  tabActive: {
+    backgroundColor: "#FFF",
+    ...SHADOW_LIGHT,
+  },
+  tabText: { fontSize: 11, fontWeight: "500", color: "#9CA3AF" },
+  tabTextActive: { color: "#8B6914", fontWeight: "700" },
 
-  // Mis Subastas
+  tabContent: { gap: 16 },
+
+  /* ── Search Bar ── */
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F5F1EC",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 44,
-    gap: 10,
-    marginBottom: 12,
+    backgroundColor: "#FFF",
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    height: 52,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: "#E5DDD0",
+    ...SHADOW_LIGHT,
   },
-  searchInput: { flex: 1, fontSize: 15, color: "#1A1A2E" },
+  searchInput: { flex: 1, fontSize: 14, color: "#1A1A2E", fontWeight: "500" },
 
+  /* ── Stats Card ── */
   statsRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
-    paddingVertical: 14,
+    paddingVertical: 10,
     backgroundColor: "#FFF",
-    borderRadius: 14,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: "#F0EBE3",
+    ...SHADOW_LIGHT,
   },
   statItem: { flex: 1, alignItems: "center" },
-  statNum: { fontSize: 22, fontWeight: "800", color: "#1A1A2E" },
-  statLbl: { fontSize: 12, color: "#9CA3AF", marginTop: 2 },
-  statDiv: { width: 1, height: 30, backgroundColor: "#F0EBE3" },
+  statLiveRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  statNum: { fontSize: 18, fontWeight: "800", color: "#1A1A2E" },
+  statLbl: { fontSize: 10, color: "#9CA3AF", fontWeight: "600", marginTop: 2 },
+  statDiv: { width: 1, height: 20, backgroundColor: "#F0EBE3" },
 
+  /* ── Mis Subastas Cards ── */
   misCard: {
     flexDirection: "row",
     backgroundColor: "#FFF",
-    borderRadius: 14,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: "#F0EBE3",
-    padding: 12,
+    padding: 14,
     gap: 14,
-    marginBottom: 12,
+    alignItems: "center",
+    ...SHADOW_LIGHT,
   },
   misThumb: {
-    width: 80,
-    height: 80,
-    borderRadius: 10,
+    width: 76,
+    height: 76,
+    borderRadius: 14,
     backgroundColor: "#F0EBE3",
   },
-  misInfo: { flex: 1, justifyContent: "center" },
+  misInfo: { flex: 1, gap: 4 },
   misTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "700",
     color: "#1A1A2E",
-    marginBottom: 4,
+    letterSpacing: -0.2,
   },
-  misCateg: {
-    alignSelf: "flex-start",
+  cardMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 2,
+  },
+  categChip: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 4,
+  },
+  categText: { fontSize: 10, fontWeight: "700" },
+  liveTagBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(220,38,38,0.9)",
+    paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
-    marginBottom: 4,
+    gap: 4,
   },
-  misCategText: { fontSize: 11, fontWeight: "700" },
-  misPrice: { fontSize: 11, color: "#9CA3AF" },
-  misPriceVal: { fontSize: 14, fontWeight: "700", color: "#1A1A2E" },
-
-  addArticleBtn: {
-    backgroundColor: "#1A1A2E",
-    height: 52,
-    borderRadius: 14,
+  liveTagText: {
+    fontSize: 8,
+    fontWeight: "900",
+    color: "#FFF",
+    letterSpacing: 0.5,
+  },
+  closedTagBadge: {
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  closedTagText: { fontSize: 8, fontWeight: "700", color: "#6B7280" },
+  dateRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
+  dateText: { fontSize: 12, color: "#9CA3AF", fontWeight: "500" },
+  cardArrow: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: "#FFF8F0",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 8,
   },
-  addArticleBtnText: { color: "#FFF", fontSize: 16, fontWeight: "700" },
 
-  emptySection: { alignItems: "center", paddingVertical: 40, gap: 12 },
+  /* ── Buttons ── */
+  addArticleBtn: {
+    flexDirection: "row",
+    backgroundColor: "#8B6914",
+    height: 52,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 8,
+    ...SHADOW_LIGHT,
+  },
+  addArticleBtnText: { color: "#FFF", fontSize: 15, fontWeight: "800" },
 
-  // Perfil
+  emptySection: { alignItems: "center", paddingVertical: 32, gap: 12 },
+  emptyIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: "#FEF3E2",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  /* ── Perfil View ── */
   section: {
     backgroundColor: "#FFF",
-    borderRadius: 16,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: "#F0EBE3",
-    padding: 18,
+    padding: 20,
+    ...SHADOW_LIGHT,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#1A1A2E",
     marginBottom: 16,
+    letterSpacing: -0.2,
   },
   avatarRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 16,
-    marginBottom: 16,
+    marginBottom: 18,
   },
   avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: "#F5F1EC",
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "#FFF8F0",
     justifyContent: "center",
     alignItems: "center",
     overflow: "hidden",
+    borderWidth: 2,
+    borderColor: "#FEF3E2",
   },
-  avatarImg: { width: 64, height: 64, borderRadius: 20 },
-  userName: { fontSize: 18, fontWeight: "700", color: "#1A1A2E" },
+  avatarImg: { width: "100%", height: "100%", borderRadius: 36 },
+  userName: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#1A1A2E",
+    letterSpacing: -0.3,
+  },
   userEmail: { fontSize: 13, color: "#6B7280", marginTop: 2 },
-  badgesRow: { flexDirection: "row", gap: 6, marginTop: 6 },
-  badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  badgeText: { fontSize: 11, fontWeight: "700" },
+  badgesRow: { flexDirection: "row", gap: 6, marginTop: 8 },
+  badge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    gap: 3,
+  },
+  badgeText: { fontSize: 9, fontWeight: "800" },
 
   multaAlert: {
     flexDirection: "row",
@@ -1547,57 +1872,247 @@ const s = StyleSheet.create({
     gap: 8,
     backgroundColor: "#FEF2F2",
     padding: 12,
-    borderRadius: 10,
-    marginBottom: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#FEE2E2",
+    marginBottom: 16,
   },
-  multaAlertText: { fontSize: 13, color: "#DC2626", fontWeight: "600" },
+  multaAlertText: { fontSize: 13, color: "#DC2626", fontWeight: "700" },
 
   infoList: { gap: 0 },
   infoRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 12,
+    gap: 14,
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: "#F3EDE4",
   },
-  infoLabel: { fontSize: 12, color: "#9CA3AF" },
-  infoValue: { fontSize: 14, color: "#1A1A2E", fontWeight: "600" },
+  infoRowIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: "#FFF8F0",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#FEF3E2",
+  },
+  infoLabel: {
+    fontSize: 10,
+    color: "#9CA3AF",
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  infoValue: {
+    fontSize: 14,
+    color: "#1A1A2E",
+    fontWeight: "700",
+    marginTop: 2,
+  },
+
+  editProfileBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    height: 48,
+    marginTop: 18,
+    backgroundColor: "#FFF",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#E5DDD0",
+  },
+  editProfileText: { fontSize: 14, color: "#1A1A2E", fontWeight: "700" },
 
   logoutBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    paddingVertical: 14,
-    marginTop: 16,
+    height: 52,
+    marginTop: 24,
     backgroundColor: "#FEF2F2",
-    borderRadius: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#FEE2E2",
   },
-  logoutText: { fontSize: 14, color: "#DC2626", fontWeight: "700" },
+  logoutText: { fontSize: 14, color: "#DC2626", fontWeight: "800" },
 
   adminBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    paddingVertical: 14,
-    marginTop: 16,
-    backgroundColor: "#FFF8F0",
-    borderColor: "#E5DDD0",
-    borderWidth: 1,
-    borderRadius: 12,
+    height: 52,
+    marginTop: 24,
+    backgroundColor: "#FFF",
+    borderColor: "#1A1A2E",
+    borderWidth: 1.5,
+    borderRadius: 16,
+    ...SHADOW_LIGHT,
   },
-  adminText: { fontSize: 14, color: "#8B6914", fontWeight: "700" },
+  adminText: { fontSize: 14, color: "#1A1A2E", fontWeight: "800" },
 
-  // Pagos
-  secTitle: {
+  /* ── Payments View ── */
+  paymentsHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  addPagoToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#FEF3E2",
+    borderWidth: 1,
+    borderColor: "#E5DDD0",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  addPagoToggleActive: {
+    backgroundColor: "#B45309",
+    borderColor: "#B45309",
+  },
+  addPagoToggleText: { fontSize: 12, fontWeight: "700", color: "#8B6914" },
+
+  payCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3EDE4",
+  },
+  payCardIconContainer: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: "#FFF8F0",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#FEF3E2",
+  },
+  payType: { fontSize: 14, fontWeight: "700", color: "#1A1A2E" },
+  payInfo: { fontSize: 12, color: "#9CA3AF", fontWeight: "500" },
+  verifBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  deletePayBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: "#FEF2F2",
+  },
+
+  /* ── Add Payment Form ── */
+  addPagoForm: {
+    backgroundColor: "#FFF",
+    borderWidth: 1,
+    borderColor: "#E5DDD0",
+    borderRadius: 24,
+    padding: 20,
+    gap: 14,
+    marginBottom: 16,
+    ...SHADOW_LIGHT,
+  },
+  addPagoFormTitle: {
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "800",
     color: "#1A1A2E",
+    letterSpacing: -0.2,
+  },
+  formGroup: { gap: 6 },
+  formLabel: { fontSize: 12, fontWeight: "700", color: "#6B7280" },
+  formButtonRow: { flexDirection: "row", gap: 6 },
+  formRadioBtn: {
+    flex: 1,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: "#FFF",
+    borderWidth: 1,
+    borderColor: "#E5DDD0",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  formRadioBtnActive: {
+    borderColor: "#8B6914",
+    backgroundColor: "#FEF3E2",
+  },
+  formRadioText: { fontSize: 12, color: "#6B7280", fontWeight: "600" },
+  formRadioTextActive: { color: "#8B6914", fontWeight: "800" },
+  formInput: {
+    backgroundColor: "#FFF8F0",
+    borderWidth: 1.5,
+    borderColor: "#E5DDD0",
+    borderRadius: 12,
+    height: 44,
+    paddingHorizontal: 14,
+    fontSize: 14,
+    color: "#1A1A2E",
+  },
+  selectTrigger: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#FFF8F0",
+    borderWidth: 1.5,
+    borderColor: "#E5DDD0",
+    borderRadius: 12,
+    height: 44,
+    paddingHorizontal: 14,
+  },
+  selectTriggerText: { fontSize: 12, color: "#9CA3AF" },
+  dropdownList: {
+    position: "absolute",
+    top: 66,
+    left: 0,
+    right: 0,
+    backgroundColor: "#FFF",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5DDD0",
+    padding: 6,
+    zIndex: 999,
+    gap: 4,
+    ...SHADOW_LIGHT,
+  },
+  dropdownItem: {
+    height: 38,
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    justifyContent: "space-between",
+  },
+  dropdownItemActive: { backgroundColor: "#FEF3E2" },
+  dropdownItemText: { fontSize: 12, color: "#1A1A2E" },
+  registerPayBtn: {
+    flexDirection: "row",
+    backgroundColor: "#1A1A2E",
+    height: 48,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 8,
+  },
+  registerPayBtnText: { color: "#FFF", fontSize: 14, fontWeight: "700" },
+
+  /* ── Notificaciones Tab ── */
+  secTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#1A1A2E",
+    letterSpacing: -0.3,
     marginBottom: 12,
   },
-  payCard: {
+  notificationCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
@@ -1605,30 +2120,29 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F3EDE4",
   },
-  payType: { fontSize: 14, fontWeight: "600", color: "#1A1A2E" },
-  payInfo: { fontSize: 12, color: "#9CA3AF", marginTop: 2 },
-  verifBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-
-  // Notificaciones
-  notificationCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3EDE4",
-  },
-  notificationCardRead: { opacity: 0.7 },
+  notificationCardRead: { opacity: 0.5 },
   notificationIcon: {
-    width: 32,
-    height: 32,
+    width: 34,
+    height: 34,
     borderRadius: 10,
-    backgroundColor: "#F5F1EC",
+    backgroundColor: "#FFF8F0",
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#FEF3E2",
   },
-  notificationText: { fontSize: 14, color: "#1A1A2E", fontWeight: "600" },
-  notificationMeta: { fontSize: 11, color: "#9CA3AF", marginTop: 2 },
+  notificationText: {
+    fontSize: 14,
+    color: "#1A1A2E",
+    fontWeight: "700",
+    lineHeight: 20,
+  },
+  notificationMeta: {
+    fontSize: 11,
+    color: "#9CA3AF",
+    marginTop: 2,
+    fontWeight: "500",
+  },
   unreadDot: {
     width: 8,
     height: 8,
@@ -1636,47 +2150,60 @@ const s = StyleSheet.create({
     backgroundColor: "#DC2626",
   },
 
-  // Métricas
+  /* ── Métricas ── */
   metricsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
-    marginBottom: 14,
+    gap: 12,
+    marginBottom: 16,
   },
   metricBox: {
     width: "47%",
-    backgroundColor: "#F5F1EC",
-    borderRadius: 12,
-    padding: 14,
+    backgroundColor: "#FFF",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#F0EBE3",
+    padding: 16,
     alignItems: "center",
     gap: 4,
+    ...SHADOW_LIGHT,
   },
-  metricBoxVal: { fontSize: 20, fontWeight: "800", color: "#1A1A2E" },
-  metricBoxLabel: { fontSize: 11, color: "#9CA3AF" },
+  metricBoxIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: "#FFF8F0",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#FEF3E2",
+    marginBottom: 4,
+  },
+  metricBoxVal: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#1A1A2E",
+    letterSpacing: -0.5,
+  },
+  metricBoxLabel: {
+    fontSize: 11,
+    color: "#9CA3AF",
+    fontWeight: "600",
+    textTransform: "uppercase",
+  },
   metricRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: "#F3EDE4",
-  },
-  metricLabel: { fontSize: 14, color: "#6B7280" },
-  metricVal: { fontSize: 14, fontWeight: "700", color: "#1A1A2E" },
-
-  // Edit Profile styles
-  editProfileBtn: {
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
     paddingVertical: 14,
-    marginTop: 16,
-    backgroundColor: "#F5F1EC",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#F0EBE3",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3EDE4",
   },
-  editProfileText: { fontSize: 14, color: "#1A1A2E", fontWeight: "700" },
+  metricRowLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
+  metricLabel: { fontSize: 14, color: "#6B7280", fontWeight: "600" },
+  metricVal: { fontSize: 16, fontWeight: "800", color: "#1A1A2E" },
+
+  /* ── Edit Profile ── */
   avatarEditRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1686,14 +2213,16 @@ const s = StyleSheet.create({
   avatarContainerEdit: {
     width: 80,
     height: 80,
-    borderRadius: 24,
-    backgroundColor: "#F5F1EC",
+    borderRadius: 40,
+    backgroundColor: "#FFF",
     justifyContent: "center",
     alignItems: "center",
     overflow: "hidden",
     position: "relative",
+    borderWidth: 2,
+    borderColor: "#E5DDD0",
   },
-  avatarImgEdit: { width: 80, height: 80, borderRadius: 24 },
+  avatarImgEdit: { width: "100%", height: "100%", borderRadius: 40 },
   avatarOverlay: {
     position: "absolute",
     bottom: 0,
@@ -1707,8 +2236,8 @@ const s = StyleSheet.create({
   avatarEditButtons: { flex: 1, gap: 8 },
   changePhotoBtn: {
     alignSelf: "flex-start",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 8,
     backgroundColor: "#1A1A2E",
   },
@@ -1723,39 +2252,41 @@ const s = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#DC2626",
+    backgroundColor: "#FEF2F2",
   },
   deletePhotoText: { color: "#DC2626", fontSize: 12, fontWeight: "700" },
   editForm: { gap: 12, marginBottom: 20 },
   inputGroup: { marginBottom: 12 },
   inputLabel: {
     fontSize: 13,
-    fontWeight: "600",
-    color: "#1A1A2E",
+    fontWeight: "700",
+    color: "#6B7280",
     marginBottom: 4,
   },
   textInput: {
-    backgroundColor: "#FFF8F0",
+    backgroundColor: "#FFF",
     borderWidth: 1.5,
     borderColor: "#E5DDD0",
     borderRadius: 12,
     height: 48,
     paddingHorizontal: 16,
-    fontSize: 15,
+    fontSize: 14,
     color: "#1A1A2E",
+    fontWeight: "500",
   },
   editActionRow: { flexDirection: "row", gap: 12, marginTop: 12 },
-  saveBtn: {
-    flex: 1,
+  saveBtn: { flex: 1 },
+  saveBtnInner: {
     height: 48,
     borderRadius: 12,
-    backgroundColor: "#1A1A2E",
+    backgroundColor: "#8B6914",
     justifyContent: "center",
     alignItems: "center",
   },
   saveBtnDisabled: { opacity: 0.7 },
   saveBtnText: { color: "#FFF", fontSize: 15, fontWeight: "700" },
-  cancelBtn: {
-    flex: 1,
+  cancelBtn: { flex: 1 },
+  cancelBtnInner: {
     height: 48,
     borderRadius: 12,
     borderWidth: 1.5,

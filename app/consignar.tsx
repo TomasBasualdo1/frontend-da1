@@ -3,15 +3,15 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { articleService } from "../src/services";
@@ -168,7 +168,12 @@ export default function ConsignarScreen() {
 
         {step < 4 && <ProgressBar />}
 
-        <ScrollView contentContainerStyle={st.scroll}>
+        <ScrollView
+          contentContainerStyle={[
+            st.scroll,
+            step === 4 && { justifyContent: "center" },
+          ]}
+        >
           {/* STEP 1 */}
           {step === 1 && (
             <View style={st.stepContent}>
@@ -389,10 +394,15 @@ export default function ConsignarScreen() {
                 <Text style={st.successText}>Artículo cargado con éxito</Text>
               </View>
               <Pressable
-                style={st.btnPrimary}
                 onPress={() => router.replace("/(tabs)/profile")}
+                style={({ pressed }) => [
+                  pressed && { opacity: 0.9 },
+                  { width: "100%" },
+                ]}
               >
-                <Text style={st.btnPrimaryText}>Volver a Mis Subastas</Text>
+                <View style={st.successBtn}>
+                  <Text style={st.successBtnText}>Volver a Mis Subastas</Text>
+                </View>
               </Pressable>
             </View>
           )}
@@ -609,9 +619,24 @@ const st = StyleSheet.create({
   },
 
   // Step 4
-  successContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  successContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
+    width: "100%",
+  },
   successIconWrap: { alignItems: "center", gap: 16, marginBottom: 40 },
   successText: { fontSize: 18, fontWeight: "700", color: "#059669" },
+  successBtn: {
+    backgroundColor: "#1A1A2E",
+    height: 52,
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    width: "100%",
+  },
+  successBtnText: { color: "#FFF", fontSize: 16, fontWeight: "700" },
 
   // Footer Actions
   footerActions: {
