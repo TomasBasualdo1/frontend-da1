@@ -1,13 +1,107 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, Pressable, StyleSheet, FlatList, Image, ActivityIndicator, ScrollView } from "react-native";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  Image,
+  ActivityIndicator,
+  ScrollView,
+  Animated,
+  Dimensions,
+  Platform,
+  StatusBar,
+} from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../../../src/context/AuthContext";
 import { auctionService } from "../../../src/services";
-import { SubastaDetalle, SubastaDetallePublica, ItemCatalogo, Categoria } from "../../../src/types";
+import {
+  SubastaDetalle,
+  SubastaDetallePublica,
+  ItemCatalogo,
+  Categoria,
+} from "../../../src/types";
 
-const CATEG_COLORS: Record<Categoria, string> = { comun: "#6B7280", especial: "#2563EB", plata: "#94A3B8", oro: "#D97706", platino: "#7C3AED" };
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+
+const CATEG_LABELS: Record<Categoria, string> = {
+  comun: "Común",
+  especial: "Especial",
+  plata: "Plata",
+  oro: "Oro",
+  platino: "Platino",
+};
+
+const CATEG_COLORS: Record<Categoria, { bg: string; text: string; border: string }> = {
+  comun: { bg: "#F3F4F6", text: "#374151", border: "#E5E7EB" },
+  especial: { bg: "#EFF6FF", text: "#1D4ED8", border: "#BFDBFE" },
+  plata: { bg: "#F1F5F9", text: "#475569", border: "#CBD5E1" },
+  oro: { bg: "#FEF3C7", text: "#B45309", border: "#FDE68A" },
+  platino: { bg: "#F5F3FF", text: "#6D28D9", border: "#DDD6FE" },
+};
+
+const CATEG_ICONS: Record<Categoria, string> = {
+  comun: "local-offer",
+  especial: "star",
+  plata: "workspace-premium",
+  oro: "emoji-events",
+  platino: "diamond",
+};
+
+const COVER_IMAGES = [
+  "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80",
+  "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80",
+  "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80",
+];
+
+/* ── Pulsating Live Dot ─────────────────────────────────── */
+function LiveDot() {
+  const pulse = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.6, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: true }),
+      ])
+    ).start();
+  }, [pulse]);
+  return (
+    <View style={{ width: 12, height: 12, justifyContent: "center", alignItems: "center" }}>
+      <Animated.View
+        style={{
+          position: "absolute",
+          width: 12,
+          height: 12,
+          borderRadius: 6,
+          backgroundColor: "rgba(239,68,68,0.3)",
+          transform: [{ scale: pulse }],
+        }}
+      />
+      <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: "#EF4444" }} />
+    </View>
+  );
+}
+
+function formatDate(fecha: string): string {
+  try {
+    const d = new Date(fecha);
+    return d.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
+  } catch {
+    return fecha;
+  }
+}
+
+function formatTime(hora: string): string {
+  try {
+    const [h, m] = hora.split(":");
+    return `${h}:${m} hs`;
+  } catch {
+    return hora;
+  }
+}
 
 export default function SubastaDetalleScreen() {
   const router = useRouter();
@@ -20,94 +114,535 @@ export default function SubastaDetalleScreen() {
     if (!id) return;
     const load = async () => {
       try {
-        const data = isAuthenticated ? await auctionService.getDetalle(Number(id)) : await auctionService.getPublicaDetalle(Number(id));
+        const data = isAuthenticated
+          ? await auctionService.getDetalle(Number(id))
+          : await auctionService.getPublicaDetalle(Number(id));
         setSubasta(data);
       } catch {} finally { setLoading(false); }
     };
     load();
   }, [id, isAuthenticated]);
 
-  if (loading) return <View style={s.center}><ActivityIndicator size="large" color="#8B6914" /></View>;
-  if (!subasta) return <View style={s.center}><Text style={s.err}>Subasta no encontrada</Text></View>;
+  if (loading) {
+    return (
+      <View style={st.center}>
+        <ActivityIndicator size="large" color="#8B6914" />
+      </View>
+    );
+  }
 
-  const color = CATEG_COLORS[subasta.categoria] || "#6B7280";
+  if (!subasta) {
+    return (
+      <View style={st.center}>
+        <MaterialIcons name="error-outline" size={48} color="#DC2626" />
+        <Text style={st.err}>Subasta no encontrada</Text>
+        <Pressable onPress={() => router.back()} style={st.backBtnSimple}>
+          <Text style={st.backBtnSimpleText}>Volver al Inicio</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  const catColors = CATEG_COLORS[subasta.categoria];
+  const coverImg = COVER_IMAGES[Number(id) % COVER_IMAGES.length];
+  const isLive = subasta.estado === "abierta";
 
   return (
-    <View style={s.container}><SafeAreaView style={{ flex: 1 }}>
-      <View style={s.header}>
-        <Pressable style={s.back} onPress={() => router.back()}><MaterialIcons name="arrow-back" size={24} color="#1A1A2E" /></Pressable>
-        <Text style={s.headerTitle}>Subasta #{id}</Text>
-        <View style={{ width: 44 }} />
-      </View>
+    <View style={st.container}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      
+      {/* ── Fixed Premium Header (Overlay) ── */}
+      <SafeAreaView style={st.headerSafeArea} edges={["top"]}>
+        <View style={st.headerRow}>
+          <Pressable onPress={() => router.back()} style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
+            <View style={st.backBtnCircle}>
+              <MaterialIcons name="arrow-back" size={22} color="#1A1A2E" />
+            </View>
+          </Pressable>
+          <Text style={st.headerTitle}>Detalles de Subasta</Text>
+          <View style={{ width: 40 }} />
+        </View>
+      </SafeAreaView>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
-        {/* Info card */}
-        <View style={s.infoCard}>
-          <View style={s.infoRow}>
-            <View style={[s.badge, { backgroundColor: color + "18" }]}><Text style={[s.badgeText, { color }]}>{subasta.categoria.toUpperCase()}</Text></View>
-            <Text style={[s.estado, { color: subasta.estado === "abierta" ? "#059669" : "#DC2626" }]}>● {subasta.estado === "abierta" ? "Abierta" : "Cerrada"}</Text>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={st.scrollContainer}>
+        {/* ── Cover Hero Image ── */}
+        <View style={st.heroWrap}>
+          <Image source={{ uri: coverImg }} style={st.heroImg} />
+          <LinearGradient
+            colors={["rgba(0,0,0,0.4)", "rgba(0,0,0,0.85)"]}
+            style={st.heroGradient}
+          />
+          <View style={st.heroInfoOverlay}>
+            <Text style={st.heroSubTitle}>Catálogo Exclusivo</Text>
+            <Text style={st.heroTitle}>Subasta #{id}</Text>
           </View>
-          <View style={s.detailRow}><MaterialIcons name="event" size={18} color="#9CA3AF" /><Text style={s.detailText}>{subasta.fecha} · {subasta.hora}</Text></View>
-          <View style={s.detailRow}><MaterialIcons name="place" size={18} color="#9CA3AF" /><Text style={s.detailText}>{subasta.ubicacion || "Sin ubicación"}</Text></View>
-          <View style={s.detailRow}><MaterialIcons name="attach-money" size={18} color="#9CA3AF" /><Text style={s.detailMoney}>{subasta.moneda}</Text></View>
         </View>
 
-        {/* Catálogo */}
-        <Text style={s.secTitle}>Catálogo ({subasta.catalogo?.length || 0} piezas)</Text>
-        {subasta.catalogo?.map((item: any) => (
-          <View key={item.id} style={s.itemCard}>
-            {item.fotos?.length > 0 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.photoScroll}>
-                {item.fotos.map((uri: string, i: number) => <Image key={i} source={{ uri }} style={s.photo} />)}
-              </ScrollView>
-            )}
-            <Text style={s.itemDesc}>{item.descripcion}</Text>
-            <View style={s.itemPrices}>
-              {item.precioBase != null && <View><Text style={s.priceLabel}>Base</Text><Text style={s.priceVal}>${item.precioBase.toLocaleString()}</Text></View>}
-              <View><Text style={s.priceLabel}>Mejor oferta</Text><Text style={s.priceOffer}>${item.mejorOfertaActual?.toLocaleString() || "—"}</Text></View>
+        {/* ── Main Details Card ── */}
+        <View style={st.cardWrapper}>
+          <View style={st.infoCard}>
+            <View style={st.cardHeaderRow}>
+              {/* Category */}
+              <View style={[st.categChip, { backgroundColor: catColors.bg, borderColor: catColors.border }]}>
+                <MaterialIcons name={CATEG_ICONS[subasta.categoria] as any} size={11} color={catColors.text} />
+                <Text style={[st.categText, { color: catColors.text }]}>
+                  {CATEG_LABELS[subasta.categoria]}
+                </Text>
+              </View>
+
+              {/* Status */}
+              {isLive ? (
+                <View style={st.liveStatusBadge}>
+                  <LiveDot />
+                  <Text style={st.liveStatusText}>EN VIVO</Text>
+                </View>
+              ) : (
+                <View style={st.closedStatusBadge}>
+                  <Text style={st.closedStatusText}>Finalizada</Text>
+                </View>
+              )}
             </View>
-            <View style={[s.itemStatus, { backgroundColor: item.subastado === "si" ? "#FEF2F2" : "#ECFDF5" }]}>
-              <Text style={{ fontSize: 12, fontWeight: "600", color: item.subastado === "si" ? "#DC2626" : "#059669" }}>{item.subastado === "si" ? "Vendido" : "Disponible"}</Text>
+
+            <View style={st.divider} />
+
+            {/* Info rows */}
+            <View style={st.detailsList}>
+              <View style={st.detailItem}>
+                <View style={st.iconContainer}>
+                  <MaterialIcons name="event" size={18} color="#8B6914" />
+                </View>
+                <View>
+                  <Text style={st.detailLabel}>Fecha y Hora</Text>
+                  <Text style={st.detailValue}>
+                    {formatDate(subasta.fecha)} a las {formatTime(subasta.hora)}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={st.detailItem}>
+                <View style={st.iconContainer}>
+                  <MaterialIcons name="place" size={18} color="#8B6914" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={st.detailLabel}>Ubicación</Text>
+                  <Text style={st.detailValue} numberOfLines={1}>
+                    {subasta.ubicacion || "Virtual / En Línea"}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={st.detailItem}>
+                <View style={st.iconContainer}>
+                  <MaterialIcons name="monetization-on" size={18} color="#8B6914" />
+                </View>
+                <View>
+                  <Text style={st.detailLabel}>Moneda de Ofertas</Text>
+                  <View style={st.currencyRow}>
+                    <Text style={st.detailValue}>Valores expresados en </Text>
+                    <View style={st.currencyChip}>
+                      <Text style={st.currencyText}>{subasta.moneda}</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
             </View>
           </View>
-        ))}
+        </View>
 
-        {subasta.estado === "abierta" && isAuthenticated && (
-          <Pressable style={s.joinBtn} onPress={() => router.push("/(tabs)/live")}>
-            <MaterialIcons name="live-tv" size={20} color="#FFF" /><Text style={s.joinText}>Ir a subasta en vivo</Text>
-          </Pressable>
-        )}
+        {/* ── Catalog Section ── */}
+        <View style={st.catalogSection}>
+          <Text style={st.sectionTitle}>
+            Catálogo de Piezas <Text style={st.sectionTitleCount}>({subasta.catalogo?.length || 0})</Text>
+          </Text>
+
+          {subasta.catalogo?.map((item: any, index: number) => {
+            const hasPhotos = item.fotos && item.fotos.length > 0;
+            const itemImg = hasPhotos ? item.fotos[0] : COVER_IMAGES[index % COVER_IMAGES.length];
+            return (
+              <View key={item.id} style={st.itemCard}>
+                {/* Product Photo Slider or Single Photo */}
+                <View style={st.itemPhotoWrap}>
+                  <Image source={{ uri: itemImg }} style={st.itemPhoto} />
+                  <LinearGradient
+                    colors={["rgba(0,0,0,0.1)", "rgba(0,0,0,0.5)"]}
+                    style={st.itemPhotoGradient}
+                  />
+                  {/* Status Badge on Photo */}
+                  <View style={[
+                    st.itemStatusTag,
+                    { backgroundColor: item.subastado === "si" ? "rgba(239,68,68,0.9)" : "rgba(16,185,129,0.9)" }
+                  ]}>
+                    <Text style={st.itemStatusTagText}>
+                      {item.subastado === "si" ? "VENDIDO" : "DISPONIBLE"}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Info Container */}
+                <View style={st.itemContent}>
+                  <Text style={st.itemDescription} numberOfLines={2}>
+                    {item.descripcion}
+                  </Text>
+
+                  <View style={st.itemPriceGrid}>
+                    {item.precioBase != null && (
+                      <View style={st.priceCol}>
+                        <Text style={st.priceLabel}>PRECIO BASE</Text>
+                        <Text style={st.priceVal}>
+                          {subasta.moneda === "USD" ? "USD" : "$"} {item.precioBase.toLocaleString("es-AR")}
+                        </Text>
+                      </View>
+                    )}
+
+                    <View style={st.priceCol}>
+                      <Text style={[st.priceLabel, { color: "#8B6914" }]}>MEJOR OFERTA</Text>
+                      <Text style={[st.priceVal, st.priceOfferVal]}>
+                        {item.mejorOfertaActual != null ? (
+                          `${subasta.moneda === "USD" ? "USD" : "$"} ${item.mejorOfertaActual.toLocaleString("es-AR")}`
+                        ) : (
+                          "—"
+                        )}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            );
+          })}
+        </View>
       </ScrollView>
-    </SafeAreaView></View>
+
+      {/* ── Fixed Sticky Join Live Button at the Bottom ── */}
+      {isLive && isAuthenticated && (
+        <SafeAreaView style={st.stickyBottomArea} edges={["bottom"]}>
+          <Pressable
+            onPress={() => router.push("/(tabs)/live")}
+            style={({ pressed }) => [pressed && { opacity: 0.9 }]}
+          >
+            <LinearGradient
+              colors={["#8B6914", "#B8941C"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={st.joinBtnGrad}
+            >
+              <MaterialIcons name="live-tv" size={20} color="#FFF" />
+              <Text style={st.joinBtnText}>Ingresar a la Sala en Vivo</Text>
+              <LiveDot />
+            </LinearGradient>
+          </Pressable>
+        </SafeAreaView>
+      )}
+    </View>
   );
 }
 
-const s = StyleSheet.create({
+/* ═══════════════════════════════════════════════════════════
+   STYLES
+   ═══════════════════════════════════════════════════════════ */
+const SHADOW = Platform.select({
+  ios: {
+    shadowColor: "rgba(139,105,20,0.12)",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 1,
+    shadowRadius: 16,
+  },
+  android: { elevation: 6 },
+}) as any;
+
+const SHADOW_LIGHT = Platform.select({
+  ios: {
+    shadowColor: "rgba(139,105,20,0.08)",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+  },
+  android: { elevation: 3 },
+}) as any;
+
+const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF8F0" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FFF8F0" },
-  err: { fontSize: 16, color: "#DC2626" },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 24, paddingVertical: 12 },
-  back: { width: 44, height: 44, borderRadius: 14, backgroundColor: "#FFFCF7", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "#F0EBE3" },
-  headerTitle: { fontSize: 18, fontWeight: "700", color: "#1A1A2E" },
-  scroll: { paddingHorizontal: 24, paddingBottom: 40 },
-  infoCard: { backgroundColor: "#FFFCF7", borderRadius: 18, padding: 20, borderWidth: 1, borderColor: "#F0EBE3", marginBottom: 24, gap: 10 },
-  infoRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
-  badge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 10 },
-  badgeText: { fontSize: 12, fontWeight: "700" },
-  estado: { fontSize: 13, fontWeight: "600" },
-  detailRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  detailText: { fontSize: 14, color: "#6B7280" },
-  detailMoney: { fontSize: 14, fontWeight: "700", color: "#1A1A2E" },
-  secTitle: { fontSize: 18, fontWeight: "700", color: "#1A1A2E", marginBottom: 14 },
-  itemCard: { backgroundColor: "#FFFCF7", borderRadius: 16, borderWidth: 1, borderColor: "#F0EBE3", padding: 16, marginBottom: 14 },
-  photoScroll: { marginBottom: 12 },
-  photo: { width: 120, height: 90, borderRadius: 10, marginRight: 8, backgroundColor: "#F0EBE3" },
-  itemDesc: { fontSize: 16, fontWeight: "600", color: "#1A1A2E", marginBottom: 10 },
-  itemPrices: { flexDirection: "row", justifyContent: "space-between", marginBottom: 10 },
-  priceLabel: { fontSize: 12, color: "#9CA3AF" },
-  priceVal: { fontSize: 16, fontWeight: "700", color: "#1A1A2E" },
-  priceOffer: { fontSize: 16, fontWeight: "700", color: "#059669" },
-  itemStatus: { alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  joinBtn: { flexDirection: "row", backgroundColor: "#8B6914", height: 56, borderRadius: 16, justifyContent: "center", alignItems: "center", gap: 10, marginTop: 8, elevation: 4 },
-  joinText: { color: "#FFF", fontSize: 17, fontWeight: "700" },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FFF8F0", padding: 24 },
+  err: { fontSize: 16, color: "#1A1A2E", fontWeight: "700", marginTop: 12, marginBottom: 20 },
+  backBtnSimple: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10, backgroundColor: "#8B6914" },
+  backBtnSimpleText: { color: "#FFF", fontWeight: "700" },
+
+  /* ── Header ── */
+  headerSafeArea: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+  },
+  backBtnCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E5DDD0",
+    ...SHADOW_LIGHT,
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#FFF",
+    textShadowColor: "rgba(0,0,0,0.4)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+
+  /* ── Scroll Area ── */
+  scrollContainer: { paddingBottom: 120 },
+
+  /* ── Hero section ── */
+  heroWrap: {
+    width: "100%",
+    height: 240,
+    position: "relative",
+  },
+  heroImg: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  heroGradient: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  heroInfoOverlay: {
+    position: "absolute",
+    bottom: 24,
+    left: 24,
+    right: 24,
+  },
+  heroSubTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#B8941C",
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  heroTitle: {
+    fontSize: 32,
+    fontWeight: "800",
+    color: "#FFF",
+    letterSpacing: -0.5,
+  },
+
+  /* ── Details Card ── */
+  cardWrapper: {
+    paddingHorizontal: 24,
+    marginTop: -24,
+    zIndex: 5,
+  },
+  infoCard: {
+    backgroundColor: "#FFF",
+    borderRadius: 24,
+    padding: 20,
+    ...SHADOW,
+  },
+  cardHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  categChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 4,
+  },
+  categText: { fontSize: 11, fontWeight: "700" },
+  
+  liveStatusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEF2F2",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#FEE2E2",
+    gap: 6,
+  },
+  liveStatusText: { fontSize: 10, fontWeight: "800", color: "#EF4444" },
+  
+  closedStatusBadge: {
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  closedStatusText: { fontSize: 10, fontWeight: "700", color: "#6B7280" },
+
+  divider: {
+    height: 1,
+    backgroundColor: "#F3EDE4",
+    marginVertical: 16,
+  },
+
+  detailsList: { gap: 14 },
+  detailItem: { flexDirection: "row", alignItems: "center", gap: 14 },
+  iconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#FFF8F0",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#FEF3E2",
+  },
+  detailLabel: { fontSize: 11, color: "#9CA3AF", fontWeight: "600", textTransform: "uppercase" },
+  detailValue: { fontSize: 14, color: "#1A1A2E", fontWeight: "700", marginTop: 2 },
+  
+  currencyRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", marginTop: 2 },
+  currencyChip: {
+    backgroundColor: "#EFF6FF",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#DBEAFE",
+  },
+  currencyText: { fontSize: 11, fontWeight: "800", color: "#2563EB" },
+
+  /* ── Catalog Section ── */
+  catalogSection: {
+    paddingHorizontal: 24,
+    marginTop: 32,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#1A1A2E",
+    letterSpacing: -0.3,
+    marginBottom: 16,
+  },
+  sectionTitleCount: {
+    fontWeight: "400",
+    color: "#8B6914",
+  },
+
+  itemCard: {
+    backgroundColor: "#FFF",
+    borderRadius: 20,
+    overflow: "hidden",
+    marginBottom: 16,
+    ...SHADOW_LIGHT,
+  },
+  itemPhotoWrap: {
+    width: "100%",
+    height: 180,
+    position: "relative",
+  },
+  itemPhoto: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  itemPhotoGradient: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: "50%",
+  },
+  itemStatusTag: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  itemStatusTagText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#FFF",
+    letterSpacing: 0.5,
+  },
+
+  itemContent: {
+    padding: 16,
+    gap: 12,
+  },
+  itemDescription: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#1A1A2E",
+    lineHeight: 22,
+  },
+
+  itemPriceGrid: {
+    flexDirection: "row",
+    backgroundColor: "#FFF8F0",
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#FEF3E2",
+    justifyContent: "space-between",
+  },
+  priceCol: { flex: 1 },
+  priceLabel: {
+    fontSize: 9,
+    color: "#9CA3AF",
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  priceVal: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#1A1A2E",
+  },
+  priceOfferVal: {
+    color: "#059669",
+  },
+
+  /* ── Sticky Bottom Button ── */
+  stickyBottomArea: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 24,
+    paddingBottom: Platform.OS === "ios" ? 8 : 16,
+    backgroundColor: "transparent",
+  },
+  joinBtnGrad: {
+    height: 56,
+    borderRadius: 28,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 24,
+    ...SHADOW,
+  },
+  joinBtnText: {
+    color: "#FFF",
+    fontSize: 16,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+  },
 });
