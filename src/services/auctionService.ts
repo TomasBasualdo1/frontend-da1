@@ -1,6 +1,8 @@
 import api from "./api";
 import { getItemAsync } from "../utils/storage";
 import {
+  Categoria,
+  Moneda,
   SubastaListado,
   SubastaDetalle,
   SubastaDetallePublica,
@@ -24,6 +26,13 @@ type StreamHandlers = {
 };
 
 const STREAM_RECONNECT_MS = 3000;
+const CATEGORIAS: Categoria[] = [
+  "comun",
+  "especial",
+  "plata",
+  "oro",
+  "platino",
+];
 
 function buildApiUrl(path: string): string {
   const baseUrl = String(api.defaults.baseURL || "").replace(/\/+$/, "");
@@ -45,6 +54,87 @@ function parseSseEvent(rawEvent: string): StreamEvent | null {
   } catch {
     return null;
   }
+}
+
+function asArray(value: unknown): any[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function normalizeNumber(value: unknown): number | undefined {
+  if (value === null || value === undefined || value === "") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function normalizeSubastado(value: unknown): "si" | "no" {
+  if (value === "si" || value === true || value === "true") return "si";
+  return "no";
+}
+
+function normalizeFotos(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((foto) => foto != null).map((foto) => String(foto));
+  }
+  if (typeof value === "string" && value.trim()) return [value];
+  return [];
+}
+
+function normalizeCategoria(value: unknown): Categoria {
+  return CATEGORIAS.includes(value as Categoria) ? (value as Categoria) : "comun";
+}
+
+function normalizeMoneda(value: unknown): Moneda {
+  return value === "ARS" || value === "USD" ? value : "USD";
+}
+
+function normalizeSubastaListado(raw: any): SubastaListado {
+  return {
+    id: Number(raw?.id ?? 0),
+    fecha: String(raw?.fecha ?? ""),
+    hora: String(raw?.hora ?? ""),
+    estado: raw?.estado === "cerrada" ? "cerrada" : "abierta",
+    categoria: normalizeCategoria(raw?.categoria),
+    ubicacion: String(raw?.ubicacion ?? ""),
+    moneda: normalizeMoneda(raw?.moneda),
+  };
+}
+
+function normalizeCatalogItem(raw: any, includePrivateFields: boolean) {
+  const item: any = {
+    id: Number(raw?.id ?? 0),
+    descripcion: String(raw?.descripcion ?? ""),
+    mejorOfertaActual: normalizeNumber(raw?.mejorOfertaActual),
+    subastado: normalizeSubastado(raw?.subastado),
+    fotos: normalizeFotos(raw?.fotos),
+  };
+
+  if (includePrivateFields) {
+    const precioBase = normalizeNumber(raw?.precioBase);
+    const limiteMinimo = normalizeNumber(raw?.limiteMinimo);
+    const limiteMaximo = normalizeNumber(raw?.limiteMaximo);
+
+    if (precioBase !== undefined) item.precioBase = precioBase;
+    if (limiteMinimo !== undefined) item.limiteMinimo = limiteMinimo;
+    if (limiteMaximo !== undefined) item.limiteMaximo = limiteMaximo;
+  }
+
+  return item;
+}
+
+function normalizeDetallePublico(raw: any): SubastaDetallePublica {
+  return {
+    ...normalizeSubastaListado(raw),
+    catalogo: asArray(raw?.catalogo).map((item) =>
+      normalizeCatalogItem(item, false),
+    ),
+  };
+}
+
+function normalizeDetalle(raw: any): SubastaDetalle {
+  return {
+    ...normalizeSubastaListado(raw),
+    catalogo: asArray(raw?.catalogo).map((item) => normalizeCatalogItem(item, true)),
+  };
 }
 
 function openAuctionStream(subastaId: number, handlers: StreamHandlers): () => void {
@@ -134,7 +224,7 @@ export const auctionService = {
   /** Listar subastas públicas (sin auth) */
   async getPublicas(): Promise<SubastaListado[]> {
     const response = await api.get("/subastas/publicas");
-    return Array.isArray(response.data) ? response.data : [];
+    return asArray(response.data).map(normalizeSubastaListado);
   },
 
   /** Detalle público de una subasta */
@@ -142,19 +232,19 @@ export const auctionService = {
     const response = await api.get<SubastaDetallePublica>(
       `/subastas/publicas/${id}`,
     );
-    return response.data;
+    return normalizeDetallePublico(response.data);
   },
 
   /** Listar subastas para usuarios autenticados */
   async getSubastas(): Promise<SubastaListado[]> {
     const response = await api.get("/subastas");
-    return Array.isArray(response.data) ? response.data : [];
+    return asArray(response.data).map(normalizeSubastaListado);
   },
 
   /** Detalle de subasta con catálogo (autenticado) */
   async getDetalle(id: number): Promise<SubastaDetalle> {
     const response = await api.get<SubastaDetalle>(`/subastas/${id}`);
-    return response.data;
+    return normalizeDetalle(response.data);
   },
 
   /** Crear subasta desde administracion */

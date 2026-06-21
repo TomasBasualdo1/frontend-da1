@@ -139,16 +139,31 @@ export default function SubastaDetalleScreen() {
     SubastaDetalle | SubastaDetallePublica | null
   >(null);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("Subasta no encontrada");
 
   useEffect(() => {
     if (!id) return;
     const load = async () => {
+      setLoading(true);
+      setErrorMessage("Subasta no encontrada");
       try {
         const data = isAuthenticated
           ? await auctionService.getDetalle(Number(id))
           : await auctionService.getPublicaDetalle(Number(id));
         setSubasta(data);
-      } catch {
+      } catch (error: any) {
+        setSubasta(null);
+        const status = error?.response?.status;
+        const detail = error?.response?.data?.detail;
+        if (status === 403) {
+          setErrorMessage(
+            typeof detail === "string"
+              ? detail
+              : "No tenes categoria suficiente para ver el detalle completo de esta subasta.",
+          );
+        } else if (status === 404) {
+          setErrorMessage("Subasta no encontrada o no disponible.");
+        }
       } finally {
         setLoading(false);
       }
@@ -167,8 +182,8 @@ export default function SubastaDetalleScreen() {
   if (!subasta) {
     return (
       <View style={st.center}>
-        <MaterialIcons name="error-outline" size={48} color="#DC2626" />
-        <Text style={st.err}>Subasta no encontrada</Text>
+        <MaterialIcons name="lock-outline" size={48} color="#DC2626" />
+        <Text style={st.err}>{errorMessage}</Text>
         <Pressable onPress={() => router.back()} style={st.backBtnSimple}>
           <Text style={st.backBtnSimpleText}>Volver al Inicio</Text>
         </Pressable>

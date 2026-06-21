@@ -17,9 +17,10 @@
 - [ ] Spec 04: Publicación de Artículos por el usuario.
   - [ ] Backend: Endpoints de consignación (POST /articulos, GET /articulos/mis-publicaciones, etc.) e integración de almacenamiento.
   - [x] Frontend: Wizard de publicación de artículos de 4 pasos (ConsignarScreen).
-- [ ] Spec 05: Listado Público y Privado de Subastas.
-  - [ ] Backend: Endpoints para listar subastas públicas (sin auth) y privadas (autenticado) y sus detalles.
+- [x] Spec 05: Listado Público y Privado de Subastas.
+  - [x] Backend: Endpoints para listar subastas públicas (sin auth) y privadas (autenticado) y sus detalles alineados en P1.1.
   - [x] Frontend: Pantalla de listado de subastas (SubastasScreen) con filtros y búsqueda, y detalle de catálogo.
+  - [x] Frontend: Normalización defensiva de listados/detalles en `auctionService`.
 
 ## Phase 3: Motor de Pujas (Core)
 
@@ -48,4 +49,3 @@
 - [x] Spec 11: Native Tabs (Expo SDK 54) — **Frontend actualizado**.
 
 > Nota: Se han añadido specs detalladas para los puntos 02 a 10 en `context/specs/`.
-
