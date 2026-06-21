@@ -392,7 +392,7 @@ const SHADOW_LIGHT = Platform.select({
 
 const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF8F0" },
-  mainList: { paddingBottom: 32 },
+  mainList: { paddingBottom: 110 },
 
   /* ── Header ── */
   header: {
