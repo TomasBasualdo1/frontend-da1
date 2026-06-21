@@ -104,4 +104,10 @@ export const auctionService = {
   async confirmarPago(subastaId: number, data: PagoRequest): Promise<void> {
     await api.post(`/subastas/${subastaId}/pagos`, data);
   },
+
+  /** Cerrar subasta (admin) */
+  async close(id: number): Promise<any> {
+    const response = await api.post(`/subastas/${id}/cerrar`);
+    return response.data;
+  },
 };

@@ -746,6 +746,18 @@ export default function ProfileScreen() {
                       ))
                     )}
 
+                    {user?.id === 12 && (
+                      <Pressable
+                        style={{ width: "100%" }}
+                        onPress={() => router.push("/admin")}
+                      >
+                        <View style={s.adminBtn}>
+                          <MaterialIcons name="admin-panel-settings" size={20} color="#8B6914" />
+                          <Text style={s.adminText}>Panel de Administración</Text>
+                        </View>
+                      </Pressable>
+                    )}
+
                     <Pressable
                       style={s.logoutBtn}
                       onPress={() =>
@@ -1563,6 +1575,20 @@ const s = StyleSheet.create({
     borderRadius: 12,
   },
   logoutText: { fontSize: 14, color: "#DC2626", fontWeight: "700" },
+
+  adminBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    marginTop: 16,
+    backgroundColor: "#FFF8F0",
+    borderColor: "#E5DDD0",
+    borderWidth: 1,
+    borderRadius: 12,
+  },
+  adminText: { fontSize: 14, color: "#8B6914", fontWeight: "700" },
 
   // Pagos
   secTitle: {

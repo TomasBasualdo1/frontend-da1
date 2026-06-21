@@ -15,6 +15,8 @@ export interface Usuario {
   categoria?: Categoria;
   multaActiva?: boolean;
   bloqueado?: boolean;
+  fotoFrente?: string;
+  fotoDorso?: string;
 }
 
 export interface UsuarioUpdate {
