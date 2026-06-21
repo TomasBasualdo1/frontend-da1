@@ -19,8 +19,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../src/context/AuthContext";
-import { auctionService, userService } from "../../src/services";
+import { articleService, auctionService, userService } from "../../src/services";
 import {
+  Articulo,
   Categoria,
   MedioPago,
   Multa,
@@ -232,7 +233,7 @@ export default function ProfileScreen() {
   const [metricas, setMetricas] = useState<UsuarioMetricas | null>(null);
   const [multas, setMultas] = useState<Multa[]>([]);
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
-  const [misSubastas, setMisSubastas] = useState<SubastaListado[]>([]);
+  const [misConsignaciones, setMisConsignaciones] = useState<Articulo[]>([]);
   const [tab, setTab] = useState<ProfileTab>("perfil");
   const [searchMis, setSearchMis] = useState("");
 
@@ -254,19 +255,19 @@ export default function ProfileScreen() {
       return;
     }
     try {
-      const [dataMedios, dataMultas, dataNotifs, dataMetricas, dataSubastas] =
+      const [dataMedios, dataMultas, dataNotifs, dataMetricas, dataConsignaciones] =
         await Promise.all([
           userService.getMediosPago(),
           userService.getMultas(),
           userService.getNotificaciones(),
           userService.getMetricas(),
-          auctionService.getSubastas(),
+          articleService.getMisPublicaciones(),
         ]);
       setMedios(dataMedios);
       setMultas(dataMultas);
       setNotificaciones(dataNotifs);
       setMetricas(dataMetricas);
-      setMisSubastas(dataSubastas);
+      setMisConsignaciones(dataConsignaciones);
     } catch (err) {
       console.error("Error loading profile data:", err);
     } finally {
@@ -354,23 +355,74 @@ export default function ProfileScreen() {
     }
   };
 
-  const misSubastasStats = useMemo(() => {
-    const total = misSubastas.length;
-    const enVivo = misSubastas.filter((s) => s.estado === "abierta").length;
-    const proximas = misSubastas.filter((s) => s.estado === "cerrada").length;
-    return { total, enVivo, proximas };
-  }, [misSubastas]);
+  const misConsignacionesStats = useMemo(() => {
+    const total = misConsignaciones.length;
+    const pendientes = misConsignaciones.filter(
+      (c) => c.estado === "pendiente" || c.estado === "en_inspeccion"
+    ).length;
+    const revisadas = misConsignaciones.filter(
+      (c) => (c.estado === "aprobado" && !c.subastaId) || c.estado === "rechazado" || c.estado === "devuelto"
+    ).length;
+    const enSubasta = misConsignaciones.filter((c) => !!c.subastaId).length;
+    return { total, pendientes, revisadas, enSubasta };
+  }, [misConsignaciones]);
 
-  const filteredMisSubastas = useMemo(() => {
-    if (!searchMis.trim()) return misSubastas;
+  const filteredMisConsignaciones = useMemo(() => {
+    if (!searchMis.trim()) return misConsignaciones;
     const q = searchMis.toLowerCase();
-    return misSubastas.filter(
-      (s) =>
-        s.ubicacion?.toLowerCase().includes(q) ||
-        s.categoria.toLowerCase().includes(q) ||
-        String(s.id).includes(q),
+    return misConsignaciones.filter(
+      (c) =>
+        c.descripcion?.toLowerCase().includes(q) ||
+        String(c.id).includes(q) ||
+        (c.estado && c.estado.toLowerCase().includes(q))
     );
-  }, [misSubastas, searchMis]);
+  }, [misConsignaciones, searchMis]);
+
+  const handleAceptarTasacion = async (id: number, acepta: boolean) => {
+    try {
+      await articleService.aceptarTasacion(id, acepta);
+      Alert.alert(
+        "Éxito",
+        acepta
+          ? "Tasación aceptada correctamente. El artículo ahora es un producto subastable."
+          : "Tasación rechazada. El artículo ha sido marcado como devuelto."
+      );
+      loadAllData();
+    } catch (err) {
+      console.error("Error al responder a la tasación:", err);
+      Alert.alert("Error", "No se pudo procesar la respuesta a la tasación.");
+    }
+  };
+
+  const STATE_LABELS: Record<string, string> = {
+    pendiente: "Pendiente",
+    en_inspeccion: "En Inspección",
+    aprobado: "Aprobado",
+    rechazado: "Rechazado",
+    devuelto: "Devuelto",
+  };
+
+  const handlePressConsignacion = (item: Articulo) => {
+    if (item.subastaId) {
+      router.push(`/subasta/${item.subastaId}` as any);
+    } else {
+      let detailMsg = `Descripción: ${item.descripcion}\n\nEstado: ${STATE_LABELS[item.estado || 'pendiente']}`;
+      if (item.precioBasePropuesto) {
+        detailMsg += `\nPrecio Base Propuesto: $${item.precioBasePropuesto}`;
+      }
+      if (item.comisionPropuesta) {
+        detailMsg += `\nComisión Propuesta: ${item.comisionPropuesta}%`;
+      }
+      if (item.motivoRechazo) {
+        detailMsg += `\nMotivo de rechazo: ${item.motivoRechazo}`;
+      }
+      if (item.seguro && item.seguro.poliza) {
+        detailMsg += `\nPóliza de Seguro: ${item.seguro.poliza}`;
+        detailMsg += `\nMonto Asegurado: $${item.seguro.montoAsegurado}`;
+      }
+      Alert.alert(`Detalle de Consignación #${item.id}`, detailMsg);
+    }
+  };
 
   if (!isAuthenticated) {
     return (
@@ -484,7 +536,7 @@ export default function ProfileScreen() {
                   <MaterialIcons name="search" size={20} color="#8B6914" />
                   <TextInput
                     style={s.searchInput}
-                    placeholder="Buscar subastas en las que participás.."
+                    placeholder="Buscar mis consignaciones..."
                     placeholderTextColor="#9CA3AF"
                     value={searchMis}
                     onChangeText={setSearchMis}
@@ -499,121 +551,178 @@ export default function ProfileScreen() {
                 {/* Stats Card */}
                 <View style={s.statsRow}>
                   <View style={s.statItem}>
-                    <Text style={s.statNum}>{misSubastasStats.total}</Text>
-                    <Text style={s.statLbl}>Total</Text>
+                    <Text style={s.statNum}>{misConsignacionesStats.pendientes}</Text>
+                    <Text style={s.statLbl}>Pendientes</Text>
                   </View>
                   <View style={s.statDiv} />
                   <View style={s.statItem}>
-                    <View style={s.statLiveRow}>
-                      <LiveDot />
-                      <Text style={[s.statNum, { color: "#DC2626" }]}>
-                        {misSubastasStats.enVivo}
-                      </Text>
-                    </View>
-                    <Text style={s.statLbl}>En Vivo</Text>
+                    <Text style={s.statNum}>{misConsignacionesStats.revisadas}</Text>
+                    <Text style={s.statLbl}>Revisadas</Text>
                   </View>
                   <View style={s.statDiv} />
                   <View style={s.statItem}>
-                    <Text style={s.statNum}>{misSubastasStats.proximas}</Text>
-                    <Text style={s.statLbl}>Próximas</Text>
+                    <Text style={[s.statNum, { color: "#8B6914" }]}>
+                      {misConsignacionesStats.enSubasta}
+                    </Text>
+                    <Text style={s.statLbl}>En Subasta</Text>
                   </View>
                 </View>
 
-                {/* Subastas list */}
-                {filteredMisSubastas.length === 0 ? (
+                {/* Consignaciones list */}
+                {filteredMisConsignaciones.length === 0 ? (
                   <View style={s.emptySection}>
                     <View style={s.emptyIconWrap}>
                       <MaterialIcons name="inbox" size={36} color="#C4B898" />
                     </View>
                     <Text style={s.emptyText}>
                       {searchMis
-                        ? "No se encontraron subastas inscritas"
-                        : "No estás inscripto en ninguna subasta"}
+                        ? "No se encontraron consignaciones"
+                        : "No tienes ninguna consignación registrada"}
                     </Text>
                   </View>
                 ) : (
-                  filteredMisSubastas.map((item, idx) => {
-                    const catColors = CATEG_COLORS[item.categoria];
-                    const isLive = item.estado === "abierta";
-                    return (
-                      <Pressable
-                        key={item.id}
-                        onPress={() =>
-                          router.push(`/subasta/${item.id}` as any)
-                        }
-                        style={({ pressed }) => [pressed && { opacity: 0.9 }]}
-                      >
-                        <View style={s.misCard}>
-                          <Image
-                            source={{
-                              uri: PLACEHOLDER_IMAGES[
-                                idx % PLACEHOLDER_IMAGES.length
-                              ],
-                            }}
-                            style={s.misThumb}
-                          />
-                          <View style={s.misInfo}>
-                            <Text style={s.misTitle} numberOfLines={1}>
-                              Subasta #{item.id}
-                            </Text>
+                  filteredMisConsignaciones.map((item, idx) => {
+                    const titlePart = item.descripcion?.split(" - ")[0] || item.descripcion || `Artículo #${item.id}`;
+                    
+                    // State chip styling
+                    const STATE_COLORS: Record<string, { bg: string; text: string; border: string; label: string }> = {
+                      pendiente: { bg: "#FFFDF5", text: "#D97706", border: "#FDE68A", label: "Pendiente" },
+                      en_inspeccion: { bg: "#EFF6FF", text: "#2563EB", border: "#BFDBFE", label: "En Inspección" },
+                      aprobado: { bg: "#ECFDF5", text: "#059669", border: "#A7F3D0", label: item.subastaId ? "En Subasta" : "Listo para Subastar" },
+                      rechazado: { bg: "#FEF2F2", text: "#DC2626", border: "#FCA5A5", label: "Rechazado" },
+                      devuelto: { bg: "#F3F4F6", text: "#4B5563", border: "#E5E7EB", label: "Devuelto" },
+                    };
+                    const stateConf = STATE_COLORS[item.estado || "pendiente"];
 
-                            <View style={s.cardMetaRow}>
-                              <View
-                                style={[
-                                  s.categChip,
-                                  {
-                                    backgroundColor: catColors.bg,
-                                    borderColor: catColors.border,
-                                  },
-                                ]}
-                              >
-                                <MaterialIcons
-                                  name={CATEG_ICONS[item.categoria] as any}
-                                  size={10}
-                                  color={catColors.text}
-                                />
-                                <Text
+                    // Show buttons for valuation acceptance if approved and not yet decided
+                    const showValuationActions = item.estado === "aprobado" && (item.tasacionAceptada === null || item.tasacionAceptada === undefined);
+
+                    return (
+                      <View key={item.id} style={{ gap: 8 }}>
+                        <Pressable
+                          onPress={() => handlePressConsignacion(item)}
+                          style={({ pressed }) => [pressed && { opacity: 0.95 }]}
+                        >
+                          <View style={s.misCard}>
+                            <Image
+                              source={{
+                                uri: item.fotos && item.fotos.length > 0
+                                  ? item.fotos[0]
+                                  : PLACEHOLDER_IMAGES[idx % PLACEHOLDER_IMAGES.length],
+                              }}
+                              style={s.misThumb}
+                            />
+                            <View style={s.misInfo}>
+                              <Text style={s.misTitle} numberOfLines={1}>
+                                {titlePart}
+                              </Text>
+
+                              <View style={s.cardMetaRow}>
+                                <View
                                   style={[
-                                    s.categText,
-                                    { color: catColors.text },
+                                    s.categChip,
+                                    {
+                                      backgroundColor: stateConf.bg,
+                                      borderColor: stateConf.border,
+                                    },
                                   ]}
                                 >
-                                  {CATEG_LABELS[item.categoria]}
-                                </Text>
+                                  <Text
+                                    style={[
+                                      s.categText,
+                                      { color: stateConf.text },
+                                    ]}
+                                  >
+                                    {stateConf.label}
+                                  </Text>
+                                </View>
+
+                                {item.subastaId && (
+                                  <View style={s.liveTagBadge}>
+                                    <Text style={s.liveTagText}>SUBASTA #{item.subastaId}</Text>
+                                  </View>
+                                )}
                               </View>
 
-                              {isLive ? (
-                                <View style={s.liveTagBadge}>
-                                  <LiveDot />
-                                  <Text style={s.liveTagText}>VIVO</Text>
+                              {item.precioBasePropuesto && (
+                                <View style={s.dateRow}>
+                                  <MaterialIcons
+                                    name="attach-money"
+                                    size={13}
+                                    color="#8B6914"
+                                  />
+                                  <Text style={[s.dateText, { color: "#8B6914", fontWeight: "700" }]}>
+                                    Base: ${item.precioBasePropuesto}
+                                    {item.comisionPropuesta ? ` | Com.: ${item.comisionPropuesta}%` : ""}
+                                  </Text>
                                 </View>
-                              ) : (
-                                <View style={s.closedTagBadge}>
-                                  <Text style={s.closedTagText}>Cerrada</Text>
+                              )}
+
+                              {item.subastaFecha && (
+                                <View style={s.dateRow}>
+                                  <MaterialIcons
+                                    name="event"
+                                    size={13}
+                                    color="#9CA3AF"
+                                  />
+                                  <Text style={s.dateText}>
+                                    {formatFecha(item.subastaFecha)}
+                                  </Text>
                                 </View>
                               )}
                             </View>
-
-                            <View style={s.dateRow}>
+                            <View style={s.cardArrow}>
                               <MaterialIcons
-                                name="event"
-                                size={13}
-                                color="#9CA3AF"
+                                name="chevron-right"
+                                size={22}
+                                color="#C4B898"
                               />
-                              <Text style={s.dateText}>
-                                {formatFecha(item.fecha)}
-                              </Text>
                             </View>
                           </View>
-                          <View style={s.cardArrow}>
-                            <MaterialIcons
-                              name="chevron-right"
-                              size={22}
-                              color="#C4B898"
-                            />
+                        </Pressable>
+
+                        {/* Valuation Decision buttons directly below the card */}
+                        {showValuationActions && (
+                          <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: 4 }}>
+                            <Pressable
+                              style={{ flex: 1 }}
+                              onPress={() => handleAceptarTasacion(item.id!, true)}
+                            >
+                              <View style={{
+                                backgroundColor: "#ECFDF5",
+                                borderColor: "#A7F3D0",
+                                borderWidth: 1,
+                                borderRadius: 10,
+                                height: 36,
+                                justifyContent: "center",
+                                alignItems: "center"
+                              }}>
+                                <Text style={{ color: "#059669", fontSize: 12, fontWeight: "700" }}>
+                                  ✓ Aceptar Tasación
+                                </Text>
+                              </View>
+                            </Pressable>
+                            <Pressable
+                              style={{ flex: 1 }}
+                              onPress={() => handleAceptarTasacion(item.id!, false)}
+                            >
+                              <View style={{
+                                backgroundColor: "#FFF5F5",
+                                borderColor: "#FEB2B2",
+                                borderWidth: 1,
+                                borderRadius: 10,
+                                height: 36,
+                                justifyContent: "center",
+                                alignItems: "center"
+                              }}>
+                                <Text style={{ color: "#DC2626", fontSize: 12, fontWeight: "700" }}>
+                                  ✕ Rechazar
+                                </Text>
+                              </View>
+                            </Pressable>
                           </View>
-                        </View>
-                      </Pressable>
+                        )}
+                      </View>
                     );
                   })
                 )}

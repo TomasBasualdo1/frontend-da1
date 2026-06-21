@@ -26,4 +26,8 @@ export interface Articulo {
   fotos?: string[];
   ubicacion?: string;
   seguro?: Seguro;
+  subastaId?: number | null;
+  subastaFecha?: string | null;
+  subastaHora?: string | null;
+  subastaEstado?: 'abierta' | 'cerrada' | 'proxima' | null;
 }

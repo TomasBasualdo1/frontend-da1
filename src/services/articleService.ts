@@ -17,6 +17,10 @@ const normalizeArticulo = (data: any): Articulo => ({
   fotos: data?.fotos ?? data?.imagenes,
   ubicacion: data?.ubicacion,
   seguro: data?.seguro,
+  subastaId: data?.subastaId ?? data?.subasta_id,
+  subastaFecha: data?.subastaFecha ?? data?.subasta_fecha,
+  subastaHora: data?.subastaHora ?? data?.subasta_hora,
+  subastaEstado: data?.subastaEstado ?? data?.subasta_estado,
 });
 
 export const articleService = {
