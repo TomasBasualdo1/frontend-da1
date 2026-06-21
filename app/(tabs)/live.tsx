@@ -106,7 +106,7 @@ export default function LiveScreen() {
       // Add to local historial
       setHistorial((prev) => {
         const updatedPrev = res.esGanadoraParcial
-          ? prev.map((p) => ({ ...p, esGanadoraParcial: false }))
+          ? prev.map((p) => p.itemId === currentItem.id ? { ...p, esGanadoraParcial: false } : p)
           : prev;
         return [{
           id: res.pujaId, usuarioId: 0, itemId: currentItem.id,
@@ -339,14 +339,19 @@ export default function LiveScreen() {
               <Text style={st.feedTitle}>Pujas en Tiempo Real</Text>
               <View style={st.feedCount}>
                 <MaterialIcons name="trending-up" size={14} color="#6B7280" />
-                <Text style={st.feedCountText}>{historial.length} pujas</Text>
+                <Text style={st.feedCountText}>
+                  {historial.filter((p) => p.itemId === currentItem?.id).length} pujas
+                </Text>
               </View>
             </View>
 
-            {historial.length === 0 ? (
+            {historial.filter((p) => p.itemId === currentItem?.id).length === 0 ? (
               <Text style={st.feedEmpty}>Aún no hay pujas para este ítem</Text>
             ) : (
-              historial.slice(0, 10).map((puja, i) => (
+              historial
+                .filter((p) => p.itemId === currentItem?.id)
+                .slice(0, 10)
+                .map((puja, i) => (
                 <View key={puja.id || i} style={[st.feedItem, i === 0 && st.feedItemTop]}>
                   <View style={st.feedUser}>
                     <Text style={st.feedUserName}>
