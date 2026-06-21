@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { View, Text, Pressable, StyleSheet, FlatList, TextInput, Alert, ActivityIndicator, ScrollView, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -53,6 +53,7 @@ export default function LiveScreen() {
   const [joined, setJoined] = useState(false);
   const [historial, setHistorial] = useState<Puja[]>([]);
   const [timer, setTimer] = useState("31:59");
+  const inFlightBidKey = useRef<string | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -92,10 +93,18 @@ export default function LiveScreen() {
   };
 
   const handlePujar = async (importe: number) => {
-    if (!currentItem || !selectedId || importe <= 0) return;
+    if (!currentItem || !selectedId || importe <= 0 || sending || inFlightBidKey.current) return;
+    const idempotencyKey = [
+      "bid",
+      selectedId,
+      currentItem.id,
+      Date.now(),
+      Math.random().toString(36).slice(2),
+    ].join("-");
+    inFlightBidKey.current = idempotencyKey;
     setSending(true);
     try {
-      const res = await auctionService.pujar(selectedId, currentItem.id, { importe }, `${Date.now()}`);
+      const res = await auctionService.pujar(selectedId, currentItem.id, { importe }, idempotencyKey);
       setCurrentItem((prev) => prev ? {
         ...prev,
         mejorOfertaActual: res.mejorOfertaActual,
@@ -123,7 +132,10 @@ export default function LiveScreen() {
       else if (s === 403) Alert.alert("No autorizado", errorMsg);
       else if (s === 409) Alert.alert("Conflicto", "Otra puja en proceso. Reintentá.");
       else Alert.alert("Error", "No se pudo enviar la puja.");
-    } finally { setSending(false); }
+    } finally {
+      inFlightBidKey.current = null;
+      setSending(false);
+    }
   };
 
   const handleQuickBid = (pct: number) => {
