@@ -1112,24 +1112,27 @@ export default function ProfileScreen() {
                               setNewPagoTipo(t);
                               setNewPagoDatos("");
                             }}
-                            style={({ pressed }) => [
-                              s.formRadioBtn,
-                              newPagoTipo === t && s.formRadioBtnActive,
-                              pressed && { opacity: 0.8 },
-                            ]}
+                            style={({ pressed }) => [pressed && { opacity: 0.8 }]}
                           >
-                            <Text
+                            <View
                               style={[
-                                s.formRadioText,
-                                newPagoTipo === t && s.formRadioTextActive,
+                                s.formRadioBtn,
+                                newPagoTipo === t && s.formRadioBtnActive,
                               ]}
                             >
-                              {t === "tarjeta_credito"
-                                ? "Tarjeta"
-                                : t === "cuenta_bancaria"
-                                  ? "Cuenta"
-                                  : "Cheque"}
-                            </Text>
+                              <Text
+                                style={[
+                                  s.formRadioText,
+                                  newPagoTipo === t && s.formRadioTextActive,
+                                ]}
+                              >
+                                {t === "tarjeta_credito"
+                                  ? "Tarjeta"
+                                  : t === "cuenta_bancaria"
+                                    ? "Cuenta"
+                                    : "Cheque"}
+                              </Text>
+                            </View>
                           </Pressable>
                         ))}
                       </View>
@@ -1143,20 +1146,23 @@ export default function ProfileScreen() {
                           <Pressable
                             key={m}
                             onPress={() => setNewPagoMoneda(m)}
-                            style={({ pressed }) => [
-                              s.formRadioBtn,
-                              newPagoMoneda === m && s.formRadioBtnActive,
-                              pressed && { opacity: 0.8 },
-                            ]}
+                            style={({ pressed }) => [pressed && { opacity: 0.8 }]}
                           >
-                            <Text
+                            <View
                               style={[
-                                s.formRadioText,
-                                newPagoMoneda === m && s.formRadioTextActive,
+                                s.formRadioBtn,
+                                newPagoMoneda === m && s.formRadioBtnActive,
                               ]}
                             >
-                              {m}
-                            </Text>
+                              <Text
+                                style={[
+                                  s.formRadioText,
+                                  newPagoMoneda === m && s.formRadioTextActive,
+                                ]}
+                              >
+                                {m}
+                              </Text>
+                            </View>
                           </Pressable>
                         ))}
                       </View>
@@ -1264,30 +1270,37 @@ export default function ProfileScreen() {
                                     setShowNewPaisPicker(false);
                                   }}
                                   style={({ pressed }) => [
-                                    s.dropdownItem,
-                                    newPagoPais === p && s.dropdownItemActive,
                                     pressed && { opacity: 0.8 },
                                   ]}
                                 >
-                                  <Text
+                                  <View
                                     style={[
-                                      s.dropdownItemText,
-                                      newPagoPais === p && {
-                                        fontWeight: "700",
-                                      },
+                                      s.dropdownItem,
+                                      { height: 44 },
+                                      newPagoPais === p && s.dropdownItemActive,
                                     ]}
                                   >
-                                    {p === "AR"
-                                      ? "AR (Nacional)"
-                                      : "US (Extranjero)"}
-                                  </Text>
-                                  {newPagoPais === p && (
-                                    <MaterialIcons
-                                      name="check"
-                                      size={14}
-                                      color="#8B6914"
-                                    />
-                                  )}
+                                    <Text
+                                      style={[
+                                        s.dropdownItemText,
+                                        { fontSize: 14 },
+                                        newPagoPais === p && {
+                                          fontWeight: "700",
+                                        },
+                                      ]}
+                                    >
+                                      {p === "AR"
+                                        ? "AR (Nacional)"
+                                        : "US (Extranjero)"}
+                                    </Text>
+                                    {newPagoPais === p && (
+                                      <MaterialIcons
+                                        name="check"
+                                        size={14}
+                                        color="#8B6914"
+                                      />
+                                    )}
+                                  </View>
                                 </Pressable>
                               ))}
                             </View>
@@ -2029,11 +2042,11 @@ const s = StyleSheet.create({
   },
   formGroup: { gap: 6 },
   formLabel: { fontSize: 12, fontWeight: "700", color: "#6B7280" },
-  formButtonRow: { flexDirection: "row", gap: 6 },
+  formButtonRow: { flexDirection: "row", gap: 8 },
   formRadioBtn: {
-    flex: 1,
-    height: 38,
-    borderRadius: 10,
+    height: 44,
+    borderRadius: 22,
+    paddingHorizontal: 20,
     backgroundColor: "#FFF",
     borderWidth: 1,
     borderColor: "#E5DDD0",
@@ -2067,7 +2080,7 @@ const s = StyleSheet.create({
     height: 44,
     paddingHorizontal: 14,
   },
-  selectTriggerText: { fontSize: 12, color: "#9CA3AF" },
+  selectTriggerText: { fontSize: 14, color: "#9CA3AF" },
   dropdownList: {
     position: "absolute",
     top: 66,
@@ -2083,15 +2096,15 @@ const s = StyleSheet.create({
     ...SHADOW_LIGHT,
   },
   dropdownItem: {
-    height: 38,
-    borderRadius: 8,
+    height: 44,
+    borderRadius: 10,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 10,
+    paddingHorizontal: 14,
     justifyContent: "space-between",
   },
   dropdownItemActive: { backgroundColor: "#FEF3E2" },
-  dropdownItemText: { fontSize: 12, color: "#1A1A2E" },
+  dropdownItemText: { fontSize: 14, color: "#1A1A2E" },
   registerPayBtn: {
     flexDirection: "row",
     backgroundColor: "#1A1A2E",
@@ -2284,12 +2297,18 @@ const s = StyleSheet.create({
     alignItems: "center",
   },
   saveBtnDisabled: { opacity: 0.7 },
-  saveBtnText: { color: "#FFF", fontSize: 15, fontWeight: "700" },
+  saveBtnText: {
+    color: "#FFF",
+    fontSize: 15,
+    fontWeight: "700",
+    paddingHorizontal: 16,
+  },
   cancelBtn: { flex: 1 },
   cancelBtnInner: {
     height: 48,
     borderRadius: 12,
     borderWidth: 1.5,
+    paddingHorizontal: 8,
     borderColor: "#E5DDD0",
     justifyContent: "center",
     alignItems: "center",
