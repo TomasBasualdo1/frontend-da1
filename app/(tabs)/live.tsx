@@ -69,6 +69,9 @@ export default function LiveScreen() {
     const data = event.data as Partial<PujaStreamData>;
     if (!data || typeof data.itemId !== "number" || typeof data.pujaId !== "number") return;
 
+    const pujaId = data.pujaId;
+    const itemId = data.itemId;
+
     const importe = Number(data.importe ?? data.mejorOfertaActual ?? 0);
     const mejorOfertaActual = Number(data.mejorOfertaActual ?? importe);
     const limiteMinimo = Number(data.limiteMinimo ?? 0);
@@ -77,7 +80,7 @@ export default function LiveScreen() {
 
     setDetalle((prev) => prev ? {
       ...prev,
-      catalogo: prev.catalogo.map((item) => item.id === data.itemId ? {
+      catalogo: prev.catalogo.map((item) => item.id === itemId ? {
         ...item,
         mejorOfertaActual,
         limiteMinimo,
@@ -85,7 +88,7 @@ export default function LiveScreen() {
       } : item),
     } : prev);
 
-    setCurrentItem((prev) => prev && prev.id === data.itemId ? {
+    setCurrentItem((prev) => prev && prev.id === itemId ? {
       ...prev,
       mejorOfertaActual,
       limiteMinimo,
@@ -93,15 +96,15 @@ export default function LiveScreen() {
     } : prev);
 
     setHistorial((prev) => {
-      const withoutDuplicate = prev.filter((p) => p.id !== data.pujaId);
+      const withoutDuplicate = prev.filter((p) => p.id !== pujaId);
       const updatedPrev = data.esGanadoraParcial
-        ? withoutDuplicate.map((p) => p.itemId === data.itemId ? { ...p, esGanadoraParcial: false } : p)
+        ? withoutDuplicate.map((p) => p.itemId === itemId ? { ...p, esGanadoraParcial: false } : p)
         : withoutDuplicate;
 
       return [{
-        id: data.pujaId,
+        id: pujaId,
         usuarioId: Number(data.usuarioId ?? 0),
-        itemId: data.itemId,
+        itemId: itemId,
         importe,
         moneda: data.moneda || "USD",
         fechaHora: event.fechaHora,
@@ -223,9 +226,10 @@ export default function LiveScreen() {
       setCustomBid("");
       // Add to local historial
       setHistorial((prev) => {
+        const withoutDuplicate = prev.filter((p) => p.id !== res.pujaId);
         const updatedPrev = res.esGanadoraParcial
-          ? prev.map((p) => p.itemId === currentItem.id ? { ...p, esGanadoraParcial: false } : p)
-          : prev;
+          ? withoutDuplicate.map((p) => p.itemId === currentItem.id ? { ...p, esGanadoraParcial: false } : p)
+          : withoutDuplicate;
         return [{
           id: res.pujaId, usuarioId: 0, itemId: currentItem.id,
           importe, moneda: res.moneda, fechaHora: new Date().toISOString(),
@@ -497,7 +501,7 @@ export default function LiveScreen() {
                 .filter((p) => p.itemId === currentItem?.id)
                 .slice(0, 10)
                 .map((puja, i) => (
-                <View key={puja.id || i} style={[st.feedItem, i === 0 && st.feedItemTop]}>
+                <View key={puja.id ? `puja-${puja.id}-${i}` : `idx-${i}`} style={[st.feedItem, i === 0 && st.feedItemTop]}>
                   <View style={st.feedUser}>
                     <Text style={st.feedUserName}>
                       {(puja.usuarioId === 0 || (user && puja.usuarioId === user.id)) ? "Vos" : `Usuario ${puja.usuarioId}`}
