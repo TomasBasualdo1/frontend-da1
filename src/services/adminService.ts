@@ -39,6 +39,8 @@ const normalizeUsuario = (data: any): Usuario => ({
 
 const normalizeArticulo = (data: any): Articulo => ({
   id: data?.id ?? data?.identificador,
+  duenioId: data?.duenioId ?? data?.duenio_id,
+  duenioNombre: data?.duenioNombre ?? data?.duenio_nombre,
   descripcion: data?.descripcion ?? data?.descripcioncompleta ?? data?.descripcioncatalogo,
   precioBasePropuesto: data?.precioBasePropuesto ?? data?.precio_base_propuesto,
   comisionPropuesta: data?.comisionPropuesta ?? data?.comision_propuesta,

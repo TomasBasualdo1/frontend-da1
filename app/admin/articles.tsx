@@ -12,7 +12,7 @@ import {
   Modal,
   Platform,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { adminService } from "../../src/services";
@@ -29,6 +29,7 @@ const SHADOW = Platform.select({
 
 export default function AdminArticlesScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -207,7 +208,7 @@ export default function AdminArticlesScreen() {
 
       {/* Article Detail Modal */}
       <Modal visible={showDetailModal && !!selectedArticle} animationType="slide">
-        <SafeAreaView style={s.modalSafe}>
+        <View style={[s.modalSafe, { paddingTop: insets.top }]}>
           <View style={s.modalHeader}>
             <Pressable
               onPress={() => {
@@ -226,7 +227,7 @@ export default function AdminArticlesScreen() {
           </View>
 
           {selectedArticle && (
-            <ScrollView contentContainerStyle={s.modalScrollContainer}>
+            <ScrollView style={s.modalScrollView} contentContainerStyle={s.modalScrollContainer}>
               <View style={s.detailSection}>
                 <Text style={s.detailHeaderTitle}>{selectedArticle.descripcion}</Text>
                 <Text style={s.detailDate}>Enviado el {formatDate(selectedArticle.fechaEnvio)}</Text>
@@ -309,7 +310,7 @@ export default function AdminArticlesScreen() {
               </View>
             </ScrollView>
           )}
-        </SafeAreaView>
+        </View>
       </Modal>
 
       {/* Appraisal / Evaluation Modal */}
@@ -563,9 +564,13 @@ const s = StyleSheet.create({
     borderBottomColor: "#E5DDD0",
     backgroundColor: "#FFFFFF",
   },
+  modalScrollView: {
+    flex: 1,
+  },
   modalScrollContainer: {
     padding: 24,
     gap: 20,
+    flexGrow: 1,
   },
   detailSection: {
     backgroundColor: "#FFFFFF",

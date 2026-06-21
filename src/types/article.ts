@@ -13,6 +13,8 @@ export interface ArticuloInput {
 
 export interface Articulo {
   id?: number;
+  duenioId?: number;
+  duenioNombre?: string;
   descripcion?: string;
   precioBasePropuesto?: number;
   comisionPropuesta?: number;

@@ -35,7 +35,7 @@ function RootNavigator() {
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="subasta" />
-      <Stack.Screen name="pagos" />
+      <Stack.Screen name="pagos/[subastaId]" />
     </Stack>
   );
 }
