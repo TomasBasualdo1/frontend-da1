@@ -12,10 +12,27 @@ export interface Notificacion {
 }
 
 // Evento de streaming (SSE)
+export interface PujaStreamData {
+  itemId: number;
+  usuarioId: number;
+  importe: number;
+  mejorOfertaActual: number;
+  limiteMinimo: number;
+  limiteMaximo: number;
+  pujaId: number;
+  moneda: Moneda;
+  esGanadoraParcial: boolean;
+}
+
+export interface CierreStreamData {
+  message: string;
+  itemsCerrados: number;
+}
+
 export interface StreamEvent {
-  type: 'puja' | 'item';
+  type: 'puja' | 'item' | 'cierre';
   fechaHora: string;
-  data: unknown;
+  data: PujaStreamData | CierreStreamData | unknown;
 }
 
 // Seguro de artículo

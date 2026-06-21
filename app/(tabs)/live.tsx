@@ -1,11 +1,11 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { View, Text, Pressable, StyleSheet, FlatList, TextInput, Alert, ActivityIndicator, ScrollView, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../src/context/AuthContext";
 import { auctionService } from "../../src/services";
-import { SubastaListado, SubastaDetalle, ItemCatalogo, Puja } from "../../src/types";
+import { SubastaListado, SubastaDetalle, ItemCatalogo, Puja, StreamEvent, PujaStreamData } from "../../src/types";
 
 const QUICK_BIDS = [
   { label: "+1%", pct: 0.01 },
@@ -53,7 +53,9 @@ export default function LiveScreen() {
   const [joined, setJoined] = useState(false);
   const [historial, setHistorial] = useState<Puja[]>([]);
   const [timer, setTimer] = useState("31:59");
+  const [streamStatus, setStreamStatus] = useState<"idle" | "connecting" | "connected" | "fallback">("idle");
   const inFlightBidKey = useRef<string | null>(null);
+  const streamCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -62,9 +64,56 @@ export default function LiveScreen() {
       .catch(() => {});
   }, [isAuthenticated]);
 
+  const applyLivePuja = useCallback((event: StreamEvent) => {
+    if (event.type !== "puja") return;
+    const data = event.data as Partial<PujaStreamData>;
+    if (!data || typeof data.itemId !== "number" || typeof data.pujaId !== "number") return;
+
+    const importe = Number(data.importe ?? data.mejorOfertaActual ?? 0);
+    const mejorOfertaActual = Number(data.mejorOfertaActual ?? importe);
+    const limiteMinimo = Number(data.limiteMinimo ?? 0);
+    const limiteMaximo = Number(data.limiteMaximo ?? 0);
+    if (!importe || !mejorOfertaActual) return;
+
+    setDetalle((prev) => prev ? {
+      ...prev,
+      catalogo: prev.catalogo.map((item) => item.id === data.itemId ? {
+        ...item,
+        mejorOfertaActual,
+        limiteMinimo,
+        limiteMaximo,
+      } : item),
+    } : prev);
+
+    setCurrentItem((prev) => prev && prev.id === data.itemId ? {
+      ...prev,
+      mejorOfertaActual,
+      limiteMinimo,
+      limiteMaximo,
+    } : prev);
+
+    setHistorial((prev) => {
+      const withoutDuplicate = prev.filter((p) => p.id !== data.pujaId);
+      const updatedPrev = data.esGanadoraParcial
+        ? withoutDuplicate.map((p) => p.itemId === data.itemId ? { ...p, esGanadoraParcial: false } : p)
+        : withoutDuplicate;
+
+      return [{
+        id: data.pujaId,
+        usuarioId: Number(data.usuarioId ?? 0),
+        itemId: data.itemId,
+        importe,
+        moneda: data.moneda || "USD",
+        fechaHora: event.fechaHora,
+        esGanadoraParcial: Boolean(data.esGanadoraParcial),
+      }, ...updatedPrev];
+    });
+  }, []);
+
   const joinSubasta = async (id: number) => {
     try {
       await auctionService.join(id);
+      setStreamStatus("connecting");
       setJoined(true);
       setSelectedId(id);
       const d = await auctionService.getDetalle(id);
@@ -84,6 +133,9 @@ export default function LiveScreen() {
   };
 
   const handleLeave = async () => {
+    streamCleanupRef.current?.();
+    streamCleanupRef.current = null;
+    setStreamStatus("idle");
     if (selectedId) await auctionService.leave(selectedId).catch(() => {});
     setJoined(false);
     setDetalle(null);
@@ -91,6 +143,63 @@ export default function LiveScreen() {
     setCurrentItem(null);
     setHistorial([]);
   };
+
+  useEffect(() => {
+    if (!joined || !selectedId) return;
+
+    setStreamStatus("connecting");
+    const stop = auctionService.subscribeToStream(selectedId, {
+      onOpen: () => setStreamStatus("connected"),
+      onError: () => {
+        setStreamStatus("fallback");
+        auctionService.getHistorial(selectedId).then(setHistorial).catch(() => {});
+      },
+      onEvent: (event) => {
+        if (event.type === "puja") {
+          applyLivePuja(event);
+          return;
+        }
+        if (event.type === "cierre") {
+          Alert.alert("Subasta finalizada", "La subasta cerró.");
+          setJoined(false);
+          setDetalle(null);
+          setSelectedId(null);
+          setCurrentItem(null);
+          setHistorial([]);
+          setStreamStatus("idle");
+        }
+      },
+    });
+    streamCleanupRef.current = stop;
+
+    return () => {
+      stop();
+      if (streamCleanupRef.current === stop) streamCleanupRef.current = null;
+    };
+  }, [joined, selectedId, applyLivePuja]);
+
+  useEffect(() => {
+    if (!joined || !selectedId || streamStatus !== "fallback") return;
+
+    const refreshLiveSnapshot = () => {
+      auctionService.getHistorial(selectedId).then(setHistorial).catch(() => {});
+      auctionService.getDetalle(selectedId)
+        .then((freshDetail) => {
+          setDetalle(freshDetail);
+          setCurrentItem((prev) => {
+            if (!prev) {
+              return freshDetail.catalogo.find((i) => i.subastado === "no") || freshDetail.catalogo[0] || null;
+            }
+            return freshDetail.catalogo.find((i) => i.id === prev.id) || prev;
+          });
+        })
+        .catch(() => {});
+    };
+
+    refreshLiveSnapshot();
+    const interval = setInterval(refreshLiveSnapshot, 8000);
+    return () => clearInterval(interval);
+  }, [joined, selectedId, streamStatus]);
 
   const handlePujar = async (importe: number) => {
     if (!currentItem || !selectedId || importe <= 0 || sending || inFlightBidKey.current) return;
@@ -245,6 +354,16 @@ export default function LiveScreen() {
   // ---- Active live auction ----
   const basePrice = currentItem?.precioBase || 0;
   const currentOffer = currentItem?.mejorOfertaActual;
+  const streamTitle = streamStatus === "connected"
+    ? "Actualizaciones en vivo"
+    : streamStatus === "fallback"
+      ? "Reconectando actualizaciones"
+      : "Conectando actualizaciones";
+  const streamSubtext = streamStatus === "fallback"
+    ? "Respaldo automático de historial activo"
+    : streamStatus === "connected"
+      ? "Pujas sincronizadas con la sala"
+      : "Preparando conexión con la sala";
 
   return (
     <View style={st.container}>
@@ -268,9 +387,23 @@ export default function LiveScreen() {
           {/* Streaming placeholder */}
           <View style={st.streamBox}>
             <View style={st.streamPlaceholder}>
-              <MaterialIcons name="videocam" size={40} color="#9CA3AF" />
-              <Text style={st.streamText}>Streaming de Subasta en Vivo</Text>
-              <Text style={st.streamSubtext}>Integración con servicio externo</Text>
+              <View style={st.streamStatusPill}>
+                <View style={[
+                  st.streamStatusDot,
+                  streamStatus === "connected" && { backgroundColor: "#10B981" },
+                  streamStatus === "fallback" && { backgroundColor: "#F59E0B" },
+                ]} />
+                <Text style={st.streamStatusText}>
+                  {streamStatus === "connected" ? "SSE" : streamStatus === "fallback" ? "Fallback" : "SSE"}
+                </Text>
+              </View>
+              <MaterialIcons
+                name={streamStatus === "fallback" ? "sync" : "podcasts"}
+                size={40}
+                color={streamStatus === "connected" ? "#10B981" : "#9CA3AF"}
+              />
+              <Text style={st.streamText}>{streamTitle}</Text>
+              <Text style={st.streamSubtext}>{streamSubtext}</Text>
             </View>
           </View>
 
@@ -458,6 +591,9 @@ const st = StyleSheet.create({
   // Stream
   streamBox: { marginHorizontal: 20, marginBottom: 20 },
   streamPlaceholder: { height: 180, backgroundColor: "#1A1A2E", borderRadius: 16, justifyContent: "center", alignItems: "center", gap: 6 },
+  streamStatusPill: { position: "absolute", top: 14, right: 14, flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(255,255,255,0.08)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  streamStatusDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#9CA3AF" },
+  streamStatusText: { fontSize: 11, color: "#E5E7EB", fontWeight: "700" },
   streamText: { fontSize: 15, fontWeight: "600", color: "#9CA3AF" },
   streamSubtext: { fontSize: 12, color: "#6B7280" },
 
