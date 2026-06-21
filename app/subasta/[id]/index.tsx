@@ -263,10 +263,6 @@ export default function SubastaDetalleScreen() {
                 {/* Product Photo Slider or Single Photo */}
                 <View style={st.itemPhotoWrap}>
                   <Image source={{ uri: itemImg }} style={st.itemPhoto} />
-                  <LinearGradient
-                    colors={["rgba(0,0,0,0.1)", "rgba(0,0,0,0.5)"]}
-                    style={st.itemPhotoGradient}
-                  />
                   {/* Status Badge on Photo */}
                   <View style={[
                     st.itemStatusTag,
