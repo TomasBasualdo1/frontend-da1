@@ -284,6 +284,12 @@ export default function ProfileScreen() {
   >({});
   const [payingMultaId, setPayingMultaId] = useState<number | null>(null);
 
+  // Expandable consignment details and insurance increase states
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [isEditingInsuranceId, setIsEditingInsuranceId] = useState<number | null>(null);
+  const [newInsuranceAmount, setNewInsuranceAmount] = useState<string>("");
+  const [updatingInsurance, setUpdatingInsurance] = useState<boolean>(false);
+
   // Payment form states
   const [showAddPago, setShowAddPago] = useState(false);
   const [newPagoTipo, setNewPagoTipo] = useState<
@@ -558,24 +564,40 @@ export default function ProfileScreen() {
   };
 
   const handlePressConsignacion = (item: Articulo) => {
-    if (item.subastaId) {
-      router.push(`/subasta/${item.subastaId}` as any);
-    } else {
-      let detailMsg = `Descripción: ${item.descripcion}\n\nEstado: ${STATE_LABELS[item.estado || 'pendiente']}`;
-      if (item.precioBasePropuesto) {
-        detailMsg += `\nPrecio Base Propuesto: $${item.precioBasePropuesto}`;
-      }
-      if (item.comisionPropuesta) {
-        detailMsg += `\nComisión Propuesta: ${item.comisionPropuesta}%`;
-      }
-      if (item.motivoRechazo) {
-        detailMsg += `\nMotivo de rechazo: ${item.motivoRechazo}`;
-      }
-      if (item.seguro && item.seguro.poliza) {
-        detailMsg += `\nPóliza de Seguro: ${item.seguro.poliza}`;
-        detailMsg += `\nMonto Asegurado: $${item.seguro.montoAsegurado}`;
-      }
-      Alert.alert(`Detalle de Consignación #${item.id}`, detailMsg);
+    setExpandedId((prev) => (prev === item.id ? null : item.id));
+    setIsEditingInsuranceId(null);
+    setNewInsuranceAmount("");
+  };
+
+  const handleAumentarSeguro = async (id: number, currentAmount: number) => {
+    const val = parseFloat(newInsuranceAmount);
+    if (isNaN(val) || val <= 0) {
+      Alert.alert("Error", "Debe ingresar un monto válido mayor a 0.");
+      return;
+    }
+    if (val <= currentAmount) {
+      Alert.alert(
+        "Monto Insuficiente",
+        `El nuevo monto asegurado ($${val.toLocaleString("es-AR")}) debe ser mayor al monto asegurado actual ($${currentAmount.toLocaleString("es-AR")}).`
+      );
+      return;
+    }
+
+    setUpdatingInsurance(true);
+    try {
+      await articleService.aumentarSeguro(id, val);
+      Alert.alert(
+        "Éxito",
+        "Se ha solicitado el aumento de seguro correctamente. Te contactaremos pronto para la póliza."
+      );
+      setIsEditingInsuranceId(null);
+      setNewInsuranceAmount("");
+      loadAllData();
+    } catch (err) {
+      console.error("Error al aumentar el seguro:", err);
+      Alert.alert("Error", "No se pudo solicitar el aumento de cobertura. Intentá nuevamente.");
+    } finally {
+      setUpdatingInsurance(false);
     }
   };
 
@@ -751,6 +773,7 @@ export default function ProfileScreen() {
 
                     // Show buttons for valuation acceptance if approved and not yet decided
                     const showValuationActions = item.estado === "aprobado" && (item.tasacionAceptada === null || item.tasacionAceptada === undefined);
+                    const isExpanded = expandedId === item.id;
 
                     return (
                       <View key={item.id} style={{ gap: 8 }}>
@@ -758,125 +781,268 @@ export default function ProfileScreen() {
                           onPress={() => handlePressConsignacion(item)}
                           style={({ pressed }) => [pressed && { opacity: 0.95 }]}
                         >
-                          <View style={s.misCard}>
-                            <Image
-                              source={{
-                                uri: item.fotos && item.fotos.length > 0
-                                  ? item.fotos[0]
-                                  : PLACEHOLDER_IMAGES[idx % PLACEHOLDER_IMAGES.length],
-                              }}
-                              style={s.misThumb}
-                            />
-                            <View style={s.misInfo}>
-                              <Text style={s.misTitle} numberOfLines={1}>
-                                {titlePart}
-                              </Text>
+                          <View style={s.misCardContainer}>
+                            <View style={s.misCardHeader}>
+                              <Image
+                                source={{
+                                  uri: item.fotos && item.fotos.length > 0
+                                    ? item.fotos[0]
+                                    : PLACEHOLDER_IMAGES[idx % PLACEHOLDER_IMAGES.length],
+                                }}
+                                style={s.misThumb}
+                              />
+                              <View style={s.misInfo}>
+                                <Text style={s.misTitle} numberOfLines={1}>
+                                  {titlePart}
+                                </Text>
 
-                              <View style={s.cardMetaRow}>
-                                <View
-                                  style={[
-                                    s.categChip,
-                                    {
-                                      backgroundColor: stateConf.bg,
-                                      borderColor: stateConf.border,
-                                    },
-                                  ]}
-                                >
-                                  <Text
+                                <View style={s.cardMetaRow}>
+                                  <View
                                     style={[
-                                      s.categText,
-                                      { color: stateConf.text },
+                                      s.categChip,
+                                      {
+                                        backgroundColor: stateConf.bg,
+                                        borderColor: stateConf.border,
+                                      },
                                     ]}
                                   >
-                                    {stateConf.label}
-                                  </Text>
+                                    <Text
+                                      style={[
+                                        s.categText,
+                                        { color: stateConf.text },
+                                      ]}
+                                    >
+                                      {stateConf.label}
+                                    </Text>
+                                  </View>
+
+                                  {item.subastaId && (
+                                    <View style={s.liveTagBadge}>
+                                      <Text style={s.liveTagText}>SUBASTA #{item.subastaId}</Text>
+                                    </View>
+                                  )}
                                 </View>
 
-                                {item.subastaId && (
-                                  <View style={s.liveTagBadge}>
-                                    <Text style={s.liveTagText}>SUBASTA #{item.subastaId}</Text>
+                                {!isExpanded && item.precioBasePropuesto && (
+                                  <View style={s.dateRow}>
+                                    <MaterialIcons
+                                      name="attach-money"
+                                      size={13}
+                                      color="#8B6914"
+                                    />
+                                    <Text style={[s.dateText, { color: "#8B6914", fontWeight: "700" }]}>
+                                      Base: ${item.precioBasePropuesto}
+                                      {item.comisionPropuesta ? ` | Com.: ${item.comisionPropuesta}%` : ""}
+                                    </Text>
+                                  </View>
+                                )}
+
+                                {!isExpanded && item.subastaFecha && (
+                                  <View style={s.dateRow}>
+                                    <MaterialIcons
+                                      name="event"
+                                      size={13}
+                                      color="#9CA3AF"
+                                    />
+                                    <Text style={s.dateText}>
+                                      {formatFecha(item.subastaFecha)}
+                                    </Text>
                                   </View>
                                 )}
                               </View>
-
-                              {item.precioBasePropuesto && (
-                                <View style={s.dateRow}>
-                                  <MaterialIcons
-                                    name="attach-money"
-                                    size={13}
-                                    color="#8B6914"
-                                  />
-                                  <Text style={[s.dateText, { color: "#8B6914", fontWeight: "700" }]}>
-                                    Base: ${item.precioBasePropuesto}
-                                    {item.comisionPropuesta ? ` | Com.: ${item.comisionPropuesta}%` : ""}
-                                  </Text>
-                                </View>
-                              )}
-
-                              {item.subastaFecha && (
-                                <View style={s.dateRow}>
-                                  <MaterialIcons
-                                    name="event"
-                                    size={13}
-                                    color="#9CA3AF"
-                                  />
-                                  <Text style={s.dateText}>
-                                    {formatFecha(item.subastaFecha)}
-                                  </Text>
-                                </View>
-                              )}
+                              <View style={s.cardArrow}>
+                                <MaterialIcons
+                                  name={isExpanded ? "keyboard-arrow-up" : "chevron-right"}
+                                  size={22}
+                                  color="#C4B898"
+                                />
+                              </View>
                             </View>
-                            <View style={s.cardArrow}>
-                              <MaterialIcons
-                                name="chevron-right"
-                                size={22}
-                                color="#C4B898"
-                              />
-                            </View>
+
+                            {/* Detalle Expandido */}
+                            {isExpanded && (
+                              <View style={s.misCardDetail}>
+                                <View style={s.detailRow}>
+                                  <Text style={s.detailLabel}>Descripción completa:</Text>
+                                  <Text style={s.detailValue}>{item.descripcion}</Text>
+                                </View>
+
+                                {!!item.artista && (
+                                  <View style={s.detailRow}>
+                                    <Text style={s.detailLabel}>Artista / Creador:</Text>
+                                    <Text style={s.detailValue}>{item.artista}</Text>
+                                  </View>
+                                )}
+
+                                {!!item.fechaCreacion && (
+                                  <View style={s.detailRow}>
+                                    <Text style={s.detailLabel}>Fecha/Año de Creación:</Text>
+                                    <Text style={s.detailValue}>{item.fechaCreacion}</Text>
+                                  </View>
+                                )}
+
+                                {!!item.historia && (
+                                  <View style={s.detailRow}>
+                                    <Text style={s.detailLabel}>Historia / Procedencia:</Text>
+                                    <Text style={s.detailValue}>{item.historia}</Text>
+                                  </View>
+                                )}
+
+                                {item.estado === "rechazado" && !!item.motivoRechazo && (
+                                  <View style={[s.detailRow, s.rejectionBox]}>
+                                    <Text style={[s.detailLabel, { color: "#DC2626" }]}>Motivo de Rechazo:</Text>
+                                    <Text style={[s.detailValue, { color: "#DC2626" }]}>{item.motivoRechazo}</Text>
+                                  </View>
+                                )}
+
+                                {item.precioBasePropuesto && (
+                                  <View style={s.detailRow}>
+                                    <Text style={s.detailLabel}>Tasación propuesta:</Text>
+                                    <Text style={s.detailValue}>
+                                      Base: ${item.precioBasePropuesto.toLocaleString("es-AR")} | Comisión: {item.comisionPropuesta}%
+                                    </Text>
+                                  </View>
+                                )}
+
+                                {item.ubicacion && (
+                                  <View style={s.detailRow}>
+                                    <Text style={s.detailLabel}>Ubicación física:</Text>
+                                    <Text style={s.detailValue}>{item.ubicacion}</Text>
+                                  </View>
+                                )}
+
+                                {/* Sección de Seguro */}
+                                {item.seguro && item.seguro.poliza ? (
+                                  <View style={s.insuranceBox}>
+                                    <Text style={s.detailSectionTitle}>🛡️ Seguro de Cobertura</Text>
+                                    <View style={s.detailRow}>
+                                      <Text style={s.detailLabel}>Compañía:</Text>
+                                      <Text style={s.detailValue}>{item.seguro.compania}</Text>
+                                    </View>
+                                    <View style={s.detailRow}>
+                                      <Text style={s.detailLabel}>Póliza:</Text>
+                                      <Text style={s.detailValue}>{item.seguro.poliza}</Text>
+                                    </View>
+                                    <View style={s.detailRow}>
+                                      <Text style={s.detailLabel}>Monto Asegurado:</Text>
+                                      <Text style={[s.detailValue, { fontWeight: "700", color: "#8B6914" }]}>
+                                        ${item.seguro.montoAsegurado.toLocaleString("es-AR")}
+                                      </Text>
+                                    </View>
+
+                                    {/* Solicitar Aumento de Seguro */}
+                                    <View style={{ marginTop: 8 }}>
+                                      {isEditingInsuranceId === item.id ? (
+                                        <View style={s.insuranceForm}>
+                                          <Text style={s.formSublabel}>
+                                            Nuevo monto asegurado (mín. ${(item.seguro.montoAsegurado + 1).toLocaleString("es-AR")}):
+                                          </Text>
+                                          <View style={s.insuranceInputContainer}>
+                                            <Text style={s.currencyPrefix}>$</Text>
+                                            <TextInput
+                                              style={s.insuranceInput}
+                                              value={newInsuranceAmount}
+                                              onChangeText={setNewInsuranceAmount}
+                                              placeholder="Ej: 15000"
+                                              keyboardType="numeric"
+                                              placeholderTextColor="#9CA3AF"
+                                            />
+                                          </View>
+                                          {updatingInsurance ? (
+                                            <ActivityIndicator size="small" color="#8B6914" style={{ marginTop: 8 }} />
+                                          ) : (
+                                            <View style={s.formActions}>
+                                              <Pressable
+                                                onPress={() => handleAumentarSeguro(item.id!, item.seguro!.montoAsegurado)}
+                                                style={{ flex: 1 }}
+                                              >
+                                                <View style={s.confirmBtn}>
+                                                  <Text style={s.confirmBtnText}>Confirmar</Text>
+                                                </View>
+                                              </Pressable>
+                                              <Pressable
+                                                onPress={() => {
+                                                  setIsEditingInsuranceId(null);
+                                                  setNewInsuranceAmount("");
+                                                }}
+                                                style={{ flex: 1 }}
+                                              >
+                                                <View style={s.cancelBtn}>
+                                                  <Text style={s.cancelBtnText}>Cancelar</Text>
+                                                </View>
+                                              </Pressable>
+                                            </View>
+                                          )}
+                                        </View>
+                                      ) : (
+                                        <Pressable
+                                          onPress={() => {
+                                            setIsEditingInsuranceId(item.id!);
+                                            setNewInsuranceAmount(String(item.seguro!.montoAsegurado + 1000));
+                                          }}
+                                        >
+                                          <View style={s.aumentarSeguroBtn}>
+                                            <Text style={s.aumentarSeguroText}>Solicitar Aumento de Cobertura</Text>
+                                          </View>
+                                        </Pressable>
+                                      )}
+                                    </View>
+                                  </View>
+                                ) : null}
+
+                                {/* Sección de Subasta programada */}
+                                {item.subastaId && (
+                                  <View style={s.subastaLinkBox}>
+                                    <Text style={s.detailSectionTitle}>📅 Programación de Subasta</Text>
+                                    <View style={s.detailRow}>
+                                      <Text style={s.detailLabel}>Subasta Asociada:</Text>
+                                      <Text style={s.detailValue}>Subasta #{item.subastaId}</Text>
+                                    </View>
+                                    {item.subastaFecha && (
+                                      <View style={s.detailRow}>
+                                        <Text style={s.detailLabel}>Fecha y Hora:</Text>
+                                        <Text style={s.detailValue}>
+                                          {item.subastaFecha} {item.subastaHora ? `a las ${item.subastaHora.substring(0, 5)} hs` : ""}
+                                        </Text>
+                                      </View>
+                                    )}
+                                    <Pressable
+                                      onPress={() => router.push(`/subasta/${item.subastaId}` as any)}
+                                      style={{ marginTop: 8 }}
+                                    >
+                                      <View style={s.irSubastaBtn}>
+                                        <Text style={s.irSubastaBtnText}>Ir a la Subasta</Text>
+                                        <MaterialIcons name="arrow-forward" size={14} color="#FFFFFF" />
+                                      </View>
+                                    </Pressable>
+                                  </View>
+                                )}
+
+                                {/* Valuation Decision Buttons inline */}
+                                {showValuationActions && (
+                                  <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
+                                    <Pressable
+                                      style={{ flex: 1 }}
+                                      onPress={() => handleAceptarTasacion(item.id!, true)}
+                                    >
+                                      <View style={s.acceptValuationBtn}>
+                                        <Text style={s.acceptValuationText}>✓ Aceptar Tasación</Text>
+                                      </View>
+                                    </Pressable>
+                                    <Pressable
+                                      style={{ flex: 1 }}
+                                      onPress={() => handleAceptarTasacion(item.id!, false)}
+                                    >
+                                      <View style={s.rejectValuationBtn}>
+                                        <Text style={s.rejectValuationText}>✕ Rechazar</Text>
+                                      </View>
+                                    </Pressable>
+                                  </View>
+                                )}
+                              </View>
+                            )}
                           </View>
                         </Pressable>
-
-                        {/* Valuation Decision buttons directly below the card */}
-                        {showValuationActions && (
-                          <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: 4 }}>
-                            <Pressable
-                              style={{ flex: 1 }}
-                              onPress={() => handleAceptarTasacion(item.id!, true)}
-                            >
-                              <View style={{
-                                backgroundColor: "#ECFDF5",
-                                borderColor: "#A7F3D0",
-                                borderWidth: 1,
-                                borderRadius: 10,
-                                height: 36,
-                                justifyContent: "center",
-                                alignItems: "center"
-                              }}>
-                                <Text style={{ color: "#059669", fontSize: 12, fontWeight: "700" }}>
-                                  ✓ Aceptar Tasación
-                                </Text>
-                              </View>
-                            </Pressable>
-                            <Pressable
-                              style={{ flex: 1 }}
-                              onPress={() => handleAceptarTasacion(item.id!, false)}
-                            >
-                              <View style={{
-                                backgroundColor: "#FFF5F5",
-                                borderColor: "#FEB2B2",
-                                borderWidth: 1,
-                                borderRadius: 10,
-                                height: 36,
-                                justifyContent: "center",
-                                alignItems: "center"
-                              }}>
-                                <Text style={{ color: "#DC2626", fontSize: 12, fontWeight: "700" }}>
-                                  ✕ Rechazar
-                                </Text>
-                              </View>
-                            </Pressable>
-                          </View>
-                        )}
                       </View>
                     );
                   })
@@ -2149,16 +2315,205 @@ const s = StyleSheet.create({
   statDiv: { width: 1, height: 20, backgroundColor: "#F0EBE3" },
 
   /* ── Mis Subastas Cards ── */
-  misCard: {
-    flexDirection: "row",
+  misCardContainer: {
     backgroundColor: "#FFF",
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "#F0EBE3",
     padding: 14,
-    gap: 14,
-    alignItems: "center",
+    flexDirection: "column",
     ...SHADOW_LIGHT,
+  },
+  misCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  misCardDetail: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#F0EBE3",
+    gap: 10,
+  },
+  detailSectionTitle: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#8B6914",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  detailRow: {
+    flexDirection: "column",
+    gap: 2,
+    marginBottom: 4,
+  },
+  detailLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#9CA3AF",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  detailValue: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1A1A2E",
+    lineHeight: 18,
+  },
+  rejectionBox: {
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FCA5A5",
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 4,
+  },
+  insuranceBox: {
+    backgroundColor: "#FFFDF9",
+    borderColor: "#E5DDD0",
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 12,
+    marginTop: 8,
+    gap: 6,
+  },
+  insuranceForm: {
+    marginTop: 8,
+    backgroundColor: "#FFFFFF",
+    borderColor: "#E5DDD0",
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    gap: 6,
+  },
+  formSublabel: {
+    fontSize: 11,
+    color: "#6B7280",
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  insuranceInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderColor: "#E5DDD0",
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 40,
+    backgroundColor: "#FFF8F0",
+  },
+  currencyPrefix: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#8B6914",
+    marginRight: 6,
+  },
+  insuranceInput: {
+    flex: 1,
+    fontSize: 14,
+    color: "#1A1A2E",
+    fontWeight: "600",
+    padding: 0,
+  },
+  formActions: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 6,
+  },
+  confirmBtn: {
+    backgroundColor: "#8B6914",
+    borderRadius: 10,
+    height: 36,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  confirmBtnText: {
+    color: "#FFF",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  cancelBtn: {
+    borderColor: "#E5DDD0",
+    borderWidth: 1,
+    borderRadius: 10,
+    height: 36,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FFF",
+  },
+  cancelBtnText: {
+    color: "#6B7280",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  aumentarSeguroBtn: {
+    borderColor: "#8B6914",
+    borderWidth: 1.5,
+    borderRadius: 10,
+    height: 36,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "transparent",
+    marginTop: 4,
+  },
+  aumentarSeguroText: {
+    color: "#8B6914",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  subastaLinkBox: {
+    backgroundColor: "#F9FAFB",
+    borderColor: "#E5E7EB",
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 12,
+    marginTop: 8,
+    gap: 6,
+  },
+  irSubastaBtn: {
+    backgroundColor: "#1A1A2E",
+    borderRadius: 10,
+    height: 36,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+  },
+  irSubastaBtnText: {
+    color: "#FFF",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  acceptValuationBtn: {
+    backgroundColor: "#ECFDF5",
+    borderColor: "#A7F3D0",
+    borderWidth: 1,
+    borderRadius: 10,
+    height: 38,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  acceptValuationText: {
+    color: "#059669",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  rejectValuationBtn: {
+    backgroundColor: "#FFF5F5",
+    borderColor: "#FEB2B2",
+    borderWidth: 1,
+    borderRadius: 10,
+    height: 38,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  rejectValuationText: {
+    color: "#DC2626",
+    fontSize: 12,
+    fontWeight: "800",
   },
   misThumb: {
     width: 76,

@@ -14,9 +14,9 @@
 
 ## Phase 2: Catálogo y Consignación
 
-- [ ] Spec 04: Publicación de Artículos por el usuario.
-  - [ ] Backend: Endpoints de consignación (POST /articulos, GET /articulos/mis-publicaciones, etc.) e integración de almacenamiento.
-  - [x] Frontend: Wizard de publicación de artículos de 4 pasos (ConsignarScreen).
+- [x] Spec 04: Publicación de Artículos por el usuario.
+  - [x] Backend: Endpoints de consignación (POST /articulos, GET /articulos/mis-publicaciones, etc.) e integración de almacenamiento.
+  - [x] Frontend: Wizard de publicación de artículos de 4 pasos (ConsignarScreen), listado y seguimiento expandido con aceptación de tasación y aumento de seguro.
 - [x] Spec 05: Listado Público y Privado de Subastas.
   - [x] Backend: Endpoints para listar subastas públicas (sin auth) y privadas (autenticado) y sus detalles alineados en P1.1.
   - [x] Frontend: Pantalla de listado de subastas (SubastasScreen) con filtros y búsqueda, y detalle de catálogo.
