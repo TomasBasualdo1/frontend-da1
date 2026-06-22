@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../src/context/AuthContext";
 import { auctionService } from "../../src/services";
 import { SubastaListado, SubastaDetalle, ItemCatalogo, Puja, StreamEvent, PujaStreamData } from "../../src/types";
+import { isAuctionLive } from "../../src/utils/auctionSchedule";
 
 const QUICK_BIDS = [
   { label: "+1%", pct: 0.01 },
@@ -60,7 +61,7 @@ export default function LiveScreen() {
   useEffect(() => {
     if (!isAuthenticated) return;
     auctionService.getSubastas()
-      .then((d) => setSubastas(d.filter((s) => s.estado === "abierta")))
+      .then((d) => setSubastas(d.filter((s) => isAuctionLive(s))))
       .catch(() => {});
   }, [isAuthenticated]);
 

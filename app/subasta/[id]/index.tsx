@@ -23,6 +23,10 @@ import {
   SubastaDetalle,
   SubastaDetallePublica,
 } from "../../../src/types";
+import {
+  getAuctionScheduleLabel,
+  getAuctionScheduleStatus,
+} from "../../../src/utils/auctionSchedule";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -178,7 +182,9 @@ export default function SubastaDetalleScreen() {
 
   const catColors = CATEG_COLORS[subasta.categoria];
   const coverImg = COVER_IMAGES[Number(id) % COVER_IMAGES.length];
-  const isLive = subasta.estado === "abierta";
+  const scheduleStatus = getAuctionScheduleStatus(subasta);
+  const isLive = scheduleStatus === "live";
+  const isClosed = scheduleStatus === "closed";
 
   return (
     <View style={st.container}>
@@ -250,6 +256,12 @@ export default function SubastaDetalleScreen() {
                 <View style={st.liveStatusBadge}>
                   <LiveDot />
                   <Text style={st.liveStatusText}>EN VIVO</Text>
+                </View>
+              ) : !isClosed ? (
+                <View style={st.scheduledStatusBadge}>
+                  <Text style={st.scheduledStatusText}>
+                    {getAuctionScheduleLabel(scheduleStatus)}
+                  </Text>
                 </View>
               ) : (
                 <View style={st.closedStatusBadge}>
@@ -396,7 +408,18 @@ export default function SubastaDetalleScreen() {
         </SafeAreaView>
       )}
 
-      {!isLive && isAuthenticated && (
+      {!isLive && !isClosed && isAuthenticated && (
+        <SafeAreaView style={st.stickyBottomArea} edges={["bottom"]}>
+          <View style={st.scheduledBtn}>
+            <MaterialIcons name="event" size={20} color="#8B6914" />
+            <Text style={st.scheduledBtnText}>
+              Disponible el {formatDate(subasta.fecha)} a las {formatTime(subasta.hora)}
+            </Text>
+          </View>
+        </SafeAreaView>
+      )}
+
+      {isClosed && isAuthenticated && (
         <SafeAreaView style={st.stickyBottomArea} edges={["bottom"]}>
           <Pressable
             onPress={() => router.push(`/pagos/${subasta.id}` as any)}
@@ -578,6 +601,16 @@ const st = StyleSheet.create({
   },
   liveStatusText: { fontSize: 10, fontWeight: "800", color: "#EF4444" },
 
+  scheduledStatusBadge: {
+    backgroundColor: "#FFFBEB",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+  },
+  scheduledStatusText: { fontSize: 10, fontWeight: "800", color: "#B45309" },
+
   closedStatusBadge: {
     backgroundColor: "#F3F4F6",
     paddingHorizontal: 10,
@@ -754,6 +787,27 @@ const st = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     letterSpacing: 0.3,
+  },
+  scheduledBtn: {
+    minHeight: 56,
+    borderRadius: 28,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: "#FFFBEB",
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+    ...SHADOW,
+  },
+  scheduledBtnText: {
+    flex: 1,
+    color: "#92400E",
+    fontSize: 14,
+    fontWeight: "800",
+    textAlign: "center",
   },
   payBtn: {
     height: 56,

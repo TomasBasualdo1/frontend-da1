@@ -17,6 +17,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../src/context/AuthContext";
 import { SubastaListado, Categoria } from "../../src/types";
 import { auctionService } from "../../src/services";
+import {
+  getAuctionScheduleLabel,
+  getAuctionScheduleStatus,
+  isAuctionLive,
+  isAuctionScheduled,
+} from "../../src/utils/auctionSchedule";
 
 const CATEG_LABELS: Record<Categoria, string> = {
   comun: "Común",
@@ -120,8 +126,8 @@ export default function SubastasScreen() {
 
   const stats = useMemo(() => {
     const total = subastas.length;
-    const enVivo = subastas.filter((s) => s.estado === "abierta").length;
-    const proximas = subastas.filter((s) => s.estado === "cerrada").length;
+    const enVivo = subastas.filter((s) => isAuctionLive(s)).length;
+    const proximas = subastas.filter((s) => isAuctionScheduled(s)).length;
     return { total, enVivo, proximas };
   }, [subastas]);
 
@@ -142,7 +148,9 @@ export default function SubastasScreen() {
   }, [subastas, filterCateg, search]);
 
   const renderCard = ({ item, index }: { item: SubastaListado; index: number }) => {
-    const isLive = item.estado === "abierta";
+    const scheduleStatus = getAuctionScheduleStatus(item);
+    const isLive = scheduleStatus === "live";
+    const isClosed = scheduleStatus === "closed";
     const placeholderImg = PLACEHOLDER_IMAGES[index % PLACEHOLDER_IMAGES.length];
     const canJoin = isAuthenticated;
     const catColors = CATEG_COLORS[item.categoria];
@@ -157,10 +165,22 @@ export default function SubastasScreen() {
             {/* Thumbnail */}
             <View style={st.thumbWrap}>
               <Image source={{ uri: placeholderImg }} style={st.thumb} />
-              {isLive && (
-                <View style={st.liveTagBadge}>
-                  <LiveDot />
-                  <Text style={st.liveTagText}>VIVO</Text>
+              {!isClosed && (
+                <View
+                  style={[
+                    st.liveTagBadge,
+                    !isLive && st.scheduledTagBadge,
+                  ]}
+                >
+                  {isLive && <LiveDot />}
+                  <Text
+                    style={[
+                      st.liveTagText,
+                      !isLive && st.scheduledTagText,
+                    ]}
+                  >
+                    {getAuctionScheduleLabel(scheduleStatus)}
+                  </Text>
                 </View>
               )}
             </View>
@@ -519,6 +539,12 @@ const st = StyleSheet.create({
     fontWeight: "900",
     color: "#FFF",
     letterSpacing: 0.5,
+  },
+  scheduledTagBadge: {
+    backgroundColor: "rgba(245,158,11,0.92)",
+  },
+  scheduledTagText: {
+    color: "#FFF",
   },
 
   cardInfo: { flex: 1, justifyContent: "center", gap: 5 },
