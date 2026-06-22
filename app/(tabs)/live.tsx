@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
-import { View, Text, Pressable, StyleSheet, FlatList, TextInput, Alert, ActivityIndicator, ScrollView, Image } from "react-native";
+import { View, Text, Pressable, StyleSheet, FlatList, TextInput, Alert, ActivityIndicator, ScrollView, Image, KeyboardAvoidingView, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -242,7 +242,7 @@ export default function LiveScreen() {
       const s = e?.response?.status;
       const detail = e?.response?.data?.detail;
       const errorMsg = typeof detail === "string" ? detail : "No cumplís los requisitos.";
-      if (s === 400) Alert.alert("Puja inválida", "El monto está fuera de los límites permitidos.");
+      if (s === 400) Alert.alert("Puja inválida", errorMsg);
       else if (s === 403) Alert.alert("No autorizado", errorMsg);
       else if (s === 409) Alert.alert("Conflicto", "Otra puja en proceso. Reintentá.");
       else Alert.alert("Error", "No se pudo enviar la puja.");
@@ -260,7 +260,8 @@ export default function LiveScreen() {
   };
 
   const handleCustomBid = () => {
-    const amount = parseFloat(customBid);
+    const cleaned = customBid.replace(/,/g, ".");
+    const amount = parseFloat(cleaned);
     if (isNaN(amount) || amount <= 0) {
       Alert.alert("Error", "Ingresá un monto válido.");
       return;
@@ -373,8 +374,12 @@ export default function LiveScreen() {
   return (
     <View style={st.container}>
       <SafeAreaView style={{ flex: 1 }}>
-        {/* Live Header */}
-        <View style={st.liveHeader}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
+        >
+          {/* Live Header */}
+          <View style={st.liveHeader}>
           <Pressable onPress={handleLeave}>
             <MaterialIcons name="arrow-back" size={24} color="#1A1A2E" />
           </Pressable>
@@ -388,7 +393,7 @@ export default function LiveScreen() {
           </View>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }} keyboardShouldPersistTaps="handled">
           {/* Streaming placeholder */}
           <View style={st.streamBox}>
             <View style={st.streamPlaceholder}>
@@ -458,12 +463,7 @@ export default function LiveScreen() {
             </View>
 
             {/* Custom bid */}
-            <Pressable
-              style={({ pressed }) => [st.customBidBtn, pressed && { opacity: 0.9 }]}
-              onPress={() => {
-                if (customBid) handleCustomBid();
-              }}
-            >
+            <View style={st.customBidBtn}>
               <TextInput
                 style={st.customBidInput}
                 placeholder="Pujar Monto Personalizado"
@@ -480,7 +480,7 @@ export default function LiveScreen() {
                   <MaterialIcons name="send" size={20} color="#8B6914" />
                 </Pressable>
               )}
-            </Pressable>
+            </View>
           </View>
 
           {/* Real-time feed */}
@@ -521,6 +521,7 @@ export default function LiveScreen() {
             )}
           </View>
         </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
   );
@@ -629,10 +630,10 @@ const st = StyleSheet.create({
   customBidBtn: {
     flexDirection: "row", alignItems: "center", backgroundColor: "#FFF",
     borderWidth: 1, borderColor: "#E5DDD0", borderRadius: 14,
-    paddingHorizontal: 16, height: 52, marginTop: 12,
+    paddingLeft: 16, paddingRight: 4, height: 52, marginTop: 12,
   },
-  customBidInput: { flex: 1, fontSize: 15, color: "#1A1A2E" },
-  customBidSend: { padding: 4 },
+  customBidInput: { flex: 1, height: "100%", fontSize: 15, color: "#1A1A2E" },
+  customBidSend: { padding: 12, justifyContent: "center", alignItems: "center" },
 
   // Feed
   feedSection: { paddingHorizontal: 20 },
