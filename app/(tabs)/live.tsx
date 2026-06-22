@@ -5,7 +5,15 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../src/context/AuthContext";
 import { auctionService } from "../../src/services";
-import { SubastaListado, SubastaDetalle, ItemCatalogo, Puja, StreamEvent, PujaStreamData } from "../../src/types";
+import {
+  SubastaListado,
+  SubastaDetalle,
+  ItemCatalogo,
+  Puja,
+  StreamEvent,
+  PujaStreamData,
+  GarantiaInsuficienteErrorDetail,
+} from "../../src/types";
 import { isAuctionLive } from "../../src/utils/auctionSchedule";
 
 const QUICK_BIDS = [
@@ -38,6 +46,38 @@ const CATEG_PESO: Record<string, number> = {
   oro: 4,
   platino: 5,
 };
+
+function formatMoney(moneda: string | undefined, value: number): string {
+  const prefix = moneda === "USD" ? "USD" : "$";
+  return `${prefix} ${Number(value || 0).toLocaleString("es-AR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function isGarantiaInsuficienteDetail(
+  detail: unknown,
+): detail is GarantiaInsuficienteErrorDetail {
+  return (
+    typeof detail === "object" &&
+    detail !== null &&
+    (detail as { codigo?: string }).codigo === "GARANTIA_INSUFICIENTE"
+  );
+}
+
+function getBidErrorMessage(detail: unknown): string {
+  if (typeof detail === "string") return detail;
+  if (isGarantiaInsuficienteDetail(detail)) {
+    const moneda = detail.moneda || "USD";
+    return [
+      detail.mensaje || "La puja supera tu garantia disponible.",
+      `Disponible: ${formatMoney(moneda, detail.garantiaDisponible)}.`,
+      `Requerido: ${formatMoney(moneda, detail.importeRequerido)}.`,
+      `Exposicion actual: ${formatMoney(moneda, detail.exposicionActual)}.`,
+    ].join("\n");
+  }
+  return "No cumplís los requisitos.";
+}
 
 export default function LiveScreen() {
   const router = useRouter();
@@ -241,8 +281,10 @@ export default function LiveScreen() {
     } catch (e: any) {
       const s = e?.response?.status;
       const detail = e?.response?.data?.detail;
-      const errorMsg = typeof detail === "string" ? detail : "No cumplís los requisitos.";
-      if (s === 400) Alert.alert("Puja inválida", errorMsg);
+      const errorMsg = getBidErrorMessage(detail);
+      if (s === 400 && isGarantiaInsuficienteDetail(detail)) {
+        Alert.alert("Garantía insuficiente", errorMsg);
+      } else if (s === 400) Alert.alert("Puja inválida", errorMsg);
       else if (s === 403) Alert.alert("No autorizado", errorMsg);
       else if (s === 409) Alert.alert("Conflicto", "Otra puja en proceso. Reintentá.");
       else Alert.alert("Error", "No se pudo enviar la puja.");
