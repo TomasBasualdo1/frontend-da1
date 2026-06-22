@@ -83,6 +83,15 @@ export interface PujaResponse {
   esGanadoraParcial: boolean;
 }
 
+export interface GarantiaInsuficienteErrorDetail {
+  codigo: 'GARANTIA_INSUFICIENTE';
+  mensaje?: string;
+  garantiaDisponible: number;
+  exposicionActual: number;
+  importeRequerido: number;
+  moneda: Moneda;
+}
+
 export interface Puja {
   id: number;
   usuarioId: number;

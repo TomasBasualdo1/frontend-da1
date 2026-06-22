@@ -32,11 +32,11 @@ Vista desde el **frontend**. (Contraparte: `backend-da1/context/12_INTEGRATION.m
 - **Multipart**: registro paso 1, update perfil y publicar artículo arman `FormData`. En RN los archivos van como `{ uri, name, type }`; en **web** se hace `fetch(uri) → blob`. Los nombres de campo deben coincidir con el backend (`fotoFrente`, `fotoDorso`, `fotos`, `documentacionOrigen`).
 - **Normalización defensiva**: `normalizeUsuario`, `normalizeArticulo`, `normalizeMedioPago`, etc. aceptan camelCase **y** snake_case porque el backend no es 100% consistente. Si agregás campos, extendé el normalizer correspondiente.
 - **Códigos manejados en UI**: 401 (sesión, global), 403 (acceso/categoría), 409 (ya conectado a otra subasta). Mantenerlos alineados con el backend.
-- **Pujas**: `auctionService.pujar` manda header `Idempotency-Key` (timestamp), pero **el backend lo ignora** hoy. No confíes en deduplicación server-side.
+- **Pujas**: `auctionService.pujar` manda header `Idempotency-Key` y el backend deduplica reintentos. Si la garantía limitada no alcanza, el backend responde `400` con `detail.codigo = "GARANTIA_INSUFICIENTE"` y datos seguros (`garantiaDisponible`, `exposicionActual`, `importeRequerido`, `moneda`).
 
 ## Desalineaciones conocidas (importante)
 
-1. **SSE no consumido**: el backend expone `/subastas/{id}/stream` (eventos `puja`/`cierre`), pero el front **no abre EventSource**. `live.tsx` no se actualiza en tiempo real (timer fijo `31:59`). Integrarlo es trabajo pendiente. (RN no trae `EventSource` nativo; requeriría polyfill o fetch-stream.)
+1. **Garantía disponible no anticipada**: no existe endpoint frontend para consultar exposición acumulada antes de pujar. `live.tsx` muestra el rechazo backend de garantía insuficiente, pero no deshabilita botones por exposición acumulada.
 2. **Admin sin UI**: `auctionService.createSubasta/addCatalogItem` apuntan a `/admin/*`, pero no hay pantalla admin. Además el backend protege mal esos endpoints (solo `evaluar artículo` chequea admin).
 3. **`StreamEvent` tipo**: `src/types/common.ts` define `type: 'puja' | 'item'`, pero el backend emite `'puja'` y `'cierre'`. Ajustar al integrar SSE.
 
