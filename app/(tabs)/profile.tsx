@@ -132,6 +132,49 @@ function formatFecha(fecha?: string): string {
   }
 }
 
+function formatAmount(value?: number): string {
+  return `$ ${Number(value || 0).toLocaleString("es-AR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function formatMedioLimit(medio: MedioPago): string {
+  const prefix = medio.moneda === "USD" ? "USD" : "$";
+  return `${prefix} ${Number(medio.limiteReservado || 0).toLocaleString("es-AR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function medioPagoLabel(medio: MedioPago): string {
+  const type =
+    medio.tipo === "tarjeta_credito"
+      ? "Tarjeta"
+      : medio.tipo === "cuenta_bancaria"
+        ? "Cuenta"
+        : medio.tipo === "cheque_certificado"
+          ? "Cheque certificado"
+          : "Medio de pago";
+  return medio.ultimos_digitos ? `${type} ...${medio.ultimos_digitos}` : type;
+}
+
+function getMultaPagoErrorMessage(error: unknown): string {
+  const apiError = error as { response?: { status?: number } };
+  switch (apiError?.response?.status) {
+    case 400:
+      return "El medio seleccionado es inválido o no tiene fondos suficientes para cubrir la multa.";
+    case 403:
+      return "No podés usar ese medio de pago: puede ser ajeno, no autorizado o no estar validado.";
+    case 404:
+      return "La multa no existe o ya no está disponible.";
+    case 409:
+      return "La multa ya fue pagada o dejó de estar pendiente.";
+    default:
+      return "No se pudo completar el pago. Revisá la conexión e intentá nuevamente.";
+  }
+}
+
 export default function ProfileScreen() {
   const router = useRouter();
   const { isAuthenticated, user, logout, refreshUser } = useAuth();
@@ -236,6 +279,10 @@ export default function ProfileScreen() {
   const [misConsignaciones, setMisConsignaciones] = useState<Articulo[]>([]);
   const [tab, setTab] = useState<ProfileTab>("perfil");
   const [searchMis, setSearchMis] = useState("");
+  const [selectedMedioByMultaId, setSelectedMedioByMultaId] = useState<
+    Record<number, number | null>
+  >({});
+  const [payingMultaId, setPayingMultaId] = useState<number | null>(null);
 
   // Payment form states
   const [showAddPago, setShowAddPago] = useState(false);
@@ -336,6 +383,114 @@ export default function ProfileScreen() {
               loadAllData();
             } catch {
               Alert.alert("Error", "No se pudo eliminar el medio de pago");
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const multasEvaluadas = useMemo(
+    () =>
+      multas.map((multa) => {
+        const importe = Number(multa.importe || 0);
+        const mediosEvaluados = medios.map((medio) => {
+          const motivos: string[] = [];
+          const limite = Number(medio.limiteReservado || 0);
+
+          if (medio.id == null) motivos.push("Sin identificador");
+          if (medio.estadoVerificacion !== "validado") motivos.push("No validado");
+          if (limite > 0 && limite < importe) motivos.push("Límite insuficiente");
+
+          return { medio, motivos };
+        });
+
+        return { multa, mediosEvaluados };
+      }),
+    [medios, multas],
+  );
+
+  useEffect(() => {
+    setSelectedMedioByMultaId((prev) => {
+      const next: Record<number, number | null> = {};
+
+      multasEvaluadas.forEach(({ multa, mediosEvaluados }) => {
+        if (multa.estado !== "pendiente" || multa.id == null) return;
+
+        const current = prev[multa.id];
+        const currentValid = mediosEvaluados.some(
+          (item) => item.medio.id === current && item.motivos.length === 0,
+        );
+        const firstValid =
+          mediosEvaluados.find((item) => item.motivos.length === 0)?.medio.id ??
+          null;
+
+        next[multa.id] = currentValid ? current : firstValid;
+      });
+
+      const prevKeys = Object.keys(prev);
+      const nextKeys = Object.keys(next);
+      const changed =
+        prevKeys.length !== nextKeys.length ||
+        nextKeys.some((key) => prev[Number(key)] !== next[Number(key)]);
+
+      return changed ? next : prev;
+    });
+  }, [multasEvaluadas]);
+
+  const handlePagarMulta = (multa: Multa) => {
+    if (multa.id == null) {
+      Alert.alert("Multa inválida", "Esta multa no tiene identificador para pagar.");
+      return;
+    }
+
+    const evaluacion = multasEvaluadas.find((item) => item.multa.id === multa.id);
+    const selectedMedioId = selectedMedioByMultaId[multa.id];
+    const selectedMedio = evaluacion?.mediosEvaluados.find(
+      (item) => item.medio.id === selectedMedioId,
+    );
+
+    if (!selectedMedio || selectedMedio.motivos.length > 0 || selectedMedioId == null) {
+      Alert.alert(
+        "Medio requerido",
+        "Seleccioná un medio validado y compatible para pagar la multa.",
+      );
+      return;
+    }
+
+    Alert.alert(
+      "Confirmar pago",
+      `Vas a pagar ${formatAmount(multa.importe)} con ${medioPagoLabel(
+        selectedMedio.medio,
+      )}.`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Pagar",
+          onPress: async () => {
+            setPayingMultaId(multa.id!);
+            try {
+              await userService.pagarMulta({
+                multaId: multa.id!,
+                medioPagoId: selectedMedioId,
+              });
+
+              const [dataMultas, dataMedios] = await Promise.all([
+                userService.getMultas(),
+                userService.getMediosPago(),
+              ]);
+              setMultas(dataMultas);
+              setMedios(dataMedios);
+              await refreshUser();
+
+              Alert.alert(
+                "Multa pagada",
+                "El pago se registró correctamente y actualizamos tu perfil.",
+              );
+            } catch (err) {
+              Alert.alert("No se pudo pagar la multa", getMultaPagoErrorMessage(err));
+            } finally {
+              setPayingMultaId(null);
             }
           },
         },
@@ -1542,60 +1697,218 @@ export default function ProfileScreen() {
                 {/* Multas section */}
                 {multas.length > 0 && (
                   <>
-                    <Text style={s.secTitle}>Multas Activas</Text>
-                    <View style={s.section}>
-                      {multas.map((m) => (
-                        <View
-                          key={m.id ?? `${m.importe}-${m.estado}`}
-                          style={s.payCard}
-                        >
-                          <View style={s.payCardIconContainer}>
-                            <MaterialIcons
-                              name="gavel"
-                              size={20}
-                              color="#DC2626"
-                            />
-                          </View>
-                          <View style={{ flex: 1, gap: 2 }}>
-                            <Text style={[s.payType, { color: "#DC2626" }]}>
-                              Importe: $
-                              {m.importe?.toLocaleString("es-AR") || "0"}
-                            </Text>
-                            <Text style={s.payInfo}>
-                              {m.motivo || "Sin detalle de la multa"}
-                            </Text>
-                          </View>
+                    <Text style={s.secTitle}>Multas</Text>
+                    {user?.multaActiva && (
+                      <View style={s.multaPagoNotice}>
+                        <MaterialIcons name="warning" size={18} color="#B45309" />
+                        <Text style={s.multaPagoNoticeText}>
+                          Tenés una multa pendiente. Hasta pagarla no podés participar en otra subasta.
+                        </Text>
+                      </View>
+                    )}
+                    <View style={s.fineList}>
+                      {multasEvaluadas.map(({ multa, mediosEvaluados }) => {
+                        const isPendiente = multa.estado === "pendiente";
+                        const hasValidMedio = medios.some(
+                          (medio) => medio.estadoVerificacion === "validado",
+                        );
+                        const selectedMedioId =
+                          multa.id != null
+                            ? selectedMedioByMultaId[multa.id] ?? null
+                            : null;
+                        const selectedMedio = mediosEvaluados.find(
+                          (item) => item.medio.id === selectedMedioId,
+                        );
+                        const canPay =
+                          isPendiente &&
+                          multa.id != null &&
+                          !!selectedMedio &&
+                          selectedMedio.motivos.length === 0 &&
+                          payingMultaId !== multa.id;
+
+                        return (
                           <View
-                            style={[
-                              s.verifBadge,
-                              {
-                                backgroundColor:
-                                  m.estado === "pendiente"
-                                    ? "#FEF2F2"
-                                    : "#ECFDF5",
-                                borderColor:
-                                  m.estado === "pendiente"
-                                    ? "#FEE2E2"
-                                    : "#D1FAE5",
-                              },
-                            ]}
+                            key={multa.id ?? `${multa.importe}-${multa.estado}`}
+                            style={s.fineCard}
                           >
-                            <Text
-                              style={{
-                                fontSize: 10,
-                                fontWeight: "700",
-                                color:
-                                  m.estado === "pendiente"
-                                    ? "#DC2626"
-                                    : "#059669",
-                                textTransform: "uppercase",
-                              }}
-                            >
-                              {m.estado || "pendiente"}
-                            </Text>
+                            <View style={s.fineHeader}>
+                              <View style={s.payCardIconContainer}>
+                                <MaterialIcons
+                                  name={isPendiente ? "gavel" : "check-circle"}
+                                  size={20}
+                                  color={isPendiente ? "#DC2626" : "#059669"}
+                                />
+                              </View>
+                              <View style={{ flex: 1, gap: 2 }}>
+                                <Text
+                                  style={[
+                                    s.payType,
+                                    isPendiente && { color: "#DC2626" },
+                                  ]}
+                                >
+                                  {formatAmount(multa.importe)}
+                                </Text>
+                                <Text style={s.payInfo}>
+                                  {multa.motivo || "Sin detalle de la multa"}
+                                </Text>
+                                <Text style={s.payInfo}>
+                                  Vence {formatFecha(multa.fechaLimite) || "sin fecha"}
+                                </Text>
+                              </View>
+                              <View
+                                style={[
+                                  s.verifBadge,
+                                  isPendiente ? s.fineBadgePending : s.fineBadgePaid,
+                                ]}
+                              >
+                                <Text
+                                  style={[
+                                    s.fineBadgeText,
+                                    isPendiente
+                                      ? s.fineBadgeTextPending
+                                      : s.fineBadgeTextPaid,
+                                  ]}
+                                >
+                                  {multa.estado || "pendiente"}
+                                </Text>
+                              </View>
+                            </View>
+
+                            {isPendiente && multa.id != null && (
+                              <View style={s.finePaymentBlock}>
+                                <Text style={s.fineSubTitle}>Medio para pagar</Text>
+
+                                {mediosEvaluados.length === 0 ? (
+                                  <View style={s.fineMessage}>
+                                    <MaterialIcons
+                                      name="payment"
+                                      size={18}
+                                      color="#B45309"
+                                    />
+                                    <Text style={s.fineMessageText}>
+                                      No tenés medios de pago registrados.
+                                    </Text>
+                                  </View>
+                                ) : !hasValidMedio ? (
+                                  <View style={s.fineMessage}>
+                                    <MaterialIcons
+                                      name="verified-user"
+                                      size={18}
+                                      color="#B45309"
+                                    />
+                                    <Text style={s.fineMessageText}>
+                                      No tenés medios validados para pagar multas.
+                                    </Text>
+                                  </View>
+                                ) : null}
+
+                                <View style={s.fineMethods}>
+                                  {mediosEvaluados.map(({ medio, motivos }) => {
+                                    const disabled =
+                                      motivos.length > 0 || payingMultaId === multa.id;
+                                    const selected = medio.id === selectedMedioId;
+
+                                    return (
+                                      <Pressable
+                                        key={
+                                          medio.id ??
+                                          `${multa.id}-${medio.tipo}-${medio.ultimos_digitos}`
+                                        }
+                                        disabled={disabled || medio.id == null}
+                                        onPress={() =>
+                                          setSelectedMedioByMultaId((prev) => ({
+                                            ...prev,
+                                            [multa.id!]: medio.id ?? null,
+                                          }))
+                                        }
+                                        style={({ pressed }) => [
+                                          pressed && { opacity: 0.9 },
+                                        ]}
+                                      >
+                                        <View
+                                          style={[
+                                            s.fineMethodCard,
+                                            selected && s.fineMethodSelected,
+                                            disabled && s.fineMethodDisabled,
+                                          ]}
+                                        >
+                                          <MaterialIcons
+                                            name={
+                                              selected
+                                                ? "radio-button-checked"
+                                                : "radio-button-unchecked"
+                                            }
+                                            size={20}
+                                            color={selected ? "#8B6914" : "#9CA3AF"}
+                                          />
+                                          <View style={{ flex: 1, gap: 2 }}>
+                                            <Text style={s.fineMethodTitle}>
+                                              {medioPagoLabel(medio)}
+                                            </Text>
+                                            <Text style={s.fineMethodMeta}>
+                                              {medio.moneda || "-"} · Límite{" "}
+                                              {formatMedioLimit(medio)}
+                                            </Text>
+                                          </View>
+                                          <Text
+                                            style={[
+                                              s.fineMethodStatus,
+                                              motivos.length > 0
+                                                ? s.fineMethodStatusError
+                                                : s.fineMethodStatusOk,
+                                            ]}
+                                          >
+                                            {motivos.length > 0
+                                              ? motivos.join(" · ")
+                                              : "Compatible"}
+                                          </Text>
+                                        </View>
+                                      </Pressable>
+                                    );
+                                  })}
+                                </View>
+
+                                <Pressable
+                                  onPress={() => handlePagarMulta(multa)}
+                                  disabled={!canPay}
+                                  style={({ pressed }) => [
+                                    pressed && canPay && { opacity: 0.9 },
+                                  ]}
+                                >
+                                  <View
+                                    style={[
+                                      s.payFineButton,
+                                      !canPay && s.payFineButtonDisabled,
+                                    ]}
+                                  >
+                                    {payingMultaId === multa.id ? (
+                                      <ActivityIndicator color="#FFF" />
+                                    ) : (
+                                      <>
+                                        <MaterialIcons
+                                          name="paid"
+                                          size={18}
+                                          color="#FFF"
+                                        />
+                                        <Text style={s.payFineButtonText}>Pagar</Text>
+                                      </>
+                                    )}
+                                  </View>
+                                </Pressable>
+                              </View>
+                            )}
+
+                            {isPendiente && multa.id == null && (
+                              <View style={s.fineMessage}>
+                                <MaterialIcons name="error" size={18} color="#B45309" />
+                                <Text style={s.fineMessageText}>
+                                  Esta multa no se puede pagar desde la app porque no tiene identificador.
+                                </Text>
+                              </View>
+                            )}
                           </View>
-                        </View>
-                      ))}
+                        );
+                      })}
                     </View>
                   </>
                 )}
@@ -2131,6 +2444,128 @@ const s = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "#FEF2F2",
   },
+  multaPagoNotice: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    backgroundColor: "#FFFBEB",
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+    borderRadius: 16,
+    padding: 14,
+  },
+  multaPagoNoticeText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 19,
+    color: "#92400E",
+    fontWeight: "700",
+  },
+  fineList: { gap: 12 },
+  fineCard: {
+    backgroundColor: "#FFF",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#F0EBE3",
+    padding: 16,
+    gap: 14,
+    ...SHADOW_LIGHT,
+  },
+  fineHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  fineBadgePending: {
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FEE2E2",
+  },
+  fineBadgePaid: {
+    backgroundColor: "#ECFDF5",
+    borderColor: "#D1FAE5",
+  },
+  fineBadgeText: {
+    fontSize: 10,
+    fontWeight: "800",
+    textTransform: "uppercase",
+  },
+  fineBadgeTextPending: { color: "#DC2626" },
+  fineBadgeTextPaid: { color: "#059669" },
+  finePaymentBlock: {
+    gap: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#F3EDE4",
+    paddingTop: 14,
+  },
+  fineSubTitle: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#6B7280",
+    textTransform: "uppercase",
+  },
+  fineMessage: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    backgroundColor: "#FFFBEB",
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+    borderRadius: 12,
+    padding: 10,
+  },
+  fineMessageText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 17,
+    color: "#92400E",
+    fontWeight: "600",
+  },
+  fineMethods: { gap: 8 },
+  fineMethodCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderWidth: 1,
+    borderColor: "#E5DDD0",
+    borderRadius: 14,
+    padding: 12,
+    backgroundColor: "#FFF",
+  },
+  fineMethodSelected: {
+    borderColor: "#8B6914",
+    backgroundColor: "#FFFBEB",
+  },
+  fineMethodDisabled: { opacity: 0.55 },
+  fineMethodTitle: {
+    fontSize: 13,
+    color: "#1A1A2E",
+    fontWeight: "800",
+  },
+  fineMethodMeta: {
+    fontSize: 11,
+    color: "#6B7280",
+    fontWeight: "600",
+  },
+  fineMethodStatus: {
+    maxWidth: 118,
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: "800",
+    textAlign: "right",
+  },
+  fineMethodStatusOk: { color: "#059669" },
+  fineMethodStatusError: { color: "#DC2626" },
+  payFineButton: {
+    flexDirection: "row",
+    backgroundColor: "#1A1A2E",
+    height: 46,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+  },
+  payFineButtonDisabled: { opacity: 0.45 },
+  payFineButtonText: { color: "#FFF", fontSize: 14, fontWeight: "800" },
 
   /* ── Add Payment Form ── */
   addPagoForm: {

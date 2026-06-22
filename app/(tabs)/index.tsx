@@ -19,6 +19,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../../src/context/AuthContext";
 import { SubastaListado, Categoria } from "../../src/types";
 import { auctionService } from "../../src/services";
+import {
+  getAuctionScheduleLabel,
+  getAuctionScheduleStatus,
+  isAuctionLive,
+  isAuctionScheduled,
+} from "../../src/utils/auctionSchedule";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const FEATURED_CARD_WIDTH = SCREEN_WIDTH * 0.72;
@@ -161,12 +167,13 @@ export default function HomeScreen() {
 
   useEffect(() => { loadSubastas(); }, []);
 
-  const liveSubastas = subastas.filter(s => s.estado === "abierta");
-  const proximasSubastas = subastas.filter(s => s.estado === "cerrada");
+  const liveSubastas = subastas.filter((s) => isAuctionLive(s));
+  const proximasSubastas = subastas.filter((s) => isAuctionScheduled(s));
 
   /* ── Featured Card (Horizontal) ── */
   const renderFeatured = ({ item, index }: { item: SubastaListado; index: number }) => {
     const img = PLACEHOLDER_IMAGES[index % PLACEHOLDER_IMAGES.length];
+    const scheduleStatus = getAuctionScheduleStatus(item);
     return (
       <Pressable
         onPress={() => router.push(`/subasta/${item.id}` as any)}
@@ -179,10 +186,11 @@ export default function HomeScreen() {
               colors={["transparent", "rgba(0,0,0,0.65)"]}
               style={st.featuredGradient}
             />
-            {/* Live badge */}
             <View style={st.liveBadge}>
               <View style={st.liveDotSmall} />
-              <Text style={st.liveText}>EN VIVO</Text>
+              <Text style={st.liveText}>
+                {getAuctionScheduleLabel(scheduleStatus)}
+              </Text>
             </View>
             {/* Bottom info overlay */}
             <View style={st.featuredOverlayInfo}>
