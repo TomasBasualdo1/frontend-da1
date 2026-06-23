@@ -92,7 +92,7 @@ export default function LoginScreen() {
             keyboardDismissMode="on-drag"
           >
             {/* Header */}
-            <Pressable style={styles.backButton} onPress={() => router.back()}>
+            <Pressable testID="login-back-btn" style={styles.backButton} onPress={() => router.back()}>
               <MaterialIcons name="arrow-back" size={24} color="#1A1A2E" />
             </Pressable>
 
@@ -123,6 +123,7 @@ export default function LoginScreen() {
                     style={styles.inputIcon}
                   />
                   <TextInput
+                    testID="login-documento-input"
                     style={styles.input}
                     placeholder="Ej: 35123456"
                     placeholderTextColor="#9CA3AF"
@@ -156,6 +157,7 @@ export default function LoginScreen() {
                     style={styles.inputIcon}
                   />
                   <TextInput
+                    testID="login-password-input"
                     style={styles.input}
                     placeholder="Tu contraseña"
                     placeholderTextColor="#9CA3AF"
@@ -168,6 +170,7 @@ export default function LoginScreen() {
                     }}
                   />
                   <Pressable
+                    testID="login-toggle-password-btn"
                     onPress={() => setShowPassword(!showPassword)}
                     style={styles.eyeButton}
                   >
@@ -184,6 +187,7 @@ export default function LoginScreen() {
               </View>
 
               <Pressable
+                testID="login-forgot-link"
                 style={styles.forgotLink}
                 onPress={() => router.push("/(auth)/forgot-password")}
               >
@@ -191,13 +195,14 @@ export default function LoginScreen() {
               </Pressable>
 
               {formError ? (
-                <View style={styles.formErrorContainer}>
+                <View testID="login-error-container" style={styles.formErrorContainer}>
                   <MaterialIcons name="error-outline" size={18} color="#DC2626" />
                   <Text style={styles.formErrorText}>{formError}</Text>
                 </View>
               ) : null}
 
               <Pressable
+                testID="login-submit-btn"
                 style={({ pressed }) => [
                   styles.loginButton,
                   pressed && styles.buttonPressed,
@@ -220,14 +225,14 @@ export default function LoginScreen() {
             {/* Footer */}
             <View style={styles.footer}>
               <Text style={styles.footerText}>¿No tenés cuenta? </Text>
-              <Pressable onPress={() => router.push("/(auth)/register-step1")}>
+              <Pressable testID="login-register-link" onPress={() => router.push("/(auth)/register-step1")}>
                 <Text style={styles.footerLink}>Registrate</Text>
               </Pressable>
             </View>
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>¿Recibiste un código? </Text>
-              <Pressable onPress={() => router.push("/(auth)/register-step2")}>
+              <Pressable testID="login-complete-register-link" onPress={() => router.push("/(auth)/register-step2")}>
                 <Text style={styles.footerLink}>Completar registro</Text>
               </Pressable>
             </View>

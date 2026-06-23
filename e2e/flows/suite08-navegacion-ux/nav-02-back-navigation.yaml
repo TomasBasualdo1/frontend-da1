@@ -1,0 +1,36 @@
+# Suite 8 - Navigation & UX
+# nav-02-back-navigation: Verify back navigation from subasta detail to list
+#
+# Flow: Subastas list → tap first card → subasta detail → back → Subastas list
+
+appId: host.exp.exponent
+---
+- runFlow:
+    file: ../_helpers/login.yaml
+
+# Navigate to Subastas tab
+- tapOn: "Subastas"
+- assertVisible:
+    id: "auctions-stats-total"
+
+# Tap the first auction card in the list
+- tapOn:
+    id: "auctions-card"
+    index: 0
+
+# Assert we are on the subasta detail screen
+- assertVisible:
+    id: "auction-detail-back-btn"
+
+# Tap back button to return to Subastas list
+- tapOn:
+    id: "auction-detail-back-btn"
+
+# Assert we returned to the Subastas list (tab still active)
+- assertVisible: "Subastas"
+
+# Verify the list is still populated (not blank or reset)
+- assertVisible:
+    id: "auctions-stats-total"
+- assertVisible:
+    id: "auctions-stats-live"

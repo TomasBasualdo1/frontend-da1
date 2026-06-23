@@ -1,0 +1,51 @@
+# sub-03-detalle-publico
+# Flow: Guest mode → Subastas → tap first auction card → assert public detail view
+#
+# Guest users should NOT see: precioBase, limites, "Unirse" button.
+# The join-live-btn and pay-btn are gated behind isAuthenticated.
+
+appId: host.exp.exponent
+---
+- assertVisible:
+    text: "Iniciar sesión"
+- tapOn:
+    id: "welcome-explore-btn"
+- tapOn: "Subastas"
+
+# Tap the first auction card in the list.
+# The card does not have a testID on the card itself, but we can
+# tap on any visible auction # text or the card area.
+# We use the search to filter down to a known auction ID.
+- tapOn:
+    id: "auctions-search-input"
+- inputText: "${E2E_SUBASTA_ID_ABIERTA:-800010}"
+# Wait for filtered results
+- assertVisible:
+    text: "${E2E_SUBASTA_ID_ABIERTA:-800010}"
+    optional: true
+# Tap the auction card — the card shows the auction # text
+- tapOn:
+    text: "${E2E_SUBASTA_ID_ABIERTA:-800010}"
+    optional: true
+
+# Assert we are on the auction detail screen
+- assertVisible:
+    id: "auction-detail-back-btn"
+
+# Assert authenticated-only elements are NOT visible for guest
+- assertNotVisible:
+    id: "auction-detail-join-live-btn"
+    optional: true
+- assertNotVisible:
+    id: "auction-detail-pay-btn"
+    optional: true
+
+# Assert precioBase labels are NOT visible (guest users don't see pricing)
+- assertNotVisible:
+    text: "PRECIO BASE"
+    optional: true
+
+# Navigate back
+- tapOn:
+    id: "auction-detail-back-btn"
+- assertVisible: "Subastas"

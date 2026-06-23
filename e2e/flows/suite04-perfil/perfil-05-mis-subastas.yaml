@@ -1,0 +1,33 @@
+# Suite 4 - Profile
+# perfil-05-mis-subastas: View user's consigned auctions in profile
+
+appId: host.exp.exponent
+---
+- runFlow:
+    file: ../_helpers/login.yaml
+- tapOn: "Perfil"
+
+# Navigate to Subastas sub-tab
+- tapOn:
+    id: "profile-tab-subastas"
+
+# Assert search bar is visible for filtering user's auctions
+- assertVisible:
+    id: "profile-subastas-search"
+
+# Assert consignment list is loaded
+# The list may show items or an empty state depending on user data
+- assertVisible:
+    text: "Consignar"
+    optional: true
+- assertVisible:
+    text: "Agregar Articulo"
+    optional: true
+
+# Assert "Consignar / Agregar Artículo" button is visible
+- scrollUntilVisible:
+    element:
+      id: "profile-consignar-btn"
+    direction: DOWN
+- assertVisible:
+    id: "profile-consignar-btn"

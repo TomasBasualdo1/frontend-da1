@@ -1,0 +1,52 @@
+# auth-07-navegacion-desde-login
+# Flow: Navigate from login to all auth sub-screens and back
+
+appId: host.exp.exponent
+---
+- assertVisible:
+    text: "Iniciar sesión"
+- tapOn:
+    id: "welcome-login-btn"
+- assertVisible: "Bienvenido"
+
+# 1. Navigate to Forgot Password
+- tapOn:
+    id: "login-forgot-link"
+- assertVisible:
+    id: "forgot-email-input"
+- assertVisible:
+    id: "forgot-submit-btn"
+# Go back to login
+- tapOn:
+    id: "forgot-back-btn"
+- assertVisible: "Bienvenido"
+
+# 2. Navigate to Register Step 1
+- tapOn:
+    id: "login-register-link"
+- assertVisible:
+    id: "reg1-nombre-input"
+- assertVisible:
+    id: "reg1-submit-btn"
+# Go back to login
+- tapOn:
+    id: "reg1-back-btn"
+- assertVisible: "Bienvenido"
+
+# 3. Navigate to Register Step 2 (Complete Registration)
+- tapOn:
+    id: "login-complete-register-link"
+- assertVisible:
+    id: "reg2-token-input"
+- assertVisible:
+    id: "reg2-submit-btn"
+# Go back to login
+- tapOn:
+    id: "reg2-back-btn"
+- assertVisible: "Bienvenido"
+
+# 4. Go back to Welcome
+- tapOn:
+    id: "login-back-btn"
+- assertVisible:
+    text: "Iniciar sesión"

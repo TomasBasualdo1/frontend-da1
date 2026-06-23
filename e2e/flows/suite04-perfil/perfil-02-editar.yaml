@@ -1,0 +1,62 @@
+# Suite 4 - Profile
+# perfil-02-editar: Edit profile data and verify changes persist
+
+appId: host.exp.exponent
+---
+- runFlow:
+    file: ../_helpers/login.yaml
+- tapOn: "Perfil"
+
+# Tap edit profile button
+- scrollUntilVisible:
+    element:
+      id: "profile-edit-btn"
+    direction: DOWN
+- tapOn:
+    id: "profile-edit-btn"
+
+# Assert edit fields are visible and editable
+- assertVisible:
+    id: "profile-nombre-input"
+- assertVisible:
+    id: "profile-apellido-input"
+- assertVisible:
+    id: "profile-direccion-input"
+- assertVisible:
+    id: "profile-telefono-input"
+- assertVisible:
+    id: "profile-save-btn"
+- assertVisible:
+    id: "profile-cancel-btn"
+
+# Edit the nombre field
+- tapOn:
+    id: "profile-nombre-input"
+- eraseText: 100
+- inputText: "Juan Editado"
+
+# Save changes
+- scrollUntilVisible:
+    element:
+      id: "profile-save-btn"
+    direction: DOWN
+- tapOn:
+    id: "profile-save-btn"
+
+# Assert success message
+- assertVisible:
+    text: "Guardado"
+    optional: true
+- assertVisible:
+    text: "guardado"
+    optional: true
+- assertVisible:
+    text: "exito"
+    optional: true
+- assertVisible:
+    text: "éxito"
+    optional: true
+
+# Assert updated name is reflected
+- assertVisible:
+    text: "Juan Editado"

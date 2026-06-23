@@ -1,0 +1,36 @@
+# Suite 8 - Navigation & UX
+# nav-03-deep-link: Verify deep linking opens the correct screens directly
+#
+# App scheme: frontendda1 (defined in app.json)
+#
+# For Expo Go, deep links work via exp:// URLs from Metro:
+#   openLink: exp://192.168.x.x:8081/--/subasta/800010
+# Alternatively, use expo-dev-client for direct scheme linking:
+#   openLink: frontendda1://subasta/800010
+#
+# NOTE: Expo Go does not support custom scheme deep linking directly.
+# Use exp:// scheme when running inside Expo Go.
+# With a development build (expo-dev-client), custom schemes work natively.
+
+appId: host.exp.exponent
+---
+# ---- Deep link to subasta detail (800010) ----
+# Open the subasta detail screen directly via deep link
+- openLink:
+    link: "frontendda1://subasta/800010"
+
+# Assert the subasta detail screen loaded correctly
+- assertVisible:
+    id: "auction-detail-back-btn"
+- assertVisible:
+    text: "800010"
+
+# ---- Deep link to Subastas tab ----
+# Open the Subastas tab directly via deep link
+- openLink:
+    link: "frontendda1://(tabs)/subastas"
+
+# Assert the Subastas tab opened and content is loaded
+- assertVisible: "Subastas"
+- assertVisible:
+    id: "auctions-stats-total"

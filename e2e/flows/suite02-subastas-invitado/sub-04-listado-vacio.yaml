@@ -1,0 +1,31 @@
+# sub-04-listado-vacio
+# Flow: Guest mode → Subastas → assert empty state when no auctions available
+#
+# IMPORTANT: This test requires a backend that returns an empty auctions list.
+# Since we cannot easily mock the API in Maestro, this test will only pass
+# when the connected backend has no active auctions, has all auctions filtered
+# out by an improbable search query, or is pointed at a test environment
+# seeded specifically for this scenario.
+#
+# Alternative: use a search query guaranteed to return no results to trigger
+# the empty state UI.
+
+appId: host.exp.exponent
+---
+- assertVisible:
+    text: "Iniciar sesión"
+- tapOn:
+    id: "welcome-explore-btn"
+- tapOn: "Subastas"
+
+# Use an improbable search query to trigger the empty state
+- tapOn:
+    id: "auctions-search-input"
+- inputText: "zzzzzzzzzz_no_existe"
+# Assert empty state is rendered
+- assertVisible:
+    id: "auctions-empty-state"
+- assertVisible:
+    text: "No hay subastas"
+- assertVisible:
+    text: "No se encontraron resultados para tu búsqueda"

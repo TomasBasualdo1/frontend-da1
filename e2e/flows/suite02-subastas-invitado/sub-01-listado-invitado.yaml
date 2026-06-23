@@ -1,0 +1,28 @@
+# sub-01-listado-invitado
+# Flow: Welcome → "Explorar sin cuenta" → assert Subastas tab with guest badges
+#
+# Guest mode shows auctions with "Solo espectador" note on each card
+# and does not show authenticated-only UI elements.
+
+appId: host.exp.exponent
+---
+- assertVisible:
+    text: "Iniciar sesión"
+- tapOn:
+    id: "welcome-explore-btn"
+# Guest mode navigates to tabs — Subastas tab should be the default or visible
+- assertVisible: "Subastas"
+# Tap Subastas tab to ensure we're on it
+- tapOn: "Subastas"
+# Assert stats counters are visible
+- assertVisible:
+    id: "auctions-stats-total"
+- assertVisible:
+    id: "auctions-stats-live"
+- assertVisible:
+    id: "auctions-stats-upcoming"
+# Assert auction cards are present (at least one should render if data exists)
+# The "Solo espectador" note appears as italic text on guest cards
+- assertVisible:
+    text: "Solo espectador"
+    optional: true

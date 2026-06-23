@@ -1,0 +1,48 @@
+# Suite 7 - Network & Offline
+# net-01-error-red-login: Verify login fails without connectivity, then recovers
+#
+# NOTE: setNetworkCondition only works on iOS Simulator.
+# On Android emulator, use adb instead:
+#   adb shell settings put global airplane_mode_on 1
+#   adb shell settings put global airplane_mode_on 0
+#
+# Alternative for Android: use Maestro's `runScript` to toggle connectivity.
+
+appId: host.exp.exponent
+---
+- assertVisible:
+    text: "Iniciar sesión"
+- tapOn:
+    id: "welcome-login-btn"
+- assertVisible: "Bienvenido"
+
+# Simulate offline: iOS Simulator only
+- setNetworkCondition:
+    condition: offline
+
+- tapOn:
+    id: "login-documento-input"
+- inputText: "${E2E_USER_DOCUMENTO:-12345678}"
+- tapOn:
+    id: "login-password-input"
+- inputText: "${E2E_USER_PASSWORD:-password123}"
+- tapOn:
+    id: "login-submit-btn"
+
+# Assert error message shown when network is unavailable
+- assertVisible:
+    text: "No pudimos conectar con el servidor"
+- assertVisible:
+    id: "login-error-container"
+
+# Restore network connectivity
+- setNetworkCondition:
+    condition: online
+
+# Retry login with network restored
+- tapOn:
+    id: "login-submit-btn"
+- assertVisible: "Inicio"
+- assertVisible: "En Vivo"
+- assertVisible: "Subastas"
+- assertVisible: "Perfil"

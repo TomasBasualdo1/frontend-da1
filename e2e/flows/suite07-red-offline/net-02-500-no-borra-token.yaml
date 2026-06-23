@@ -1,0 +1,41 @@
+# Suite 7 - Network & Offline
+# net-02-500-no-borra-token: Verify a 500 server error does NOT log the user out
+#
+# [requires-mock]
+#
+# Requiere un proxy mock (mitmproxy o similar) que intercepte requests y
+# retorne 500. Sin mock, este test solo verifica comportamiento con errores
+# reales del backend (si el backend devuelve 500 real).
+#
+# Setup del mock: interceptar requests a la API (ej. GET /subastas) y retornar
+# HTTP 500 con body vacío. El interceptor debe activarse después del login.
+
+appId: host.exp.exponent
+---
+# Login normally first
+- runFlow:
+    file: ../_helpers/login.yaml
+- assertVisible: "Inicio"
+- assertVisible: "En Vivo"
+- assertVisible: "Subastas"
+- assertVisible: "Perfil"
+
+# ---- Activar mock que retorne 500 aquí ----
+# (El proxy mock debe estar corriendo y configurado para interceptar)
+
+# Navigate to a screen that triggers an API request
+- tapOn: "Subastas"
+
+# The request fails with 500, but the user should remain authenticated
+# Assert tab bar is still visible (not kicked to login)
+- assertVisible: "Inicio"
+- assertVisible: "En Vivo"
+- assertVisible: "Subastas"
+- assertVisible: "Perfil"
+
+# Assert we can still navigate freely (token not deleted)
+- tapOn: "Perfil"
+- assertVisible:
+    id: "profile-edit-btn"
+
+# ---- Desactivar mock aquí ----

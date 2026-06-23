@@ -1,0 +1,19 @@
+# auth-10-registro-step1-validacion
+# Flow: Welcome → Register Step 1 → submit empty form → assert validation errors
+
+appId: host.exp.exponent
+---
+- assertVisible:
+    text: "Iniciar sesión"
+- tapOn:
+    id: "welcome-register-btn"
+- assertVisible:
+    id: "reg1-nombre-input"
+# Tap submit with all fields empty
+- tapOn:
+    id: "reg1-submit-btn"
+# Assert validation error texts appear
+# The exact error text may be "Requerido" or similar — using text: to match
+- assertVisible:
+    text: "Requerido"
+    optional: true

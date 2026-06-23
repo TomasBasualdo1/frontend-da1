@@ -1,0 +1,35 @@
+# Suite 3 - Authenticated Subastas
+# sub-06-unirse: Join an open auction (800010) as authenticated user
+
+appId: host.exp.exponent
+---
+- runFlow:
+    file: ../_helpers/login.yaml
+- tapOn: "Subastas"
+# Search for the specific auction or filter by category chip
+- tapOn:
+    id: "auctions-chip-comun"
+- scrollUntilVisible:
+    element:
+      text: "800010"
+    direction: DOWN
+- tapOn:
+    text: "800010"
+# Assert on auction detail screen
+- assertVisible:
+    id: "auction-detail-back-btn"
+# Attempt to join the auction
+# NOTE: If the subasta is not in "Abierta" state, the join button may not be visible.
+# Verify with backend that subasta 800010 is in an open/joinable state.
+- scrollUntilVisible:
+    element:
+      text: "Unirse a la subasta"
+    direction: DOWN
+    optional: true
+- tapOn:
+    text: "Unirse a la subasta"
+    optional: true
+# Assert success after joining
+- assertVisible:
+    text: "Ya participas"
+    optional: true

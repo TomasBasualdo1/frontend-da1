@@ -157,6 +157,7 @@ export default function ConsignarScreen() {
               if (step === 1 || step === 4) router.back();
               else handleBack();
             }}
+            testID="consignar-back-btn"
           >
             <MaterialIcons name="arrow-back" size={20} color="#1A1A2E" />
             <Text style={st.headerTitle}>Subastar Artículo</Text>
@@ -186,6 +187,7 @@ export default function ConsignarScreen() {
                   placeholder="Ej: Reloj de Bolsillo Patek Philippe 1895"
                   value={titulo}
                   onChangeText={setTitulo}
+                  testID="consignar-titulo-input"
                 />
               </View>
 
@@ -194,6 +196,7 @@ export default function ConsignarScreen() {
                 <Pressable
                   style={st.input}
                   onPress={() => setShowCategPicker(!showCategPicker)}
+                  testID="consignar-categoria-picker"
                 >
                   <Text style={{ color: categoria ? "#1A1A2E" : "#9CA3AF" }}>
                     {categoria
@@ -233,6 +236,7 @@ export default function ConsignarScreen() {
                   placeholder="Describe el artículo en detalle: materiales, dimensiones, estado de conservación..."
                   value={descripcion}
                   onChangeText={setDescripcion}
+                  testID="consignar-desc-input"
                 />
               </View>
             </View>
@@ -252,6 +256,7 @@ export default function ConsignarScreen() {
                   placeholder="Describe la historia del objeto: origen, artista/fabricante, contexto histórico, cadena de custodia..."
                   value={historia}
                   onChangeText={setHistoria}
+                  testID="consignar-historia-input"
                 />
               </View>
 
@@ -262,6 +267,7 @@ export default function ConsignarScreen() {
                   placeholder="Ej: Joaquín Torres García"
                   value={artista}
                   onChangeText={setArtista}
+                  testID="consignar-artista-input"
                 />
               </View>
 
@@ -272,6 +278,7 @@ export default function ConsignarScreen() {
                   placeholder="AAAA-MM-DD"
                   value={fechaCreacion}
                   onChangeText={setFechaCreacion}
+                  testID="consignar-fecha-input"
                 />
               </View>
 
@@ -285,6 +292,7 @@ export default function ConsignarScreen() {
                     keyboardType="numeric"
                     value={valorEstimado}
                     onChangeText={setValorEstimado}
+                    testID="consignar-valor-input"
                   />
                 </View>
                 <Text style={st.helpText}>
@@ -297,6 +305,7 @@ export default function ConsignarScreen() {
                 <Pressable
                   style={st.checkboxRow}
                   onPress={() => setEsPropietario(!esPropietario)}
+                  testID="consignar-check-propietario"
                 >
                   <View
                     style={[st.checkbox, esPropietario && st.checkboxActive]}
@@ -313,6 +322,7 @@ export default function ConsignarScreen() {
                 <Pressable
                   style={st.checkboxRow}
                   onPress={() => setDeclaraOrigenLicito(!declaraOrigenLicito)}
+                  testID="consignar-check-licito"
                 >
                   <View
                     style={[
@@ -345,7 +355,7 @@ export default function ConsignarScreen() {
                 </Text>
               </View>
 
-              <Pressable style={st.uploadBox} onPress={pickImage}>
+              <Pressable style={st.uploadBox} onPress={pickImage} testID="consignar-foto-btn">
                 <MaterialIcons name="upload-file" size={32} color="#1A1A2E" />
                 <Text style={st.uploadBoxText}>Cargar</Text>
               </Pressable>
@@ -366,6 +376,7 @@ export default function ConsignarScreen() {
                       <Pressable
                         style={st.removePhoto}
                         onPress={() => removeFoto(i)}
+                        testID="consignar-remove-foto-btn"
                       >
                         <MaterialIcons name="close" size={14} color="#FFF" />
                       </Pressable>
@@ -399,6 +410,7 @@ export default function ConsignarScreen() {
                   pressed && { opacity: 0.9 },
                   { width: "100%" },
                 ]}
+                testID="consignar-volver-btn"
               >
                 <View style={st.successBtn}>
                   <Text style={st.successBtnText}>Volver a Mis Subastas</Text>
@@ -412,7 +424,7 @@ export default function ConsignarScreen() {
         {step < 4 && (
           <View style={st.footerActions}>
             {step > 1 && (
-              <Pressable style={st.btnSecondary} onPress={handleBack}>
+              <Pressable style={st.btnSecondary} onPress={handleBack} testID="consignar-atras-btn">
                 <Text style={st.btnSecondaryText}>Atrás</Text>
               </Pressable>
             )}
@@ -424,6 +436,7 @@ export default function ConsignarScreen() {
               ]}
               onPress={step === 3 ? handleSubmit : handleNext}
               disabled={loading}
+              testID="consignar-continuar-btn"
             >
               {loading ? (
                 <ActivityIndicator color="#FFF" />

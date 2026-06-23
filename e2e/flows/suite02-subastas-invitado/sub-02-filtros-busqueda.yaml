@@ -1,0 +1,52 @@
+# sub-02-filtros-busqueda
+# Flow: Guest mode → Subastas → search → clear → filter by category → clear filter
+#
+# Tests the search input and category filter chips functionality.
+
+appId: host.exp.exponent
+---
+- assertVisible:
+    text: "Iniciar sesión"
+- tapOn:
+    id: "welcome-explore-btn"
+- tapOn: "Subastas"
+
+# Type an auction ID in the search input
+- tapOn:
+    id: "auctions-search-input"
+- inputText: "800010"
+# Assert the filtered list appears (or empty state if no match)
+- assertVisible:
+    id: "auctions-search-input"
+
+# Clear search by tapping the close icon (appears when search is non-empty)
+- tapOn:
+    id: "auctions-search-input"
+- eraseText: 6
+
+# Open filter panel
+- tapOn:
+    id: "auctions-filter-btn"
+# Assert category chips are visible
+- assertVisible:
+    id: "auctions-chip-comun"
+- assertVisible:
+    id: "auctions-chip-especial"
+- assertVisible:
+    id: "auctions-chip-plata"
+- assertVisible:
+    id: "auctions-chip-oro"
+- assertVisible:
+    id: "auctions-chip-platino"
+
+# Tap "Oro" chip to filter
+- tapOn:
+    id: "auctions-chip-oro"
+# Assert active filter tag appears: "✕ Oro"
+- assertVisible: "✕ Oro"
+
+# Tap "✕ Oro" to clear filter
+- tapOn: "✕ Oro"
+# Filter cleared — all auctions should return
+- assertVisible:
+    id: "auctions-stats-total"

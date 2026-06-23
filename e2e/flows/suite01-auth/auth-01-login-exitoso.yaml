@@ -1,0 +1,24 @@
+# auth-01-login-exitoso
+# Flow: Welcome → Login with valid credentials → assert tabs visible
+#
+# Requires: E2E_USER_DOCUMENTO and E2E_USER_PASSWORD env vars set
+
+appId: host.exp.exponent
+---
+- assertVisible:
+    text: "Iniciar sesión"
+- tapOn:
+    id: "welcome-login-btn"
+- assertVisible: "Bienvenido"
+- tapOn:
+    id: "login-documento-input"
+- inputText: "${E2E_USER_DOCUMENTO:-12345678}"
+- tapOn:
+    id: "login-password-input"
+- inputText: "${E2E_USER_PASSWORD:-password123}"
+- tapOn:
+    id: "login-submit-btn"
+- assertVisible: "Inicio"
+- assertVisible: "En Vivo"
+- assertVisible: "Subastas"
+- assertVisible: "Perfil"

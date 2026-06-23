@@ -1,0 +1,16 @@
+# auth-04-campos-vacios
+# Flow: Submit login with empty fields → assert validation errors
+
+appId: host.exp.exponent
+---
+- assertVisible:
+    text: "Iniciar sesión"
+- tapOn:
+    id: "welcome-login-btn"
+- assertVisible: "Bienvenido"
+- tapOn:
+    id: "login-submit-btn"
+- assertVisible:
+    text: "Ingrese su documento"
+- assertVisible:
+    text: "Ingrese su contraseña"

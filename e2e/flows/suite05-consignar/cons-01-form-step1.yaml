@@ -1,0 +1,43 @@
+# Suite 5 - Consignar
+# cons-01-form-step1: Validate step 1 of consignment form (required fields, validation errors, navigation to step 2)
+
+appId: host.exp.exponent
+---
+- runFlow:
+    file: ../_helpers/login.yaml
+# Navigate to Profile -> Subastas tab -> Consignar button
+- tapOn: "Perfil"
+- tapOn:
+    id: "profile-tab-subastas"
+- scrollUntilVisible:
+    element:
+      id: "profile-consignar-btn"
+    direction: DOWN
+- tapOn:
+    id: "profile-consignar-btn"
+# Assert we are on the consignar screen with 4-step progress bar
+- assertVisible: "Paso 1 de 4"
+- assertVisible: "Información Básica"
+# Leave required fields empty and tap "Continuar"
+- tapOn:
+    id: "consignar-continuar-btn"
+# Assert validation alert appears for empty required fields
+- assertVisible: "Campos requeridos"
+- tapOn: "OK"
+# Fill required fields: titulo, categoria, descripcion
+- tapOn:
+    id: "consignar-titulo-input"
+- inputText: "Reloj E2E Test"
+- tapOn:
+    id: "consignar-categoria-picker"
+# Tap the first category option in the dropdown ("Común")
+- tapOn: "Común"
+- tapOn:
+    id: "consignar-desc-input"
+- inputText: "Reloj de prueba para E2E"
+# Tap "Continuar" to proceed to step 2
+- tapOn:
+    id: "consignar-continuar-btn"
+# Assert we moved to step 2
+- assertVisible: "Paso 2 de 4"
+- assertVisible: "Historia y Valoración"

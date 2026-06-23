@@ -1,0 +1,56 @@
+# Suite 7 - Network & Offline
+# net-03-401-fuerza-login: Verify a 401 Unauthorized forces logout and redirects
+# the user back to the login screen.
+#
+# [requires-mock]
+#
+# Requiere proxy mock que retorne 401 (simula token expirado) o token expirado
+# real (esperar ~30 min hasta que expire el JWT). Opciones:
+#   - mitmproxy interceptando y retornando 401
+#   - Charles Proxy con rewrite rule para status 401
+#   - Modificar el backend para devolver 401 en un endpoint específico
+#
+# Setup: activar mock después del login para que el próximo request retorne 401.
+
+appId: host.exp.exponent
+---
+# Login normally first
+- runFlow:
+    file: ../_helpers/login.yaml
+- assertVisible: "Inicio"
+- assertVisible: "En Vivo"
+- assertVisible: "Subastas"
+- assertVisible: "Perfil"
+
+# ---- Activar mock que retorne 401 aquí ----
+# (El proxy mock debe estar corriendo y configurado para interceptar)
+
+# Navigate to a screen that triggers an API request
+- tapOn: "Subastas"
+
+# The request fails with 401 → app should redirect to login
+# Tab bar should NOT be visible (we are at the Welcome/login screen)
+- assertNotVisible:
+    text: "Inicio"
+    optional: true
+- assertNotVisible:
+    text: "En Vivo"
+    optional: true
+- assertVisible:
+    text: "Iniciar sesión"
+
+# ---- Desactivar mock aquí ----
+
+# Verify user can re-login successfully
+- tapOn:
+    id: "welcome-login-btn"
+- assertVisible: "Bienvenido"
+- tapOn:
+    id: "login-documento-input"
+- inputText: "${E2E_USER_DOCUMENTO:-12345678}"
+- tapOn:
+    id: "login-password-input"
+- inputText: "${E2E_USER_PASSWORD:-password123}"
+- tapOn:
+    id: "login-submit-btn"
+- assertVisible: "Inicio"

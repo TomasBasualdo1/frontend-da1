@@ -319,7 +319,7 @@ export default function LiveScreen() {
           <MaterialIcons name="live-tv" size={56} color="#E5DDD0" />
           <Text style={st.emptyTitle}>Subastas en Vivo</Text>
           <Text style={st.emptyText}>Iniciá sesión para participar en subastas en tiempo real</Text>
-          <Pressable style={st.loginBtn} onPress={() => router.push("/(auth)/welcome")}>
+          <Pressable style={st.loginBtn} onPress={() => router.push("/(auth)/welcome")} testID="live-login-btn">
             <Text style={st.loginBtnText}>Iniciar Sesión</Text>
           </Pressable>
         </SafeAreaView>
@@ -422,7 +422,7 @@ export default function LiveScreen() {
         >
           {/* Live Header */}
           <View style={st.liveHeader}>
-          <Pressable onPress={handleLeave}>
+          <Pressable onPress={handleLeave} testID="live-back-btn">
             <MaterialIcons name="arrow-back" size={24} color="#1A1A2E" />
           </Pressable>
           <View style={st.liveIndicator}>
@@ -496,6 +496,7 @@ export default function LiveScreen() {
                     style={({ pressed }) => [st.quickBtn, pressed && st.quickBtnPressed]}
                     onPress={() => handleQuickBid(qb.pct)}
                     disabled={sending}
+                    testID={`live-bid-${Math.round(qb.pct * 100)}pct`}
                   >
                     <Text style={st.quickBtnLabel}>{qb.label}</Text>
                     <Text style={st.quickBtnAmount}>${amount.toLocaleString()}</Text>
@@ -514,11 +515,12 @@ export default function LiveScreen() {
                 value={customBid}
                 onChangeText={setCustomBid}
                 onSubmitEditing={handleCustomBid}
+                testID="live-bid-input"
               />
               {sending ? (
                 <ActivityIndicator size="small" color="#8B6914" />
               ) : (
-                <Pressable onPress={handleCustomBid} style={st.customBidSend}>
+                <Pressable onPress={handleCustomBid} style={st.customBidSend} testID="live-bid-send-btn">
                   <MaterialIcons name="send" size={20} color="#8B6914" />
                 </Pressable>
               )}

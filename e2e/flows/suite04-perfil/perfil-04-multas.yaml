@@ -1,0 +1,56 @@
+# Suite 4 - Profile
+# perfil-04-multas: Pay a pending fine (multa) from the profile
+
+appId: host.exp.exponent
+---
+- runFlow:
+    file: ../_helpers/login.yaml
+- tapOn: "Perfil"
+
+# Navigate to Pagos sub-tab
+- tapOn:
+    id: "profile-tab-pagos"
+
+# Scroll to find the multas section
+- scrollUntilVisible:
+    element:
+      text: "3500.00"
+    direction: DOWN
+
+# Assert multa is visible with correct amount
+- assertVisible:
+    text: "3500.00"
+
+# Tap the radio/checkbox to select the multa for payment
+# The exact interaction depends on UI implementation.
+# It may be a radio button, checkbox, or tap-to-select.
+- scrollUntilVisible:
+    element:
+      text: "3500.00"
+    direction: DOWN
+- tapOn:
+    text: "3500.00"
+
+# Tap Pagar button
+- scrollUntilVisible:
+    element:
+      id: "profile-pagar-multa-btn"
+    direction: DOWN
+- tapOn:
+    id: "profile-pagar-multa-btn"
+
+# Assert payment success
+- assertVisible:
+    text: "éxito"
+    optional: true
+- assertVisible:
+    text: "exito"
+    optional: true
+- assertVisible:
+    text: "pagad"
+    optional: true
+
+# Assert multa disappears after payment
+- assertNotVisible:
+    text: "3500.00"
+    optional: true

@@ -54,7 +54,7 @@ export default function AdminDashboardScreen() {
   return (
     <SafeAreaView style={s.safe}>
       <View style={s.header}>
-        <Pressable onPress={() => router.back()} style={s.backBtn}>
+        <Pressable onPress={() => router.back()} style={s.backBtn} testID="admin-back-btn">
           <View style={s.backBtnInner}>
             <MaterialIcons name="arrow-back-ios" size={16} color="#8B6914" />
             <Text style={s.backText}>Volver</Text>
@@ -79,6 +79,12 @@ export default function AdminDashboardScreen() {
               key={i}
               onPress={() => router.push(opt.route)}
               style={s.cardWrapper}
+              testID={
+                i === 0 ? "admin-nav-usuarios" :
+                i === 1 ? "admin-nav-pagos" :
+                i === 2 ? "admin-nav-articulos" :
+                "admin-nav-subastas"
+              }
             >
               <View style={s.card}>
                 <View style={s.cardHeader}>

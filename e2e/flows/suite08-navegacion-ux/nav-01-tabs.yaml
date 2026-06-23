@@ -1,0 +1,38 @@
+# Suite 8 - Navigation & UX
+# nav-01-tabs: Verify all four bottom tabs are reachable and render content
+#
+# Tab labels (from NativeTabs.Trigger with <Label>):
+#   Inicio | En Vivo | Subastas | Perfil
+
+appId: host.exp.exponent
+---
+- runFlow:
+    file: ../_helpers/login.yaml
+
+# Assert Inicio tab is active by default after login
+- assertVisible: "Inicio"
+
+# Navigate to En Vivo tab
+- tapOn: "En Vivo"
+- assertVisible: "En Vivo"
+
+# Navigate to Subastas tab
+- tapOn: "Subastas"
+- assertVisible: "Subastas"
+- assertVisible:
+    id: "auctions-stats-total"
+
+# Navigate to Perfil tab
+- tapOn: "Perfil"
+- assertVisible: "Perfil"
+- assertVisible:
+    id: "profile-edit-btn"
+
+# Return to Inicio tab
+- tapOn: "Inicio"
+- assertVisible: "Inicio"
+
+# Verify all tabs are still reachable after round-trip navigation
+- assertVisible: "En Vivo"
+- assertVisible: "Subastas"
+- assertVisible: "Perfil"

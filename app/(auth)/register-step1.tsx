@@ -138,7 +138,7 @@ export default function RegisterStep1Screen() {
           >
             {/* Header */}
             <View style={styles.headerRow}>
-              <Pressable style={styles.backButton} onPress={() => router.back()}>
+              <Pressable testID="reg1-back-btn" style={styles.backButton} onPress={() => router.back()}>
                 <MaterialIcons name="arrow-back" size={24} color="#1A1A2E" />
               </Pressable>
               <View style={styles.stepBadge}>
@@ -159,6 +159,7 @@ export default function RegisterStep1Screen() {
                 <View style={[styles.inputGroup, { flex: 1 }]}>
                   <Text style={styles.label}>Nombre *</Text>
                   <TextInput
+                    testID="reg1-nombre-input"
                     style={[styles.input, errors.nombre && styles.inputError]}
                     placeholder="Juan"
                     placeholderTextColor="#9CA3AF"
@@ -170,6 +171,7 @@ export default function RegisterStep1Screen() {
                 <View style={[styles.inputGroup, { flex: 1 }]}>
                   <Text style={styles.label}>Apellido *</Text>
                   <TextInput
+                    testID="reg1-apellido-input"
                     style={[styles.input, errors.apellido && styles.inputError]}
                     placeholder="Pérez"
                     placeholderTextColor="#9CA3AF"
@@ -183,6 +185,7 @@ export default function RegisterStep1Screen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Documento *</Text>
                 <TextInput
+                  testID="reg1-documento-input"
                   style={[styles.input, errors.documento && styles.inputError]}
                   placeholder="35123456"
                   placeholderTextColor="#9CA3AF"
@@ -196,6 +199,7 @@ export default function RegisterStep1Screen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Email *</Text>
                 <TextInput
+                  testID="reg1-email-input"
                   style={[styles.input, errors.email && styles.inputError]}
                   placeholder="juan@email.com"
                   placeholderTextColor="#9CA3AF"
@@ -210,6 +214,7 @@ export default function RegisterStep1Screen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Teléfono</Text>
                 <TextInput
+                  testID="reg1-telefono-input"
                   style={styles.input}
                   placeholder="+54 11 5555-5555"
                   placeholderTextColor="#9CA3AF"
@@ -222,6 +227,7 @@ export default function RegisterStep1Screen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Dirección *</Text>
                 <TextInput
+                  testID="reg1-direccion-input"
                   style={[styles.input, errors.direccion && styles.inputError]}
                   placeholder="Av. Corrientes 1234, CABA"
                   placeholderTextColor="#9CA3AF"
@@ -234,6 +240,7 @@ export default function RegisterStep1Screen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>País de Origen *</Text>
                 <Pressable
+                  testID="reg1-pais-picker"
                   style={styles.pickerButton}
                   onPress={() => setShowPaisPicker(!showPaisPicker)}
                 >
@@ -274,6 +281,7 @@ export default function RegisterStep1Screen() {
 
               <View style={styles.photosRow}>
                 <Pressable
+                  testID="reg1-foto-frente-btn"
                   style={[
                     styles.photoCard,
                     errors.fotoFrente && styles.photoCardError,
@@ -291,6 +299,7 @@ export default function RegisterStep1Screen() {
                 </Pressable>
 
                 <Pressable
+                  testID="reg1-foto-dorso-btn"
                   style={[
                     styles.photoCard,
                     errors.fotoDorso && styles.photoCardError,
@@ -314,6 +323,7 @@ export default function RegisterStep1Screen() {
 
             {/* Submit */}
             <Pressable
+              testID="reg1-submit-btn"
               style={({ pressed }) => [
                 styles.submitButton,
                 pressed && styles.buttonPressed,
@@ -334,7 +344,7 @@ export default function RegisterStep1Screen() {
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>¿Ya tenés cuenta? </Text>
-              <Pressable onPress={() => router.push("/(auth)/login")}>
+              <Pressable testID="reg1-login-link" onPress={() => router.push("/(auth)/login")}>
                 <Text style={styles.footerLink}>Iniciá sesión</Text>
               </Pressable>
             </View>

@@ -1,0 +1,45 @@
+# Suite 7 - Network & Offline
+# net-04-pull-to-refresh: Verify pull-to-refresh on Subastas list
+#
+# The pull-to-refresh gesture is performed by swiping down from near the top
+# of the list. Maestro's swipe command is used:
+#   - swipe: start: "50%, 20%" end: "50%, 60%"
+# This simulates pulling the list down to trigger a refresh.
+#
+# On iOS, ensure the list is at scroll position 0 (top) before swiping.
+# The test navigates directly to the tab, so the list should be at the top.
+
+appId: host.exp.exponent
+---
+- runFlow:
+    file: ../_helpers/login.yaml
+
+# Navigate to Subastas tab
+- tapOn: "Subastas"
+
+# Assert auction list is loaded
+- assertVisible:
+    id: "auctions-stats-total"
+
+# Pull-to-refresh: swipe down from near the top to trigger refresh
+# Start at ~20% from top, drag down to ~60% to trigger RefreshControl
+- swipe:
+    start: "50%, 20%"
+    end: "50%, 60%"
+    duration: 500
+
+# Assert RefreshControl / loading indicator appeared (while refreshing)
+# On React Native + Expo, the refresh indicator may be an ActivityIndicator
+# or the platform-specific RefreshControl component.
+# This assertion is optional because the loader may appear and disappear quickly.
+- assertVisible:
+    text: "Subastas"
+    optional: true
+
+# Assert list is still populated after refresh
+- assertVisible:
+    id: "auctions-stats-total"
+- assertVisible:
+    id: "auctions-stats-live"
+- assertVisible:
+    id: "auctions-stats-upcoming"

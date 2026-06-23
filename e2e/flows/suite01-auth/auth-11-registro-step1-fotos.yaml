@@ -1,0 +1,76 @@
+# auth-11-registro-step1-fotos
+# Flow: Register Step 1 with all fields filled and foto interactios
+#
+# IMPORTANT: The image picker (expo-image-picker) requires pre-loaded
+# simulator photos for the tap to work. On iOS Simulator, drag photos
+# into the Photos app first. On Android Emulator, use the emulator's
+# camera/file picker controls. If no photos are available, the system
+# picker will open but may not select anything — this test may partially
+# fail in that scenario. The foto buttons are tapped to verify they
+# trigger the picker, but the actual image selection is OS-dependent.
+
+appId: host.exp.exponent
+---
+- assertVisible:
+    text: "Iniciar sesión"
+- tapOn:
+    id: "welcome-register-btn"
+- assertVisible:
+    id: "reg1-nombre-input"
+
+# Fill all fields
+- tapOn:
+    id: "reg1-nombre-input"
+- inputText: "Test"
+- tapOn:
+    id: "reg1-apellido-input"
+- inputText: "E2E"
+- tapOn:
+    id: "reg1-documento-input"
+- inputText: "99999999"
+- tapOn:
+    id: "reg1-email-input"
+- inputText: "teste2e@test.com"
+- tapOn:
+    id: "reg1-telefono-input"
+- inputText: "1112345678"
+- tapOn:
+    id: "reg1-direccion-input"
+- inputText: "Test 123"
+
+# Select country — tap the picker and choose "Argentina"
+# Country picker may scroll; we tap the picker to open
+- scrollUntilVisible:
+    element:
+      id: "reg1-pais-picker"
+    direction: DOWN
+- tapOn:
+    id: "reg1-pais-picker"
+
+# Tap foto frente button (opens image picker)
+- scrollUntilVisible:
+    element:
+      id: "reg1-foto-frente-btn"
+    direction: DOWN
+- tapOn:
+    id: "reg1-foto-frente-btn"
+
+# Tap foto dorso button (opens image picker)
+- scrollUntilVisible:
+    element:
+      id: "reg1-foto-dorso-btn"
+    direction: DOWN
+- tapOn:
+    id: "reg1-foto-dorso-btn"
+
+# Tap submit
+- scrollUntilVisible:
+    element:
+      id: "reg1-submit-btn"
+    direction: DOWN
+- tapOn:
+    id: "reg1-submit-btn"
+# Assert loading state (ActivityIndicator may appear)
+- assertVisible:
+    id: "reg1-submit-btn"
+    optional: true

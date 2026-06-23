@@ -1,0 +1,88 @@
+# Suite 6 - Admin
+# admin-04-articulos: Inspect articles, approve with pricing, and reject with reason
+
+appId: host.exp.exponent
+---
+- runFlow:
+    file: ../_helpers/login-admin.yaml
+# Navigate to admin panel
+- tapOn: "Perfil"
+- tapOn:
+    id: "profile-tab-perfil"
+- scrollUntilVisible:
+    element:
+      id: "profile-admin-btn"
+    direction: DOWN
+- tapOn:
+    id: "profile-admin-btn"
+# Enter "Artículos Consignados" section
+- tapOn:
+    id: "admin-nav-articulos"
+# Assert article list loaded
+- assertVisible: "Inspección de Artículos"
+# Tap first article card to open detail modal
+- scrollUntilVisible:
+    element:
+      id: "admin-articles-card"
+    direction: DOWN
+- tapOn:
+    id: "admin-articles-card"
+    index: 0
+# Assert detail modal is shown (slide-up modal)
+- assertVisible: "Auditoría de Artículo"
+- assertVisible: "Ficha Técnica"
+- assertVisible: "Historia & Procedencia"
+# Close the detail modal
+- tapOn:
+    id: "admin-articles-modal-close"
+# === APPROVE flow: Tap "Aprobar & Tasar" on first article ===
+- tapOn:
+    id: "admin-articles-card"
+    index: 0
+- scrollUntilVisible:
+    element:
+      id: "admin-articles-aprobar-btn"
+    direction: DOWN
+- tapOn:
+    id: "admin-articles-aprobar-btn"
+# Assert evaluation modal (transparent overlay)
+- assertVisible: "Tasación y Aprobación"
+# Fill pricing fields
+- tapOn:
+    id: "admin-articles-precio-input"
+- inputText: "5000"
+- tapOn:
+    id: "admin-articles-comision-input"
+- inputText: "10"
+# Confirm / Finalizar
+- tapOn:
+    id: "admin-articles-modal-confirm"
+# Assert success alert
+- assertVisible: "Éxito"
+- tapOn: "OK"
+# === REJECT flow: Tap "Rechazar Postulación" on another article ===
+- scrollUntilVisible:
+    element:
+      id: "admin-articles-card"
+    direction: DOWN
+- tapOn:
+    id: "admin-articles-card"
+    index: 0
+- scrollUntilVisible:
+    element:
+      id: "admin-articles-rechazar-btn"
+    direction: DOWN
+- tapOn:
+    id: "admin-articles-rechazar-btn"
+# Assert rejection modal
+- assertVisible: "Rechazo de Consignación"
+# Enter rejection reason
+- tapOn:
+    id: "admin-articles-motivo-input"
+- inputText: "No cumple requisitos"
+# Confirm / Finalizar
+- tapOn:
+    id: "admin-articles-modal-confirm"
+# Assert success alert
+- assertVisible: "Éxito"
+- tapOn: "OK"

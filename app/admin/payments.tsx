@@ -94,14 +94,14 @@ export default function AdminPaymentsScreen() {
     <SafeAreaView style={s.safe}>
       {/* Header */}
       <View style={s.header}>
-        <Pressable onPress={() => router.back()} style={s.backBtn}>
+        <Pressable onPress={() => router.back()} style={s.backBtn} testID="admin-payments-back-btn">
           <View style={s.backBtnInner}>
             <MaterialIcons name="arrow-back-ios" size={16} color="#8B6914" />
             <Text style={s.backText}>Volver</Text>
           </View>
         </Pressable>
         <Text style={s.headerTitle}>Verificación de Pagos</Text>
-        <Pressable onPress={loadData} style={s.refreshBtn}>
+        <Pressable onPress={loadData} style={s.refreshBtn} testID="admin-payments-refresh-btn">
           <MaterialIcons name="refresh" size={20} color="#8B6914" />
         </Pressable>
       </View>
@@ -176,6 +176,7 @@ export default function AdminPaymentsScreen() {
                       )
                     }
                     disabled={actioningId === p.id}
+                    testID="admin-payments-rechazar-btn"
                   >
                     <View style={[s.btn, s.btnReject]}>
                       <MaterialIcons name="close" size={16} color="#DC2626" />
@@ -196,6 +197,7 @@ export default function AdminPaymentsScreen() {
                       )
                     }
                     disabled={actioningId === p.id}
+                    testID="admin-payments-validar-btn"
                   >
                     <View style={[s.btn, s.btnApprove]}>
                       {actioningId === p.id ? (

@@ -615,6 +615,7 @@ export default function ProfileScreen() {
           <Pressable
             style={({ pressed }) => [pressed && { opacity: 0.9 }]}
             onPress={() => router.push("/(auth)/welcome")}
+            testID="profile-login-btn"
           >
             <View style={s.loginBtn}>
               <Text style={s.loginBtnText}>Iniciar Sesión</Text>
@@ -652,6 +653,7 @@ export default function ProfileScreen() {
                 (t) => (
                   <Pressable
                     key={t}
+                    testID={`profile-tab-${t === "stats" ? "stats" : t}`}
                     style={({ pressed }) => [
                       pressed && { opacity: 0.8 },
                       { flex: 1 },
@@ -717,6 +719,7 @@ export default function ProfileScreen() {
                     placeholderTextColor="#9CA3AF"
                     value={searchMis}
                     onChangeText={setSearchMis}
+                    testID="profile-subastas-search"
                   />
                   {searchMis.length > 0 && (
                     <Pressable onPress={() => setSearchMis("")}>
@@ -946,6 +949,7 @@ export default function ProfileScreen() {
                                               placeholder="Ej: 15000"
                                               keyboardType="numeric"
                                               placeholderTextColor="#9CA3AF"
+                                              testID="profile-seguro-input"
                                             />
                                           </View>
                                           {updatingInsurance ? (
@@ -955,6 +959,7 @@ export default function ProfileScreen() {
                                               <Pressable
                                                 onPress={() => handleAumentarSeguro(item.id!, item.seguro!.montoAsegurado)}
                                                 style={{ flex: 1 }}
+                                                testID="profile-seguro-confirm-btn"
                                               >
                                                 <View style={s.confirmBtn}>
                                                   <Text style={s.confirmBtnText}>Confirmar</Text>
@@ -980,6 +985,7 @@ export default function ProfileScreen() {
                                             setIsEditingInsuranceId(item.id!);
                                             setNewInsuranceAmount(String(item.seguro!.montoAsegurado + 1000));
                                           }}
+                                          testID="profile-aumentar-btn"
                                         >
                                           <View style={s.aumentarSeguroBtn}>
                                             <Text style={s.aumentarSeguroText}>Solicitar Aumento de Cobertura</Text>
@@ -1024,6 +1030,7 @@ export default function ProfileScreen() {
                                     <Pressable
                                       style={{ flex: 1 }}
                                       onPress={() => handleAceptarTasacion(item.id!, true)}
+                                      testID="profile-aceptar-btn"
                                     >
                                       <View style={s.acceptValuationBtn}>
                                         <Text style={s.acceptValuationText}>✓ Aceptar Tasación</Text>
@@ -1032,6 +1039,7 @@ export default function ProfileScreen() {
                                     <Pressable
                                       style={{ flex: 1 }}
                                       onPress={() => handleAceptarTasacion(item.id!, false)}
+                                      testID="profile-rechazar-btn"
                                     >
                                       <View style={s.rejectValuationBtn}>
                                         <Text style={s.rejectValuationText}>✕ Rechazar</Text>
@@ -1052,6 +1060,7 @@ export default function ProfileScreen() {
                 <Pressable
                   onPress={() => router.push("/consignar")}
                   style={({ pressed }) => [pressed && { opacity: 0.9 }]}
+                  testID="profile-consignar-btn"
                 >
                   <View style={s.addArticleBtn}>
                     <MaterialIcons
@@ -1111,6 +1120,7 @@ export default function ProfileScreen() {
                         <Pressable
                           onPress={pickAvatar}
                           style={({ pressed }) => [pressed && { opacity: 0.8 }]}
+                          testID="profile-upload-photo-btn"
                         >
                           <View style={s.changePhotoBtn}>
                             <Text style={s.changePhotoText}>Subir Foto</Text>
@@ -1122,6 +1132,7 @@ export default function ProfileScreen() {
                             style={({ pressed }) => [
                               pressed && { opacity: 0.8 },
                             ]}
+                            testID="profile-delete-photo-btn"
                           >
                             <View style={s.deletePhotoBtn}>
                               <MaterialIcons
@@ -1149,6 +1160,7 @@ export default function ProfileScreen() {
                           }
                           placeholder="Nombre"
                           placeholderTextColor="#9CA3AF"
+                          testID="profile-nombre-input"
                         />
                       </View>
 
@@ -1162,6 +1174,7 @@ export default function ProfileScreen() {
                           }
                           placeholder="Apellido"
                           placeholderTextColor="#9CA3AF"
+                          testID="profile-apellido-input"
                         />
                       </View>
 
@@ -1178,6 +1191,7 @@ export default function ProfileScreen() {
                           }
                           placeholder="Dirección"
                           placeholderTextColor="#9CA3AF"
+                          testID="profile-direccion-input"
                         />
                       </View>
 
@@ -1192,6 +1206,7 @@ export default function ProfileScreen() {
                           placeholder="Teléfono"
                           placeholderTextColor="#9CA3AF"
                           keyboardType="phone-pad"
+                          testID="profile-telefono-input"
                         />
                       </View>
                     </View>
@@ -1205,6 +1220,7 @@ export default function ProfileScreen() {
                         ]}
                         onPress={saveProfile}
                         disabled={saving}
+                        testID="profile-save-btn"
                       >
                         <View style={s.saveBtnInner}>
                           {saving ? (
@@ -1222,6 +1238,7 @@ export default function ProfileScreen() {
                         ]}
                         onPress={() => setIsEditing(false)}
                         disabled={saving}
+                        testID="profile-cancel-btn"
                       >
                         <View style={s.cancelBtnInner}>
                           <Text style={s.cancelBtnEditText}>Cancelar</Text>
@@ -1353,6 +1370,7 @@ export default function ProfileScreen() {
                       <Pressable
                         onPress={startEditing}
                         style={({ pressed }) => [pressed && { opacity: 0.85 }]}
+                        testID="profile-edit-btn"
                       >
                         <View style={s.editProfileBtn}>
                           <MaterialIcons
@@ -1370,6 +1388,7 @@ export default function ProfileScreen() {
                       <Pressable
                         style={{ width: "100%", marginBottom: 16 }}
                         onPress={() => router.push("/admin")}
+                        testID="profile-admin-btn"
                       >
                         <View style={s.adminBtn}>
                           <MaterialIcons
@@ -1469,6 +1488,7 @@ export default function ProfileScreen() {
                         )
                       }
                       style={({ pressed }) => [pressed && { opacity: 0.85 }]}
+                      testID="profile-logout-btn"
                     >
                       <View style={s.logoutBtn}>
                         <MaterialIcons
@@ -1494,6 +1514,7 @@ export default function ProfileScreen() {
                   <Pressable
                     onPress={() => setShowAddPago(!showAddPago)}
                     style={({ pressed }) => [pressed && { opacity: 0.9 }]}
+                    testID="profile-add-payment-toggle"
                   >
                     <View
                       style={[
@@ -1543,6 +1564,13 @@ export default function ProfileScreen() {
                               setNewPagoDatos("");
                             }}
                             style={({ pressed }) => [pressed && { opacity: 0.8 }]}
+                            testID={`profile-payment-${
+                              t === "tarjeta_credito"
+                                ? "tarjeta"
+                                : t === "cuenta_bancaria"
+                                  ? "cuenta"
+                                  : "cheque"
+                            }`}
                           >
                             <View
                               style={[
@@ -1577,6 +1605,7 @@ export default function ProfileScreen() {
                             key={m}
                             onPress={() => setNewPagoMoneda(m)}
                             style={({ pressed }) => [pressed && { opacity: 0.8 }]}
+                            testID={`profile-payment-${m.toLowerCase()}`}
                           >
                             <View
                               style={[
@@ -1628,6 +1657,7 @@ export default function ProfileScreen() {
                             ? "numeric"
                             : "default"
                         }
+                        testID="profile-payment-datos-input"
                       />
                     </View>
 
@@ -1642,6 +1672,7 @@ export default function ProfileScreen() {
                           keyboardType="numeric"
                           value={newPagoLimite}
                           onChangeText={setNewPagoLimite}
+                          testID="profile-payment-limite-input"
                         />
                       </View>
 
@@ -1662,6 +1693,7 @@ export default function ProfileScreen() {
                             style={({ pressed }) => [
                               pressed && { opacity: 0.85 },
                             ]}
+                            testID="profile-bank-country-picker"
                           >
                             <View style={s.selectTrigger}>
                               <Text
@@ -1744,6 +1776,7 @@ export default function ProfileScreen() {
                       onPress={handleAddMedioPago}
                       disabled={addingPago}
                       style={({ pressed }) => [pressed && { opacity: 0.9 }]}
+                      testID="profile-payment-submit-btn"
                     >
                       <View style={s.registerPayBtn}>
                         {addingPago ? (
@@ -1845,6 +1878,7 @@ export default function ProfileScreen() {
                             style={({ pressed }) => [
                               pressed && { opacity: 0.7 },
                             ]}
+                            testID="profile-payment-delete-btn"
                           >
                             <View style={s.deletePayBtn}>
                               <MaterialIcons
@@ -1990,6 +2024,7 @@ export default function ProfileScreen() {
                                         style={({ pressed }) => [
                                           pressed && { opacity: 0.9 },
                                         ]}
+                                        testID="profile-multa-medio-radio"
                                       >
                                         <View
                                           style={[
@@ -2040,6 +2075,7 @@ export default function ProfileScreen() {
                                   style={({ pressed }) => [
                                     pressed && canPay && { opacity: 0.9 },
                                   ]}
+                                  testID="profile-pagar-multa-btn"
                                 >
                                   <View
                                     style={[

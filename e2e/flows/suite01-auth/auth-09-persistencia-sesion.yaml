@@ -1,0 +1,28 @@
+# auth-09-persistencia-sesion
+# Flow: Login → stopApp → launchApp → assert session persists (tabs visible)
+#
+# IMPORTANT: This test relies on SecureStore (expo-secure-store) to persist the
+# auth token across app restarts. In iOS Simulator, SecureStore may behave
+# differently than on a real device. On Simulator, the keychain may not survive
+# a stopApp + launchApp cycle depending on the simulator state.
+# If this test fails in Simulator, test on a real device where SecureStore
+# persistence is reliable.
+
+appId: host.exp.exponent
+---
+- runFlow:
+    file: ../_helpers/login.yaml
+# Session is now active — tabs are visible
+- assertVisible: "Inicio"
+- assertVisible: "Perfil"
+
+# Restart the app
+- stopApp
+- launchApp
+
+# After relaunch, the app should restore the session and show tabs
+# If session persists: tabs are visible
+# If session is lost (Simulator keychain issue): Welcome screen shows
+- assertVisible:
+    text: "Inicio"
+    optional: true

@@ -1,0 +1,21 @@
+# Helper flow: Login as ADMIN (documento 00000003, password 12345678)
+# Include this in tests that require an admin session.
+#
+# Usage in test YAML:
+#   - runFlow:
+#       file: ../_helpers/login-admin.yaml
+
+appId: host.exp.exponent
+---
+- tapOn:
+    id: "welcome-login-btn"
+- assertVisible: "Bienvenido"
+- tapOn:
+    id: "login-documento-input"
+- inputText: "${E2E_ADMIN_DOCUMENTO:-00000003}"
+- tapOn:
+    id: "login-password-input"
+- inputText: "${E2E_ADMIN_PASSWORD:-12345678}"
+- tapOn:
+    id: "login-submit-btn"
+- assertVisible: "Inicio"

@@ -1,0 +1,54 @@
+# Suite 4 - Profile
+# perfil-01-ver: View profile data and navigate all sub-tabs
+
+appId: host.exp.exponent
+---
+- runFlow:
+    file: ../_helpers/login.yaml
+- tapOn: "Perfil"
+# Assert profile data is visible
+- assertVisible:
+    id: "profile-edit-btn"
+- assertVisible:
+    id: "profile-logout-btn"
+    optional: true
+
+# Assert sub-tabs are visible
+- assertVisible:
+    id: "profile-tab-perfil"
+- assertVisible:
+    id: "profile-tab-subastas"
+- assertVisible:
+    id: "profile-tab-pagos"
+- assertVisible:
+    id: "profile-tab-stats"
+
+# Navigate each sub-tab and verify content changes
+# Tap Subastas tab
+- tapOn:
+    id: "profile-tab-subastas"
+- assertVisible:
+    id: "profile-subastas-search"
+- assertVisible:
+    id: "profile-consignar-btn"
+
+# Tap Pagos tab
+- tapOn:
+    id: "profile-tab-pagos"
+- assertVisible:
+    id: "profile-add-payment-toggle"
+    optional: true
+
+# Tap Stats tab
+- tapOn:
+    id: "profile-tab-stats"
+- assertVisible: "Stats"
+    optional: true
+- assertVisible: "Métricas"
+    optional: true
+
+# Return to Perfil tab
+- tapOn:
+    id: "profile-tab-perfil"
+- assertVisible:
+    id: "profile-edit-btn"

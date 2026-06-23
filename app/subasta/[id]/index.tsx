@@ -215,6 +215,7 @@ export default function SubastaDetalleScreen() {
           <Pressable
             onPress={() => router.back()}
             style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+            testID="auction-detail-back-btn"
           >
             <View style={st.backBtnCircle}>
               <MaterialIcons name="arrow-back" size={22} color="#1A1A2E" />
@@ -413,6 +414,7 @@ export default function SubastaDetalleScreen() {
           <Pressable
             onPress={() => router.push("/(tabs)/live")}
             style={({ pressed }) => [pressed && { opacity: 0.9 }]}
+            testID="auction-detail-join-live-btn"
           >
             <View style={st.joinBtn}>
               <MaterialIcons name="live-tv" size={20} color="#FFF" />
@@ -439,6 +441,7 @@ export default function SubastaDetalleScreen() {
           <Pressable
             onPress={() => router.push(`/pagos/${subasta.id}` as any)}
             style={({ pressed }) => [pressed && { opacity: 0.9 }]}
+            testID="auction-detail-pay-btn"
           >
             <View style={st.payBtn}>
               <MaterialIcons name="receipt-long" size={20} color="#FFF" />

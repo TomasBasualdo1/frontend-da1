@@ -1,0 +1,25 @@
+# Suite 3 - Authenticated Subastas
+# sub-05-listado-autenticado: Verify auction listing for authenticated user (no "Solo espectador" badge)
+
+appId: host.exp.exponent
+---
+- runFlow:
+    file: ../_helpers/login.yaml
+- tapOn: "Subastas"
+- assertVisible:
+    id: "auctions-stats-total"
+- assertVisible:
+    id: "auctions-stats-live"
+- assertVisible:
+    id: "auctions-stats-upcoming"
+- assertVisible:
+    id: "auctions-chip-comun"
+- assertVisible:
+    id: "auctions-chip-especial"
+- assertVisible:
+    id: "auctions-chip-plata"
+- assertVisible:
+    id: "auctions-chip-oro"
+- assertVisible:
+    id: "auctions-chip-platino"
+- assertNotVisible: "Solo espectador"

@@ -41,6 +41,7 @@ export default function WelcomeScreen() {
         {/* Botones */}
         <View style={styles.buttons}>
           <Pressable
+            testID="welcome-login-btn"
             style={({ pressed }) => [
               styles.primaryButton,
               pressed && styles.buttonPressed,
@@ -58,6 +59,7 @@ export default function WelcomeScreen() {
           <Text className="text-center text-[#6B7280]">o</Text>
 
           <Pressable
+            testID="welcome-register-btn"
             style={({ pressed }) => [
               styles.secondaryButton,
               pressed && styles.buttonPressed,
@@ -73,6 +75,7 @@ export default function WelcomeScreen() {
           </Pressable>
 
           <Pressable
+            testID="welcome-explore-btn"
             style={styles.guestLink}
             onPress={() => router.replace("/(tabs)")}
           >

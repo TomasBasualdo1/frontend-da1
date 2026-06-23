@@ -61,7 +61,7 @@ export default function ForgotPasswordScreen() {
               alwaysBounceVertical={true}
               showsVerticalScrollIndicator={false}
             >
-              <Pressable style={s.back} onPress={() => router.back()}>
+              <Pressable testID="forgot-back-btn" style={s.back} onPress={() => router.back()}>
                 <MaterialIcons name="arrow-back" size={24} color="#1A1A2E" />
               </Pressable>
               <View style={s.icon}><MaterialIcons name="email" size={36} color="#8B6914" /></View>
@@ -69,12 +69,12 @@ export default function ForgotPasswordScreen() {
               <Text style={s.sub}>Ingresá tu email y te enviaremos un enlace para restablecer tu contraseña</Text>
               <View style={s.group}>
                 <Text style={s.label}>Email</Text>
-                <TextInput style={s.input} placeholder="tu@email.com" placeholderTextColor="#9CA3AF" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} />
+                <TextInput testID="forgot-email-input" style={s.input} placeholder="tu@email.com" placeholderTextColor="#9CA3AF" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} />
               </View>
-              <Pressable style={({ pressed }) => [s.btn, pressed && s.pressed, loading && s.dis]} onPress={handleSubmit} disabled={loading}>
+              <Pressable testID="forgot-submit-btn" style={({ pressed }) => [s.btn, pressed && s.pressed, loading && s.dis]} onPress={handleSubmit} disabled={loading}>
                 {loading ? <ActivityIndicator color="#FFF" /> : <Text style={s.btnText}>Enviar enlace</Text>}
               </Pressable>
-              <Pressable style={s.codeLink} onPress={() => router.push("/(auth)/reset-password")}>
+              <Pressable testID="forgot-tengo-codigo-link" style={s.codeLink} onPress={() => router.push("/(auth)/reset-password")}>
                 <Text style={s.codeLinkText}>Ya tengo un código</Text>
               </Pressable>
             </ScrollView>

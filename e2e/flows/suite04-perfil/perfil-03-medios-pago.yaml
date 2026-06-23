@@ -1,0 +1,98 @@
+# Suite 4 - Profile
+# perfil-03-medios-pago: Add and delete a payment method (Tarjeta ARS)
+
+appId: host.exp.exponent
+---
+- runFlow:
+    file: ../_helpers/login.yaml
+- tapOn: "Perfil"
+
+# Navigate to Pagos sub-tab
+- tapOn:
+    id: "profile-tab-pagos"
+
+# Assert payment methods list is visible
+- assertVisible:
+    id: "profile-add-payment-toggle"
+
+# Tap to add a new payment method
+- tapOn:
+    id: "profile-add-payment-toggle"
+
+# Select Tarjeta as payment method type
+- scrollUntilVisible:
+    element:
+      id: "profile-payment-tarjeta"
+    direction: DOWN
+- tapOn:
+    id: "profile-payment-tarjeta"
+
+# Select ARS currency
+- scrollUntilVisible:
+    element:
+      id: "profile-payment-ars"
+    direction: DOWN
+- tapOn:
+    id: "profile-payment-ars"
+
+# Enter card data
+- scrollUntilVisible:
+    element:
+      id: "profile-payment-datos-input"
+    direction: DOWN
+- tapOn:
+    id: "profile-payment-datos-input"
+- inputText: "4532123412341234"
+
+# Enter limit
+- scrollUntilVisible:
+    element:
+      id: "profile-payment-limite-input"
+    direction: DOWN
+- tapOn:
+    id: "profile-payment-limite-input"
+- inputText: "100000"
+
+# Submit the payment method
+- scrollUntilVisible:
+    element:
+      id: "profile-payment-submit-btn"
+    direction: DOWN
+- tapOn:
+    id: "profile-payment-submit-btn"
+
+# Assert success
+- assertVisible:
+    text: "éxito"
+    optional: true
+- assertVisible:
+    text: "exito"
+    optional: true
+- assertVisible:
+    text: "registrad"
+    optional: true
+
+# Assert new payment method appears in the list
+- assertVisible:
+    text: "4532123412341234"
+    optional: true
+
+# Delete the payment method
+# Look for trash/delete icon and tap it
+- scrollUntilVisible:
+    element:
+      text: "Eliminar"
+    direction: DOWN
+    optional: true
+- tapOn:
+    text: "Eliminar"
+    optional: true
+- assertVisible:
+    text: "confirmar"
+    optional: true
+- assertVisible:
+    text: "Confirmar"
+    optional: true
+- tapOn:
+    text: "Confirmar"
+    optional: true

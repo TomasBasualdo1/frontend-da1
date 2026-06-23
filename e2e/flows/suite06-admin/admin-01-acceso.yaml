@@ -1,0 +1,49 @@
+# Suite 6 - Admin
+# admin-01-acceso: Verify admin access (admin can see panel, regular user cannot)
+
+appId: host.exp.exponent
+---
+# === PART A: Admin user can access the admin panel ===
+- runFlow:
+    file: ../_helpers/login-admin.yaml
+# Assert tab bar is visible after login
+- assertVisible: "Inicio"
+- assertVisible: "Subastas"
+- assertVisible: "Perfil"
+# Navigate to Profile > "Panel de Administración"
+- tapOn: "Perfil"
+- tapOn:
+    id: "profile-tab-perfil"
+- scrollUntilVisible:
+    element:
+      id: "profile-admin-btn"
+    direction: DOWN
+- tapOn:
+    id: "profile-admin-btn"
+# Assert admin dashboard with 4 navigation cards
+- assertVisible: "Panel de Control Admin"
+- assertVisible:
+    id: "admin-nav-usuarios"
+- assertVisible:
+    id: "admin-nav-pagos"
+- assertVisible:
+    id: "admin-nav-articulos"
+- assertVisible:
+    id: "admin-nav-subastas"
+# Logout admin
+- runFlow:
+    file: ../_helpers/logout.yaml
+
+# === PART B: Regular user cannot access admin panel ===
+- runFlow:
+    file: ../_helpers/login.yaml
+- tapOn: "Perfil"
+- tapOn:
+    id: "profile-tab-perfil"
+# Assert "Panel de Administración" is NOT visible for regular user
+- assertNotVisible:
+    id: "profile-admin-btn"
+# NOTE: Attempting to navigate to /admin directly via deep link would require
+# deep link support. The app guards admin routes server-side; direct navigation
+# would result in an error or redirect. Cannot test deep-link navigation
+# in Maestro YAML without app deep-link configuration.

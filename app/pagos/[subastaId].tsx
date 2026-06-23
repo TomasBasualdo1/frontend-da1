@@ -193,7 +193,7 @@ export default function PagoSubastaScreen() {
         style={{ flex: 1 }}
       >
         <View style={s.header}>
-          <Pressable onPress={() => router.back()} style={s.iconButton}>
+          <Pressable onPress={() => router.back()} style={s.iconButton} testID="payment-back-btn">
             <MaterialIcons name="arrow-back" size={22} color="#1A1A2E" />
           </Pressable>
           <Text style={s.headerTitle}>Pago de Subasta #{subastaId}</Text>
@@ -335,12 +335,14 @@ export default function PagoSubastaScreen() {
                     placeholder="Calle, numero, ciudad"
                     placeholderTextColor="#9CA3AF"
                     style={s.input}
+                    testID="payment-direccion-input"
                   />
                 </View>
               ) : (
                 <Pressable
                   onPress={() => setAceptaPerderSeguro((value) => !value)}
                   style={({ pressed }) => [pressed && { opacity: 0.9 }]}
+                  testID="payment-seguro-check"
                 >
                   <View style={s.insuranceWarning}>
                     <MaterialIcons
@@ -364,6 +366,7 @@ export default function PagoSubastaScreen() {
               disabled={!canSubmit}
               onPress={handleSubmit}
               style={({ pressed }) => [pressed && canSubmit && { opacity: 0.9 }]}
+              testID="payment-confirm-btn"
             >
               <View style={[s.primaryButton, !canSubmit && s.primaryDisabled]}>
                 {submitting ? (
@@ -404,7 +407,7 @@ function DeliveryButton({
   onPress: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [pressed && { opacity: 0.9 }]}>
+    <Pressable onPress={onPress} style={({ pressed }) => [pressed && { opacity: 0.9 }]} testID={`payment-${label.toLowerCase()}-btn`}>
       <View style={[s.deliveryButton, active && s.deliveryButtonActive]}>
         <MaterialIcons
           name={icon as any}

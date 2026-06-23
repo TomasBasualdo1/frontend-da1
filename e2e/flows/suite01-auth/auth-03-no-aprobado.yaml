@@ -1,0 +1,22 @@
+# auth-03-no-aprobado
+# Flow: Login with non-approved user → assert error message
+#
+# Requires: E2E_NOAPROBADO_DOCUMENTO and E2E_NOAPROBADO_PASSWORD env vars set
+
+appId: host.exp.exponent
+---
+- assertVisible:
+    text: "Iniciar sesión"
+- tapOn:
+    id: "welcome-login-btn"
+- assertVisible: "Bienvenido"
+- tapOn:
+    id: "login-documento-input"
+- inputText: "${E2E_NOAPROBADO_DOCUMENTO:-99999991}"
+- tapOn:
+    id: "login-password-input"
+- inputText: "${E2E_NOAPROBADO_PASSWORD:-password123}"
+- tapOn:
+    id: "login-submit-btn"
+- assertVisible:
+    text: "Tu cuenta no está disponible para iniciar sesión."

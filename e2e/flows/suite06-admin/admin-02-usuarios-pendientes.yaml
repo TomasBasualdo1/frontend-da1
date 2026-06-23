@@ -1,0 +1,82 @@
+# Suite 6 - Admin
+# admin-02-usuarios-pendientes: Approve and reject pending user registrations
+
+appId: host.exp.exponent
+---
+- runFlow:
+    file: ../_helpers/login-admin.yaml
+# Navigate to admin panel
+- tapOn: "Perfil"
+- tapOn:
+    id: "profile-tab-perfil"
+- scrollUntilVisible:
+    element:
+      id: "profile-admin-btn"
+    direction: DOWN
+- tapOn:
+    id: "profile-admin-btn"
+# Enter Users section
+- tapOn:
+    id: "admin-nav-usuarios"
+# Assert "Pendientes" tab is active and list loaded
+- assertVisible: "Gestión de Usuarios"
+- assertVisible: "Pendientes"
+# NOTE: Admin screens use Modal components for full-screen image viewer.
+# Tap DNI frente image to open full-screen viewer
+- scrollUntilVisible:
+    element:
+      id: "admin-users-dni-frente"
+    direction: DOWN
+- tapOn:
+    id: "admin-users-dni-frente"
+# Assert full-screen image viewer is shown (close button visible)
+- assertVisible: "close"
+# Close the image viewer by tapping the close icon
+- tapOn:
+    id: "close"
+    childOf:
+      text: "close"
+    optional: true
+# If the above selector fails, tap back on the overlay (anywhere outside image)
+- tapOn:
+    id: "admin-users-dni-dorso"
+# Close dorso viewer
+- tapOn:
+    text: "close"
+    optional: true
+# Tap "Aprobar..." on first pending user
+- tapOn:
+    id: "admin-users-aprobar-btn"
+    index: 0
+# Assert approval modal with category picker
+- assertVisible: "Aprobar Solicitud"
+- assertVisible: "Seleccione la Categoría"
+# Select "comun" category
+- tapOn:
+    id: "admin-users-cat-comun"
+# Confirm approval
+- tapOn:
+    id: "admin-users-modal-confirm"
+# Assert success alert
+- assertVisible: "Éxito"
+- tapOn: "OK"
+# Tap "Rechazar" on the next pending user
+- scrollUntilVisible:
+    element:
+      id: "admin-users-rechazar-btn"
+    direction: DOWN
+- tapOn:
+    id: "admin-users-rechazar-btn"
+    index: 0
+# Assert rejection modal
+- assertVisible: "Rechazar Solicitud"
+# Enter rejection reason
+- tapOn:
+    id: "admin-users-motivo-input"
+- inputText: "Documentación insuficiente"
+# Confirm rejection
+- tapOn:
+    id: "admin-users-modal-confirm"
+# Assert success
+- assertVisible: "Éxito"
+- tapOn: "OK"

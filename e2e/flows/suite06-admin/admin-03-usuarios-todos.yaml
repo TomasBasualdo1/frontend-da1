@@ -1,0 +1,50 @@
+# Suite 6 - Admin
+# admin-03-usuarios-todos: Search all users and modify category
+
+appId: host.exp.exponent
+---
+- runFlow:
+    file: ../_helpers/login-admin.yaml
+# Navigate to admin panel
+- tapOn: "Perfil"
+- tapOn:
+    id: "profile-tab-perfil"
+- scrollUntilVisible:
+    element:
+      id: "profile-admin-btn"
+    direction: DOWN
+- tapOn:
+    id: "profile-admin-btn"
+# Enter Users section
+- tapOn:
+    id: "admin-nav-usuarios"
+# Switch to "Todos los Usuarios" tab
+- tapOn:
+    id: "admin-users-tab-todos"
+- assertVisible: "Todos los Usuarios"
+# Wait for the list to load, then search for document "12345678"
+- assertVisible:
+    id: "admin-users-search-input"
+- tapOn:
+    id: "admin-users-search-input"
+- inputText: "12345678"
+# Assert filtered results appear (search query matches documento field)
+# NOTE: If user with documento 12345678 exists in the system, it will be shown.
+# Assert at least one user card is visible
+- assertVisible:
+    id: "admin-users-mod-cat-btn"
+# Tap "Modificar Categoría" on the first filtered result
+- tapOn:
+    id: "admin-users-mod-cat-btn"
+    index: 0
+# Assert category change modal
+- assertVisible: "Cambiar Categoría"
+# Select "oro" category
+- tapOn:
+    id: "admin-users-cat-oro"
+# Confirm category change
+- tapOn:
+    id: "admin-users-modal-confirm"
+# Assert success alert
+- assertVisible: "Éxito"
+- tapOn: "OK"

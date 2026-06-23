@@ -1,0 +1,22 @@
+# auth-02-credenciales-incorrectas
+# Flow: Login with valid documento but wrong password → assert error message
+
+appId: host.exp.exponent
+---
+- assertVisible:
+    text: "Iniciar sesión"
+- tapOn:
+    id: "welcome-login-btn"
+- assertVisible: "Bienvenido"
+- tapOn:
+    id: "login-documento-input"
+- inputText: "12345678"
+- tapOn:
+    id: "login-password-input"
+- inputText: "wrongpass"
+- tapOn:
+    id: "login-submit-btn"
+- assertVisible:
+    text: "Documento o contraseña incorrectos."
+- assertVisible: "Bienvenido"
+- assertNotVisible: "Inicio"

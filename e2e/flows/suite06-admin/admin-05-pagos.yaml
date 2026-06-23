@@ -1,0 +1,52 @@
+# Suite 6 - Admin
+# admin-05-pagos: Validate and reject pending payment methods
+
+appId: host.exp.exponent
+---
+- runFlow:
+    file: ../_helpers/login-admin.yaml
+# Navigate to admin panel
+- tapOn: "Perfil"
+- tapOn:
+    id: "profile-tab-perfil"
+- scrollUntilVisible:
+    element:
+      id: "profile-admin-btn"
+    direction: DOWN
+- tapOn:
+    id: "profile-admin-btn"
+# Enter "Medios de Pago" section
+- tapOn:
+    id: "admin-nav-pagos"
+# Assert payments list loaded
+- assertVisible: "Verificación de Pagos"
+# Tap "Validar" on first pending payment
+- scrollUntilVisible:
+    element:
+      id: "admin-payments-validar-btn"
+    direction: DOWN
+- tapOn:
+    id: "admin-payments-validar-btn"
+    index: 0
+# Assert confirmation alert appears
+- assertVisible: "Validar Medio de Pago"
+# Confirm validation
+- tapOn: "Validar"
+# Assert success alert
+- assertVisible: "Éxito"
+- tapOn: "OK"
+# Tap "Rechazar" on another pending payment
+- scrollUntilVisible:
+    element:
+      id: "admin-payments-rechazar-btn"
+    direction: DOWN
+- tapOn:
+    id: "admin-payments-rechazar-btn"
+    index: 0
+# Assert rejection confirmation alert
+- assertVisible: "Rechazar Medio de Pago"
+# Confirm rejection
+- tapOn: "Confirmar"
+# Assert success alert
+- assertVisible: "Éxito"
+- tapOn: "OK"

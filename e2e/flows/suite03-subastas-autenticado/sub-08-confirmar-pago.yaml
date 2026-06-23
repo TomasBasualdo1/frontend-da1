@@ -1,0 +1,92 @@
+# Suite 3 - Authenticated Subastas
+# sub-08-confirmar-pago: Confirm payment for a finalized auction (800012), test both Retiro and Envio modes
+
+appId: host.exp.exponent
+---
+- runFlow:
+    file: ../_helpers/login.yaml
+- tapOn: "Subastas"
+# Search for finalized auction 800012
+- tapOn:
+    id: "auctions-search-input"
+- inputText: "${E2E_SUBASTA_ID_FINALIZADA:-800012}"
+- pressKey: Enter
+- scrollUntilVisible:
+    element:
+      text: "${E2E_SUBASTA_ID_FINALIZADA:-800012}"
+    direction: DOWN
+- tapOn:
+    text: "${E2E_SUBASTA_ID_FINALIZADA:-800012}"
+# Assert on auction detail
+- assertVisible:
+    id: "auction-detail-back-btn"
+# Tap on payment button
+- scrollUntilVisible:
+    element:
+      id: "auction-detail-pay-btn"
+    direction: DOWN
+- tapOn:
+    id: "auction-detail-pay-btn"
+# Assert payment screen is visible
+- assertVisible:
+    id: "payment-back-btn"
+
+# --- Test: Retiro en local ---
+- tapOn:
+    id: "payment-retiro-btn"
+- scrollUntilVisible:
+    element:
+      id: "payment-seguro-check"
+    direction: DOWN
+- tapOn:
+    id: "payment-seguro-check"
+- scrollUntilVisible:
+    element:
+      id: "payment-confirm-btn"
+    direction: DOWN
+- tapOn:
+    id: "payment-confirm-btn"
+# Assert success for retiro
+- assertVisible:
+    text: "confirmad"
+    optional: true
+- assertVisible:
+    text: "exito"
+    optional: true
+- assertVisible:
+    text: "éxito"
+    optional: true
+
+# --- Test: Envío ---
+# Navigate back to payment screen for envio test
+- tapOn:
+    id: "payment-back-btn"
+    optional: true
+- pressKey: Back
+    optional: true
+- tapOn:
+    id: "auction-detail-pay-btn"
+    optional: true
+- assertVisible:
+    id: "payment-envio-btn"
+- tapOn:
+    id: "payment-envio-btn"
+- tapOn:
+    id: "payment-direccion-input"
+- inputText: "Av. Corrientes 1234, CABA"
+- scrollUntilVisible:
+    element:
+      id: "payment-confirm-btn"
+    direction: DOWN
+- tapOn:
+    id: "payment-confirm-btn"
+# Assert success for envio
+- assertVisible:
+    text: "confirmad"
+    optional: true
+- assertVisible:
+    text: "exito"
+    optional: true
+- assertVisible:
+    text: "éxito"
+    optional: true

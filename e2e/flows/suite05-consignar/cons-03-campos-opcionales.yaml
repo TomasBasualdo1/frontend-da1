@@ -1,0 +1,58 @@
+# Suite 5 - Consignar
+# cons-03-campos-opcionales: Fill optional fields (historia, artista, fechaCreacion, valorEstimado)
+# and verify the flow accepts them through submission
+
+appId: host.exp.exponent
+---
+- runFlow:
+    file: ../_helpers/login.yaml
+# Navigate to Consignar
+- tapOn: "Perfil"
+- tapOn:
+    id: "profile-tab-subastas"
+- scrollUntilVisible:
+    element:
+      id: "profile-consignar-btn"
+    direction: DOWN
+- tapOn:
+    id: "profile-consignar-btn"
+# === STEP 1: Fill required fields ===
+- assertVisible: "Paso 1 de 4"
+- tapOn:
+    id: "consignar-titulo-input"
+- inputText: "Reloj E2E Opcional"
+- tapOn:
+    id: "consignar-categoria-picker"
+- tapOn: "Oro"
+- tapOn:
+    id: "consignar-desc-input"
+- inputText: "Artículo con campos opcionales completos"
+- tapOn:
+    id: "consignar-continuar-btn"
+# === STEP 2: Fill optional fields ===
+- assertVisible: "Paso 2 de 4"
+- tapOn:
+    id: "consignar-historia-input"
+- inputText: "Perteneció a colección privada"
+- tapOn:
+    id: "consignar-artista-input"
+- inputText: "Desconocido"
+- tapOn:
+    id: "consignar-fecha-input"
+- inputText: "1900-01-01"
+- tapOn:
+    id: "consignar-valor-input"
+- inputText: "15000"
+# Check required declarations
+- tapOn:
+    id: "consignar-check-propietario"
+- tapOn:
+    id: "consignar-check-licito"
+# Continue to step 3 (photos)
+- tapOn:
+    id: "consignar-continuar-btn"
+- assertVisible: "Paso 3 de 4"
+- assertVisible: "Imágenes del Artículo"
+# NOTE: Optional fields (historia, artista, fechaCreacion) are included in the FormData
+# when the user submits. Cannot verify from UI; only assertion is that we reached step 3
+# without validation errors from step 2.

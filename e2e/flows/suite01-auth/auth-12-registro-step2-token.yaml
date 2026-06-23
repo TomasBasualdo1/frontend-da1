@@ -1,0 +1,40 @@
+# auth-12-registro-step2-token
+# Flow: Navigate to Register Step 2 → enter token and password → submit
+#
+# Note: This test assumes a valid registration token exists.
+# In a real E2E setup, the token should be seeded in the database
+# or obtained from the registration email. Using a placeholder token.
+
+appId: host.exp.exponent
+---
+- assertVisible:
+    text: "Iniciar sesión"
+- tapOn:
+    id: "welcome-login-btn"
+- assertVisible: "Bienvenido"
+
+# Navigate to Register Step 2 via "Completar registro" link
+- tapOn:
+    id: "login-complete-register-link"
+- assertVisible:
+    id: "reg2-token-input"
+
+# Fill token
+- tapOn:
+    id: "reg2-token-input"
+- inputText: "123456"
+
+# Fill password
+- tapOn:
+    id: "reg2-password-input"
+- inputText: "testpass1"
+
+# Fill confirm password
+- tapOn:
+    id: "reg2-confirm-input"
+- inputText: "testpass1"
+
+# Submit
+- tapOn:
+    id: "reg2-submit-btn"
+# After submit: loading state then navigates to login or tabs

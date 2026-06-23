@@ -108,7 +108,7 @@ export default function RegisterStep2Screen() {
             keyboardDismissMode="on-drag"
           >
             <View style={s.headerRow}>
-              <Pressable style={s.back} onPress={() => router.back()}>
+              <Pressable testID="reg2-back-btn" style={s.back} onPress={() => router.back()}>
                 <MaterialIcons name="arrow-back" size={24} color="#1A1A2E" />
               </Pressable>
               <View style={s.badge}>
@@ -127,6 +127,7 @@ export default function RegisterStep2Screen() {
               <View style={s.group}>
                 <Text style={s.label}>Código *</Text>
                 <TextInput
+                  testID="reg2-token-input"
                   style={[s.input, errors.token && s.inputErr]}
                   placeholder="Código de 6 dígitos"
                   placeholderTextColor="#9CA3AF"
@@ -143,6 +144,7 @@ export default function RegisterStep2Screen() {
                 <Text style={s.label}>Contraseña *</Text>
                 <View style={[s.inputRow, errors.password && s.inputErr]}>
                   <TextInput
+                    testID="reg2-password-input"
                     style={s.inputInner}
                     placeholder="Mínimo 8 caracteres"
                     placeholderTextColor="#9CA3AF"
@@ -150,7 +152,7 @@ export default function RegisterStep2Screen() {
                     value={password}
                     onChangeText={setPassword}
                   />
-                  <Pressable onPress={() => setShowPwd(!showPwd)}>
+                  <Pressable testID="reg2-toggle-password-btn" onPress={() => setShowPwd(!showPwd)}>
                     <MaterialIcons
                       name={showPwd ? "visibility-off" : "visibility"}
                       size={20}
@@ -165,6 +167,7 @@ export default function RegisterStep2Screen() {
               <View style={s.group}>
                 <Text style={s.label}>Confirmar *</Text>
                 <TextInput
+                  testID="reg2-confirm-input"
                   style={[s.input, errors.confirm && s.inputErr]}
                   placeholder="Repetí tu contraseña"
                   placeholderTextColor="#9CA3AF"
@@ -210,6 +213,7 @@ export default function RegisterStep2Screen() {
                     ] as const
                   ).map((t) => (
                     <Pressable
+                      testID={t === "tarjeta_credito" ? "reg2-payment-tarjeta" : t === "cuenta_bancaria" ? "reg2-payment-cuenta" : "reg2-payment-cheque"}
                       key={t}
                       style={[
                         s.pickerOpt,
@@ -242,6 +246,7 @@ export default function RegisterStep2Screen() {
                 <View style={s.pickerRow}>
                   {(["ARS", "USD"] as const).map((m) => (
                     <Pressable
+                      testID={m === "ARS" ? "reg2-currency-ars" : "reg2-currency-usd"}
                       key={m}
                       style={[
                         s.pickerOpt,
@@ -265,6 +270,7 @@ export default function RegisterStep2Screen() {
               <View style={s.group}>
                 <Text style={s.label}>Datos del Medio de Pago *</Text>
                 <TextInput
+                  testID="reg2-payment-datos-input"
                   style={[s.input, errors.paymentDatos && s.inputErr]}
                   placeholder={
                     paymentTipo === "tarjeta_credito"
@@ -297,6 +303,7 @@ export default function RegisterStep2Screen() {
                 <View style={[s.group, { flex: 1 }]}>
                   <Text style={s.label}>Límite / Fondos ($)</Text>
                   <TextInput
+                    testID="reg2-payment-limite-input"
                     style={[s.input, errors.paymentLimite && s.inputErr]}
                     placeholder="Ej: 50000"
                     placeholderTextColor="#9CA3AF"
@@ -374,6 +381,7 @@ export default function RegisterStep2Screen() {
               </View>
 
               <Pressable
+                testID="reg2-submit-btn"
                 style={({ pressed }) => [
                   s.btn,
                   pressed && s.pressed,

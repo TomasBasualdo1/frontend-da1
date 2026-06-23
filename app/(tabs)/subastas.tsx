@@ -262,6 +262,7 @@ export default function SubastasScreen() {
                     placeholderTextColor="#9CA3AF"
                     value={search}
                     onChangeText={setSearch}
+                    testID="auctions-search-input"
                   />
                   {search.length > 0 && (
                     <Pressable onPress={() => setSearch("")}>
@@ -274,6 +275,7 @@ export default function SubastasScreen() {
                 <Pressable
                   onPress={() => setShowFilters(!showFilters)}
                   style={({ pressed }) => [pressed && { opacity: 0.85 }]}
+                  testID="auctions-filter-btn"
                 >
                   <View style={[st.filterToggle, showFilters && st.filterToggleActive]}>
                     <MaterialIcons
@@ -309,6 +311,7 @@ export default function SubastasScreen() {
                         key={c}
                         onPress={() => setFilterCateg(isActive ? null : c)}
                         style={({ pressed }) => [pressed && { opacity: 0.8 }]}
+                        testID={`auctions-chip-${c}`}
                       >
                         <View style={[st.chip, isActive && st.chipActive]}>
                           <Text style={[st.chipText, isActive && st.chipTextActive]}>
@@ -323,12 +326,12 @@ export default function SubastasScreen() {
 
               {/* Stats Card (Now smaller and scrolls with screen) */}
               <View style={st.statsRow}>
-                <View style={st.statItem}>
+                <View style={st.statItem} testID="auctions-stats-total">
                   <Text style={st.statNumber}>{stats.total}</Text>
                   <Text style={st.statLabel}>Total</Text>
                 </View>
                 <View style={st.statDivider} />
-                <View style={st.statItem}>
+                <View style={st.statItem} testID="auctions-stats-live">
                   <View style={st.statLiveRow}>
                     <LiveDot />
                     <Text style={[st.statNumber, { color: "#DC2626" }]}>{stats.enVivo}</Text>
@@ -336,7 +339,7 @@ export default function SubastasScreen() {
                   <Text style={st.statLabel}>En Vivo</Text>
                 </View>
                 <View style={st.statDivider} />
-                <View style={st.statItem}>
+                <View style={st.statItem} testID="auctions-stats-upcoming">
                   <Text style={st.statNumber}>{stats.proximas}</Text>
                   <Text style={st.statLabel}>Próximas</Text>
                 </View>
@@ -344,7 +347,7 @@ export default function SubastasScreen() {
             </>
           }
           ListEmptyComponent={
-            <View style={st.empty}>
+            <View style={st.empty} testID="auctions-empty-state">
               <View style={st.emptyIconWrap}>
                 <MaterialIcons name="search-off" size={36} color="#C4B898" />
               </View>

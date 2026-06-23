@@ -1,0 +1,15 @@
+# Helper flow: Clear app state (force fresh start)
+# Stops the app to clear in-memory state.
+# SecureStore data may persist; use with caution.
+#
+# Usage:
+#   - runFlow:
+#       file: ../_helpers/clear-state.yaml
+
+appId: host.exp.exponent
+---
+- stopApp
+- launchApp
+- assertVisible:
+    text: "Iniciar sesión"
+    optional: true

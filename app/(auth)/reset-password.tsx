@@ -78,7 +78,7 @@ export default function ResetPasswordScreen() {
             showsVerticalScrollIndicator={false}
             keyboardDismissMode="on-drag"
           >
-            <Pressable style={s.back} onPress={() => router.back()}>
+            <Pressable testID="reset-back-btn" style={s.back} onPress={() => router.back()}>
               <MaterialIcons name="arrow-back" size={24} color="#1A1A2E" />
             </Pressable>
 
@@ -94,6 +94,7 @@ export default function ResetPasswordScreen() {
               <View style={s.group}>
                 <Text style={s.label}>Código *</Text>
                 <TextInput
+                  testID="reset-code-input"
                   style={[s.input, errors.token && s.inputErr]}
                   placeholder="Código de 6 dígitos"
                   placeholderTextColor="#9CA3AF"
@@ -112,6 +113,7 @@ export default function ResetPasswordScreen() {
                 <Text style={s.label}>Nueva contraseña *</Text>
                 <View style={[s.inputRow, errors.password && s.inputErr]}>
                   <TextInput
+                    testID="reset-password-input"
                     style={s.inputInner}
                     placeholder="Mínimo 8 caracteres"
                     placeholderTextColor="#9CA3AF"
@@ -122,7 +124,7 @@ export default function ResetPasswordScreen() {
                       if (errors.password) setErrors((prev) => ({ ...prev, password: "" }));
                     }}
                   />
-                  <Pressable onPress={() => setShowPwd(!showPwd)}>
+                  <Pressable testID="reset-toggle-password-btn" onPress={() => setShowPwd(!showPwd)}>
                     <MaterialIcons
                       name={showPwd ? "visibility-off" : "visibility"}
                       size={20}
@@ -136,6 +138,7 @@ export default function ResetPasswordScreen() {
               <View style={s.group}>
                 <Text style={s.label}>Confirmar contraseña *</Text>
                 <TextInput
+                  testID="reset-confirm-input"
                   style={[s.input, errors.confirm && s.inputErr]}
                   placeholder="Repetí tu contraseña"
                   placeholderTextColor="#9CA3AF"
@@ -166,6 +169,7 @@ export default function ResetPasswordScreen() {
               </View>
 
               <Pressable
+                testID="reset-submit-btn"
                 style={({ pressed }) => [
                   s.btn,
                   pressed && s.pressed,

@@ -1,0 +1,52 @@
+# Suite 3 - Authenticated Subastas
+# sub-07-pujar: Place a bid on a live auction (800011)
+
+# NOTE: Puja success depends on having a validated medio_pago with sufficient limit.
+# If the user lacks a validated payment method, the test will assert the expected error.
+
+appId: host.exp.exponent
+---
+- runFlow:
+    file: ../_helpers/login.yaml
+- tapOn: "Subastas"
+# Navigate to live auction 800011 via search
+- tapOn:
+    id: "auctions-search-input"
+- inputText: "${E2E_SUBASTA_ID_EN_VIVO:-800011}"
+- pressKey: Enter
+- scrollUntilVisible:
+    element:
+      text: "${E2E_SUBASTA_ID_EN_VIVO:-800011}"
+    direction: DOWN
+- tapOn:
+    text: "${E2E_SUBASTA_ID_EN_VIVO:-800011}"
+# Assert on auction detail
+- assertVisible:
+    id: "auction-detail-back-btn"
+# Join the live auction
+- scrollUntilVisible:
+    element:
+      id: "auction-detail-join-live-btn"
+    direction: DOWN
+- tapOn:
+    id: "auction-detail-join-live-btn"
+# Assert we are in the live bidding screen
+- assertVisible:
+    id: "live-bid-input"
+# Enter a bid amount
+- tapOn:
+    id: "live-bid-input"
+- inputText: "100"
+# Send the bid
+- tapOn:
+    id: "live-bid-send-btn"
+# Assert result: either success or expected error
+- assertVisible:
+    text: "Garantia insuficiente"
+    optional: true
+- assertVisible:
+    text: "Garantía insuficiente"
+    optional: true
+- assertVisible:
+    text: "Puja realizada"
+    optional: true

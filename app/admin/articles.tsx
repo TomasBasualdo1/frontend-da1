@@ -131,14 +131,14 @@ export default function AdminArticlesScreen() {
     <SafeAreaView style={s.safe}>
       {/* Header */}
       <View style={s.header}>
-        <Pressable onPress={() => router.back()} style={s.backBtn}>
+        <Pressable onPress={() => router.back()} style={s.backBtn} testID="admin-articles-back-btn">
           <View style={s.backBtnInner}>
             <MaterialIcons name="arrow-back-ios" size={16} color="#8B6914" />
             <Text style={s.backText}>Volver</Text>
           </View>
         </Pressable>
         <Text style={s.headerTitle}>Inspección de Artículos</Text>
-        <Pressable onPress={loadData} style={s.refreshBtn}>
+        <Pressable onPress={loadData} style={s.refreshBtn} testID="admin-articles-refresh-btn">
           <MaterialIcons name="refresh" size={20} color="#8B6914" />
         </Pressable>
       </View>
@@ -165,6 +165,7 @@ export default function AdminArticlesScreen() {
                   setShowDetailModal(true);
                 }}
                 style={s.cardWrapper}
+                testID="admin-articles-card"
               >
                 <View style={s.card}>
                   <View style={s.cardHeader}>
@@ -216,6 +217,7 @@ export default function AdminArticlesScreen() {
                 setSelectedArticle(null);
               }}
               style={s.backBtn}
+              testID="admin-articles-modal-close"
             >
               <View style={s.backBtnInner}>
                 <MaterialIcons name="close" size={18} color="#8B6914" />
@@ -267,7 +269,7 @@ export default function AdminArticlesScreen() {
                 <Text style={s.detailSecTitle}>Fotos Adjuntas ({selectedArticle.fotos?.length || 0})</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.galleryContainer}>
                   {selectedArticle.fotos?.map((photo: string, idx: number) => (
-                    <Pressable key={idx} onPress={() => setViewerImage(photo)}>
+                    <Pressable key={idx} onPress={() => setViewerImage(photo)} testID="admin-articles-photo">
                       <Image source={{ uri: photo }} style={s.galleryThumb} resizeMode="cover" />
                     </Pressable>
                   ))}
@@ -286,6 +288,7 @@ export default function AdminArticlesScreen() {
                     setMotivoRechazo("");
                     setShowEvaluateModal(true);
                   }}
+                  testID="admin-articles-rechazar-btn"
                 >
                   <View style={[s.btn, s.btnReject, { paddingVertical: 14 }]}>
                     <MaterialIcons name="close" size={20} color="#DC2626" />
@@ -301,6 +304,7 @@ export default function AdminArticlesScreen() {
                     setComision("");
                     setShowEvaluateModal(true);
                   }}
+                  testID="admin-articles-aprobar-btn"
                 >
                   <View style={[s.btn, s.btnApprove, { paddingVertical: 14 }]}>
                     <MaterialIcons name="gavel" size={20} color="#FFFFFF" />
@@ -335,6 +339,7 @@ export default function AdminArticlesScreen() {
                     onChangeText={setPrecioBase}
                     style={s.input}
                     placeholderTextColor="#9CA3AF"
+                    testID="admin-articles-precio-input"
                   />
                 </View>
 
@@ -347,6 +352,7 @@ export default function AdminArticlesScreen() {
                     onChangeText={setComision}
                     style={s.input}
                     placeholderTextColor="#9CA3AF"
+                    testID="admin-articles-comision-input"
                   />
                 </View>
               </View>
@@ -361,6 +367,7 @@ export default function AdminArticlesScreen() {
                   multiline
                   numberOfLines={4}
                   placeholderTextColor="#9CA3AF"
+                  testID="admin-articles-motivo-input"
                 />
               </View>
             )}
@@ -371,6 +378,7 @@ export default function AdminArticlesScreen() {
                 style={s.modalBtnWrapper}
                 onPress={() => setShowEvaluateModal(false)}
                 disabled={submitting}
+                testID="admin-articles-modal-cancel"
               >
                 <View style={[s.modalBtn, s.modalBtnCancel]}>
                   <Text style={s.modalBtnCancelText}>Cancelar</Text>
@@ -381,6 +389,7 @@ export default function AdminArticlesScreen() {
                 style={s.modalBtnWrapper}
                 onPress={handleEvaluate}
                 disabled={submitting}
+                testID="admin-articles-modal-confirm"
               >
                 <View style={[s.modalBtn, s.modalBtnSubmit]}>
                   {submitting ? (

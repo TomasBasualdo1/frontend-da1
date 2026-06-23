@@ -1,0 +1,21 @@
+# auth-08-logout
+# Flow: Login → Perfil tab → scroll to logout → confirm alert → assert back on Welcome
+
+appId: host.exp.exponent
+---
+- runFlow:
+    file: ../_helpers/login.yaml
+- tapOn: "Perfil"
+- scrollUntilVisible:
+    element:
+      id: "profile-logout-btn"
+    direction: DOWN
+- tapOn:
+    id: "profile-logout-btn"
+- assertVisible: "Cerrar sesion"
+# Confirm the logout action — exact text may be "Cerrar sesión" on the alert button
+- tapOn: "Cerrar sesión"
+- assertVisible:
+    text: "Iniciar sesión"
+    optional: true
+- assertNotVisible: "Inicio"

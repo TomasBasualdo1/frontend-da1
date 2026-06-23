@@ -168,28 +168,28 @@ export default function AdminUsersScreen() {
     <SafeAreaView style={s.safe}>
       {/* Header */}
       <View style={s.header}>
-        <Pressable onPress={() => router.back()} style={s.backBtn}>
+        <Pressable onPress={() => router.back()} style={s.backBtn} testID="admin-users-back-btn">
           <View style={s.backBtnInner}>
             <MaterialIcons name="arrow-back-ios" size={16} color="#8B6914" />
             <Text style={s.backText}>Volver</Text>
           </View>
         </Pressable>
         <Text style={s.headerTitle}>Gestión de Usuarios</Text>
-        <Pressable onPress={loadData} style={s.refreshBtn}>
+        <Pressable onPress={loadData} style={s.refreshBtn} testID="admin-users-refresh-btn">
           <MaterialIcons name="refresh" size={20} color="#8B6914" />
         </Pressable>
       </View>
 
       {/* Tabs */}
       <View style={s.tabContainer}>
-        <Pressable onPress={() => setActiveTab("pending")} style={s.tabWrapper}>
+        <Pressable onPress={() => setActiveTab("pending")} style={s.tabWrapper} testID="admin-users-tab-pendientes">
           <View style={[s.tab, activeTab === "pending" && s.activeTab]}>
             <Text style={[s.tabText, activeTab === "pending" && s.activeTabText]}>
               Pendientes ({pendingUsers.length})
             </Text>
           </View>
         </Pressable>
-        <Pressable onPress={() => setActiveTab("all")} style={s.tabWrapper}>
+        <Pressable onPress={() => setActiveTab("all")} style={s.tabWrapper} testID="admin-users-tab-todos">
           <View style={[s.tab, activeTab === "all" && s.activeTab]}>
             <Text style={[s.tabText, activeTab === "all" && s.activeTabText]}>
               Todos los Usuarios
@@ -208,6 +208,7 @@ export default function AdminUsersScreen() {
             onChangeText={setSearchQuery}
             style={s.searchInput}
             placeholderTextColor="#9CA3AF"
+            testID="admin-users-search-input"
           />
         </View>
       )}
@@ -262,7 +263,7 @@ export default function AdminUsersScreen() {
                       <View style={s.imageCard}>
                         <Text style={s.imageLabel}>Frente</Text>
                         {u.fotoFrente ? (
-                          <Pressable onPress={() => setViewerImage(u.fotoFrente || null)}>
+                          <Pressable onPress={() => setViewerImage(u.fotoFrente || null)} testID="admin-users-dni-frente">
                             <Image source={{ uri: u.fotoFrente }} style={s.dniThumb} resizeMode="cover" />
                           </Pressable>
                         ) : (
@@ -274,7 +275,7 @@ export default function AdminUsersScreen() {
                       <View style={s.imageCard}>
                         <Text style={s.imageLabel}>Dorso</Text>
                         {u.fotoDorso ? (
-                          <Pressable onPress={() => setViewerImage(u.fotoDorso || null)}>
+                          <Pressable onPress={() => setViewerImage(u.fotoDorso || null)} testID="admin-users-dni-dorso">
                             <Image source={{ uri: u.fotoDorso }} style={s.dniThumb} resizeMode="cover" />
                           </Pressable>
                         ) : (
@@ -293,6 +294,7 @@ export default function AdminUsersScreen() {
                         setSelectedUser(u);
                         setActionType("reject");
                       }}
+                      testID="admin-users-rechazar-btn"
                     >
                       <View style={[s.btn, s.btnReject]}>
                         <MaterialIcons name="close" size={16} color="#DC2626" />
@@ -307,6 +309,7 @@ export default function AdminUsersScreen() {
                         setActionType("approve");
                         setSelectedCategory("comun");
                       }}
+                      testID="admin-users-aprobar-btn"
                     >
                       <View style={[s.btn, s.btnApprove]}>
                         <MaterialIcons name="check" size={16} color="#FFFFFF" />
@@ -361,6 +364,7 @@ export default function AdminUsersScreen() {
                   <Pressable
                     style={s.actionBtnWrapper}
                     onPress={() => handleRecalculateCategory(u)}
+                    testID="admin-users-recalcular-btn"
                   >
                     <View style={[s.btn, s.btnRecalc]}>
                       <MaterialIcons name="auto-awesome" size={16} color="#2563EB" />
@@ -374,6 +378,7 @@ export default function AdminUsersScreen() {
                       setActionType("category");
                       setSelectedCategory(u.categoria || "comun");
                     }}
+                    testID="admin-users-mod-cat-btn"
                   >
                     <View style={[s.btn, s.btnCategory]}>
                       <MaterialIcons name="edit" size={16} color="#8B6914" />
@@ -407,7 +412,7 @@ export default function AdminUsersScreen() {
                 <Text style={s.formLabel}>Seleccione la Categoría:</Text>
                 <View style={s.categoryList}>
                   {CATEGORIES.map((cat) => (
-                    <Pressable key={cat} onPress={() => setSelectedCategory(cat)} style={{ width: "100%", marginBottom: 8 }}>
+                    <Pressable testID={`admin-users-cat-${cat}`} key={cat} onPress={() => setSelectedCategory(cat)} style={{ width: "100%", marginBottom: 8 }}>
                       <View style={[s.categoryOption, selectedCategory === cat && s.selectedCategoryOption]}>
                         <MaterialIcons
                           name={selectedCategory === cat ? "radio-button-checked" : "radio-button-unchecked"}
@@ -436,6 +441,7 @@ export default function AdminUsersScreen() {
                   multiline
                   numberOfLines={4}
                   placeholderTextColor="#9CA3AF"
+                  testID="admin-users-motivo-input"
                 />
               </View>
             )}
@@ -450,6 +456,7 @@ export default function AdminUsersScreen() {
                   setRejectionReason("");
                 }}
                 disabled={submitting}
+                testID="admin-users-modal-cancel"
               >
                 <View style={[s.modalBtn, s.modalBtnCancel]}>
                   <Text style={s.modalBtnCancelText}>Cancelar</Text>
@@ -460,6 +467,7 @@ export default function AdminUsersScreen() {
                 style={s.modalBtnWrapper}
                 onPress={actionType === "category" ? handleUpdateCategory : handleVerify}
                 disabled={submitting}
+                testID="admin-users-modal-confirm"
               >
                 <View style={[s.modalBtn, s.modalBtnSubmit]}>
                   {submitting ? (
