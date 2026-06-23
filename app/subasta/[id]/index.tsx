@@ -434,7 +434,7 @@ export default function SubastaDetalleScreen() {
         </SafeAreaView>
       )}
 
-      {isClosed && isAuthenticated && (
+      {isClosed && isAuthenticated && subasta.tieneDeuda && (
         <SafeAreaView style={st.stickyBottomArea} edges={["bottom"]}>
           <Pressable
             onPress={() => router.push(`/pagos/${subasta.id}` as any)}

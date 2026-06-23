@@ -64,6 +64,7 @@ export interface ItemCatalogoPublico {
 
 export interface SubastaDetalle extends SubastaListado {
   catalogo: ItemCatalogo[];
+  tieneDeuda?: boolean;
 }
 
 export interface SubastaDetallePublica extends SubastaListado {
