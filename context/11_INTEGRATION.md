@@ -6,7 +6,7 @@ Vista desde el **frontend**. (Contraparte: `backend-da1/context/12_INTEGRATION.m
 
 - Esta app consume la API REST de `backend-da1` con **JWT Bearer**.
 - Son **dos repos git independientes** abiertos juntos en el workspace VS Code (**no monorepo**): no comparten dependencias ni build.
-- **Contrato compartido**: `Swagger_v4.YAML` (copia en `context/`), del cual derivan los tipos de `src/types/` (lado front) y los Pydantic del backend.
+- **Contrato compartido**: `Swagger_v5.YAML` (copia en `context/`), del cual derivan los tipos de `src/types/` (lado front) y los Pydantic del backend.
 - El esquema SQL `Estructura-PostgreSQL-da1-updated.sql` (copia en `context/`) lo administra el backend; el front no toca la base directamente.
 
 ## Cómo se conecta

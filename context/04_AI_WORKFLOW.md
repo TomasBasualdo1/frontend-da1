@@ -7,7 +7,7 @@ Cómo debe trabajar una IA (o dev nuevo) en este repo **antes de tocar código**
 1. [00_OVERVIEW.md](00_OVERVIEW.md) y [01_ARCHITECTURE.md](01_ARCHITECTURE.md) — modelo mental.
 2. [10_NAVIGATION_AND_SCREENS.md](10_NAVIGATION_AND_SCREENS.md) — mapa de rutas/pantallas.
 3. [03_CODE_CONVENTIONS.md](03_CODE_CONVENTIONS.md) — convenciones reales (¡NativeWind NO se usa!).
-4. [11_INTEGRATION.md](11_INTEGRATION.md) + `context/Swagger_v4.YAML` — contrato con el backend.
+4. [11_INTEGRATION.md](11_INTEGRATION.md) + `context/Swagger_v5.YAML` — contrato con el backend.
 5. La **pantalla/servicio vecino** del que vas a tocar (imitar estilo).
 
 ## 2. Qué leer según el tipo de tarea

@@ -25,7 +25,7 @@ Documentación contextual de la app móvil del **Sistema de Subastas**. Objetivo
 ## Material de referencia conservado en `context/` (no son docs nuevos)
 
 - **`consignas.md`** — **la consigna oficial del proyecto** (requisitos del TPO de Desarrollo de Aplicaciones I). Fuente de verdad del dominio. La versión completa con entregables está en `backend-da1/context/TPO_DAI_1C2026.md`.
-- `Swagger_v4.YAML` — contrato OpenAPI 3.0 de la API (origen de los tipos TS).
+- `Swagger_v5.YAML` — contrato OpenAPI 3.0 de la API (origen de los tipos TS).
 - `Estructura-PostgreSQL-da1-updated.sql` — esquema de la base (la administra el backend).
 - `progress-tracker.md` — avance por spec (estado de implementación front/back).
 - `specs/` — specs SDD numeradas (01–12) que guiaron el desarrollo.

@@ -56,4 +56,4 @@ frontend-da1/
 
 ## Relación con el otro repo
 
-Consume `backend-da1` por HTTP REST con JWT Bearer. El contrato es `Swagger_v4.YAML` (copiado en `context/`), del que derivan los tipos en `src/types/`. Detalle en [11_INTEGRATION.md](11_INTEGRATION.md).
+Consume `backend-da1` por HTTP REST con JWT Bearer. El contrato es `Swagger_v5.YAML` (copiado en `context/`), del que derivan los tipos en `src/types/`. Detalle en [11_INTEGRATION.md](11_INTEGRATION.md).

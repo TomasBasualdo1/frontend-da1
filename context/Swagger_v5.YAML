@@ -38,7 +38,7 @@ paths:
               $ref: "#/components/schemas/RegistroPaso1"
       responses:
         "201":
-          description: Registro inicial creado. Se envio email para el paso 2.
+          description: Registro inicial creado. Queda pendiente de aprobacion por la empresa.
         "400":
           description: Error de validacion en los datos enviados.
         "409":
@@ -543,6 +543,7 @@ paths:
     get:
       summary: Ver detalle de subasta y su catalogo
       tags: [Subastas]
+      description: Retorna el catalogo con precios si la categoria del usuario alcanza la categoria de la subasta.
       parameters:
         - name: id
           in: path
@@ -561,6 +562,8 @@ paths:
                 $ref: "#/components/schemas/SubastaDetalle"
         "401":
           description: No autorizado.
+        "403":
+          description: Categoria insuficiente para ver el detalle autenticado.
         "404":
           description: Subasta no encontrada.
 
@@ -756,6 +759,7 @@ paths:
         2. Categoria del usuario >= categoria de la subasta.
         3. Puja mayor a la ultima oferta.
         4. Incremento minimo (+1% del valor base) y maximo (+20%), salvo oro/platino.
+        5. Exposicion acumulada contra garantia limitada validada, si el usuario dejo cheque certificado o cuenta bancaria con fondos reservados.
       parameters:
         - name: id
           in: path
@@ -791,7 +795,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/PujaResponse"
         "400":
-          description: Puja fuera de limites o menor a la oferta actual.
+          description: Puja fuera de limites, menor a la oferta actual o garantia insuficiente.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      detail:
+                        type: string
+                  - type: object
+                    properties:
+                      detail:
+                        $ref: "#/components/schemas/GarantiaInsuficienteError"
         "401":
           description: No autorizado.
         "403":
@@ -863,6 +879,40 @@ paths:
           description: No autorizado (solo administradores).
         "404":
           description: Medio de pago no encontrado.
+
+  /admin/pagos/procesar-vencimientos:
+    post:
+      summary: Procesar pagos vencidos y multas
+      tags: [Administracion]
+      description: Marca pagos pendientes vencidos, genera multas idempotentes del 10% y aplica bloqueo por multas vencidas.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Resumen de vencimientos procesados.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pagosVencidosProcesados:
+                    type: integer
+                  multasCreadas:
+                    type: integer
+                  usuariosMarcadosMultaActiva:
+                    type: array
+                    items:
+                      type: integer
+                  usuariosBloqueados:
+                    type: array
+                    items:
+                      type: integer
+                  multasVencidasBloqueantes:
+                    type: integer
+        "401":
+          description: No autorizado.
+        "403":
+          description: No autorizado (solo administradores).
 
   /admin/articulos/{id}/evaluar:
     post:
@@ -962,6 +1012,43 @@ components:
     Moneda:
       type: string
       enum: [ARS, USD]
+
+    EstadoMulta:
+      type: string
+      enum: [pendiente, pagada]
+
+    EstadoSubasta:
+      type: string
+      enum: [abierta, cerrada]
+
+    EstadoPago:
+      type: string
+      enum: [pendiente, pagado, vencido]
+
+    EstadoSesionSubasta:
+      type: string
+      enum: [activa, finalizada]
+
+    EstadoArticulo:
+      type: string
+      enum: [pendiente, en_inspeccion, aprobado, rechazado, devuelto]
+
+    EstadoEvaluacionArticulo:
+      type: string
+      enum: [aprobado, rechazado]
+
+    EstadoVerificacionMedioPagoInput:
+      type: string
+      enum: [validado, rechazado]
+
+    TipoNotificacion:
+      type: string
+      enum: [pago, subasta, sistema]
+
+    TipoStreamEvent:
+      type: string
+      enum: [puja, item, cierre]
+
 
     RegistroPaso1:
       type: object
@@ -1220,8 +1307,7 @@ components:
       required: [estadoVerificacion]
       properties:
         estadoVerificacion:
-          type: string
-          enum: [validado, rechazado]
+          $ref: "#/components/schemas/EstadoVerificacionMedioPagoInput"
 
     Multa:
       type: object
@@ -1232,8 +1318,7 @@ components:
           type: number
           format: float
         estado:
-          type: string
-          enum: [pendiente, pagada]
+          $ref: "#/components/schemas/EstadoMulta"
         fechaLimite:
           type: string
           format: date-time
@@ -1255,8 +1340,7 @@ components:
         id:
           type: integer
         tipo:
-          type: string
-          enum: [pago, subasta, sistema]
+          $ref: "#/components/schemas/TipoNotificacion"
         mensaje:
           type: string
         fechaHora:
@@ -1277,14 +1361,14 @@ components:
           type: string
           format: time
         estado:
-          type: string
-          enum: [abierta, cerrada]
+          $ref: "#/components/schemas/EstadoSubasta"
         categoria:
           $ref: "#/components/schemas/Categoria"
         ubicacion:
           type: string
         moneda:
           $ref: "#/components/schemas/Moneda"
+          description: Moneda de la subasta (ARS o USD).
 
     SubastaListadoPublico:
       allOf:
@@ -1390,6 +1474,29 @@ components:
         esGanadoraParcial:
           type: boolean
 
+    GarantiaInsuficienteError:
+      type: object
+      properties:
+        codigo:
+          type: string
+          enum: [GARANTIA_INSUFICIENTE]
+        mensaje:
+          type: string
+        garantiaDisponible:
+          type: number
+          format: float
+          description: Garantia aun disponible antes de registrar la puja candidata.
+        exposicionActual:
+          type: number
+          format: float
+          description: Pagos pendientes mas pujas ganadoras parciales activas antes de la candidata.
+        importeRequerido:
+          type: number
+          format: float
+          description: Exposicion adicional que agregaria la puja candidata.
+        moneda:
+          $ref: "#/components/schemas/Moneda"
+
     Puja:
       type: object
       properties:
@@ -1442,8 +1549,7 @@ components:
           type: string
           enum: [envio, retiro]
         estado:
-          type: string
-          enum: [pendiente, pagado, vencido]
+          $ref: "#/components/schemas/EstadoPago"
         fechaLimitePago:
           type: string
           format: date-time
@@ -1472,8 +1578,7 @@ components:
         usuarioId:
           type: integer
         estado:
-          type: string
-          enum: [activa, finalizada]
+          $ref: "#/components/schemas/EstadoSesionSubasta"
         fechaHoraInicio:
           type: string
           format: date-time
@@ -1482,8 +1587,7 @@ components:
       type: object
       properties:
         type:
-          type: string
-          enum: [puja, item]
+          $ref: "#/components/schemas/TipoStreamEvent"
         fechaHora:
           type: string
           format: date-time
@@ -1551,8 +1655,7 @@ components:
           type: string
           format: date
         estado:
-          type: string
-          enum: [pendiente, en_inspeccion, aprobado, rechazado, devuelto]
+          $ref: "#/components/schemas/EstadoArticulo"
         motivoRechazo:
           type: string
           nullable: true
@@ -1575,8 +1678,7 @@ components:
       required: [estado]
       properties:
         estado:
-          type: string
-          enum: [aprobado, rechazado]
+          $ref: "#/components/schemas/EstadoEvaluacionArticulo"
         motivoRechazo:
           type: string
         precioBasePropuesto:

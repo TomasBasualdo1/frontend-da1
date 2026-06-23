@@ -36,7 +36,7 @@ Basadas en el código **real**. Para escribir código nuevo, imitá una pantalla
 ## Tipos (`src/types/`)
 
 - Un archivo por dominio (`auth.ts`, `user.ts`, `auction.ts`, `article.ts`, `payment.ts`, `common.ts`), re-exportados en `index.ts`.
-- **Deben reflejar el Swagger** (`context/Swagger_v4.YAML`) y los modelos Pydantic del backend.
+- **Deben reflejar el Swagger** (`context/Swagger_v5.YAML`) y los modelos Pydantic del backend.
 - Enums como uniones de strings (`type Categoria = 'comun' | ... | 'platino'`).
 - Importar desde el barrel: `import { Usuario, SubastaListado } from '../types'`.
 

@@ -1217,14 +1217,14 @@ export default function ProfileScreen() {
 
                       <Pressable
                         style={({ pressed }) => [
-                          s.cancelBtn,
+                          s.cancelBtnEdit,
                           pressed && { opacity: 0.8 },
                         ]}
                         onPress={() => setIsEditing(false)}
                         disabled={saving}
                       >
                         <View style={s.cancelBtnInner}>
-                          <Text style={s.cancelBtnText}>Cancelar</Text>
+                          <Text style={s.cancelBtnEditText}>Cancelar</Text>
                         </View>
                       </Pressable>
                     </View>
@@ -3202,7 +3202,7 @@ const s = StyleSheet.create({
     fontWeight: "700",
     paddingHorizontal: 16,
   },
-  cancelBtn: { flex: 1 },
+  cancelBtnEdit: { flex: 1 },
   cancelBtnInner: {
     height: 48,
     borderRadius: 12,
@@ -3213,5 +3213,5 @@ const s = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#FFF",
   },
-  cancelBtnText: { color: "#6B7280", fontSize: 15, fontWeight: "700" },
+  cancelBtnEditText: { color: "#6B7280", fontSize: 15, fontWeight: "700" },
 });
