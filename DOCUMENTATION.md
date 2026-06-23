@@ -58,22 +58,31 @@ frontend-da1/
 │   │   ├── welcome.tsx             # Pantalla de bienvenida
 │   │   ├── login.tsx               # Login (documento + password)
 │   │   ├── register-step1.tsx      # Registro paso 1 (datos personales + fotos DNI)
-│   │   ├── register-step2.tsx      # Registro paso 2 (token + password)
-│   │   └── forgot-password.tsx     # Recuperación de contraseña
+│   │   ├── register-step2.tsx      # Registro paso 2 (token + password + medio de pago)
+│   │   ├── forgot-password.tsx     # Recuperación de contraseña
+│   │   └── reset-password.tsx      # Restablecer contraseña con token
 │   │
 │   ├── (tabs)/                     # Grupo de rutas con tabs (app principal)
 │   │   ├── _layout.tsx             # Bottom tab layout (4 tabs)
 │   │   ├── index.tsx               # Home — subastas destacadas y próximas
-│   │   ├── live.tsx                # Subastas en vivo con bidding
+│   │   ├── live.tsx                # Subastas en vivo con bidding en tiempo real
 │   │   ├── subastas.tsx            # Listado de subastas con búsqueda/filtros
-│   │   └── profile.tsx             # Perfil con 4 sub-tabs
+│   │   └── profile.tsx             # Perfil con 4 sub-tabs (Perfil, Consignaciones, Pagos & Multas, Métricas)
+│   │
+│   ├── admin/                      # Panel de administración
+│   │   ├── index.tsx               # Dashboard con 4 cards de acceso
+│   │   ├── users.tsx               # Verificación de registros y gestión de usuarios
+│   │   ├── articles.tsx            # Inspección y evaluación de artículos consignados
+│   │   ├── payments.tsx            # Verificación de medios de pago pendientes
+│   │   └── auctions.tsx            # Gestión de subastas: crear, catalogar, cerrar
+│   │
+│   ├── subasta/                    # Grupo de detalle de subasta
+│   │   ├── _layout.tsx             # Stack layout sin header
+│   │   └── [id]/
+│   │       └── index.tsx           # Detalle de subasta (catálogo + join)
 │   │
 │   ├── consignar.tsx               # Wizard de 4 pasos para publicar artículo
-│   │
-│   └── subasta/                    # Grupo de detalle de subasta
-│       ├── _layout.tsx             # Stack layout sin header
-│       └── [id]/
-│           └── index.tsx           # Detalle de subasta (catálogo + join)
+│   └── pagos/[subastaId].tsx       # Pantalla de pago: resumen, medio de pago, modo entrega
 │
 ├── src/                            # Lógica de negocio
 │   ├── constants/
@@ -86,21 +95,23 @@ frontend-da1/
 │   │   ├── index.ts                # Re-exporta todos los servicios
 │   │   ├── api.ts                  # Instancia Axios con interceptores
 │   │   ├── authService.ts          # Endpoints de autenticación
-│   │   ├── auctionService.ts       # Endpoints de subastas
-│   │   ├── articleService.ts       # Endpoints de artículos
-│   │   └── userService.ts          # Endpoints de usuario
+│   │   ├── auctionService.ts       # Endpoints de subastas + SSE streaming
+│   │   ├── articleService.ts       # Endpoints de artículos (consignación, tasación, seguro)
+│   │   ├── userService.ts          # Endpoints de usuario (perfil, medios de pago, métricas, multas)
+│   │   └── adminService.ts         # Endpoints de administración
 │   │
 │   ├── types/
 │   │   ├── index.ts                # Re-exporta todos los tipos
-│   │   ├── common.ts               # Categoria, Moneda, Notificacion, etc.
-│   │   ├── auth.ts                 # LoginRequest, TokenResponse, RegistroPaso1/2
+│   │   ├── common.ts               # Categoria, Moneda, Notificacion, StreamEvent, Seguro
+│   │   ├── auth.ts                 # LoginRequest, TokenResponse, RegistroPaso1/2, ResetPassword
 │   │   ├── user.ts                 # Usuario, UsuarioUpdate, UsuarioMetricas
-│   │   ├── payment.ts              # MedioPago, Multa
-│   │   ├── auction.ts              # SubastaListado, SubastaDetalle, ItemCatalogo, Puja
+│   │   ├── payment.ts              # MedioPago, MedioPagoInput, Multa, MultaPagoRequest
+│   │   ├── auction.ts              # SubastaListado, SubastaDetalle, ItemCatalogo, Puja, Pago, GarantiaInsuficiente
 │   │   └── article.ts              # Articulo, ArticuloInput
 │   │
 │   └── utils/
-│       └── storage.ts              # Wrapper de SecureStore (nativo + web fallback)
+│       ├── storage.ts              # Wrapper de SecureStore (nativo + web fallback)
+│       └── auctionSchedule.ts      # Clasificación de subastas (en vivo/programada/abierta/finalizada)
 │
 ├── assets/images/                  # Iconos, splash, logo
 │
@@ -109,8 +120,6 @@ frontend-da1/
 │   ├── architecture-context.md
 │   ├── code-standards.md
 │   ├── ai-workflow-rules.md
-│   ├── consignas.txt
-│   ├── progress-tracker.md
 │   └── specs/                      # 11 specs de funcionalidades
 │       ├── 01-auth-setup.md
 │       ├── 02-auth-login.md
@@ -124,7 +133,7 @@ frontend-da1/
 │       ├── 10-multas-bloqueos.md
 │       └── 11-native-tabs.md
 │
-└── lib/                            # Directorio vacío (para futuros utilities)
+└── .agents/skills/                 # Skills para agentes de IA
 ```
 
 ---
@@ -172,10 +181,12 @@ src/ (lógica de negocio)
 
 | Grupo          | Layout              | Pantallas                                          |
 | -------------- | ------------------- | -------------------------------------------------- |
-| `(auth)`       | Stack sin header    | welcome, login, register-step1, register-step2, forgot-password |
+| `(auth)`       | Stack sin header    | welcome, login, register-step1, register-step2, forgot-password, reset-password |
 | `(tabs)`       | Bottom tabs (4)     | index (Inicio), live (En Vivo), subastas, profile  |
+| `admin`        | Stack sin header    | index (Dashboard), users, articles, payments, auctions |
 | `subasta`      | Stack sin header    | `[id]/index` (detalle de subasta)                  |
 | `consignar`    | (ruta plana)        | consignar (wizard 4 pasos)                         |
+| `pagos`        | Stack sin header    | `[subastaId]` (pago de subasta)                    |
 
 ### Navegación programática
 
@@ -207,24 +218,36 @@ Los 4 tabs del layout principal usan `expo-router/unstable-native-tabs` con icon
 | `welcome.tsx`        | Landing: branding SubastApp, features, botones login/register/invitado |
 | `login.tsx`          | Formulario documento + password, validación, manejo de errores (401/403/400), link forgot password |
 | `register-step1.tsx` | Formulario datos personales + upload fotos DNI (frente/dorso) con expo-image-picker |
-| `register-step2.tsx` | Verificación de token + creación de password con medidor de fortaleza |
+| `register-step2.tsx` | Verificación de token + creación de password con medidor de fortaleza + medio de pago opcional |
 | `forgot-password.tsx`| Input email + envío de link de recuperación + pantalla de confirmación |
+| `reset-password.tsx` | Input de código de 6 dígitos + nueva contraseña con medidor de fortaleza + confirmación |
 
 ### Main App `(tabs)`
 
 | Pantalla       | Descripción                                                      |
 | -------------- | ---------------------------------------------------------------- |
 | `index.tsx`    | Home: saludo personalizado, carrusel horizontal "En Vivo", lista vertical "Próximas Subastas" con pull-to-refresh |
-| `live.tsx`     | 3 estados: no auth (login prompt), lobby (lista subastas en vivo), activo (streaming, info item actual, botones de puja rápida 1%/5%/10%/20%, input personalizado, historial en tiempo real) |
-| `subastas.tsx` | Listado: barra de búsqueda, filtros por categoría, stats (total/en vivo/próximas), cards de subastas |
-| `profile.tsx`  | 4 sub-tabs: **Subastas** (historial con búsqueda), **Perfil** (avatar, datos, badge categoría, notificaciones, logout), **Pagos** (medios de pago con verificación + multas), **Metricas** (stats: subastas, ganadas, éxito %, pujas, total ofertado/pagado) |
+| `live.tsx`     | 3 estados: no auth (login prompt), lobby (lista subastas en vivo con validación de categoría), activo (streaming SSE, info item actual, botones de puja rápida 1%/5%/10%/20%, input personalizado, historial en tiempo real, manejo de error GARANTIA_INSUFICIENTE) |
+| `subastas.tsx` | Listado: barra de búsqueda, filtros por categoría, stats (total/en vivo/próximas), cards de subastas con indicador "Solo espectador" para guest |
+| `profile.tsx`  | 4 sub-tabs: **Perfil** (avatar, datos, badge categoría, editar perfil, notificaciones, logout, acceso admin), **Mis Consignaciones** (artículos publicados con estado, tasación, seguro, ubicación, fotos), **Pagos & Multas** (medios de pago CRUD con verificación, multas con pago), **Métricas** (subastas participadas, ganadas, % éxito, pujas, totales ofertado/pagado) |
 
 ### Otras pantallas
 
 | Pantalla              | Descripción                                                      |
 | --------------------- | ---------------------------------------------------------------- |
-| `subasta/[id]/index`  | Detalle: badges categoría/estado, fecha/ubicación, catálogo con fotos, precio base/oferta actual, botón "Ir a subasta en vivo" |
-| `consignar.tsx`       | Wizard 4 pasos: (1) título/categoría/descripción, (2) historia/procedencia/artista/declaraciones, (3) fotos (6-10), (4) confirmación |
+| `subasta/[id]/index`  | Detalle: hero image con gradiente, badges categoría/estado, fecha/ubicación, catálogo con fotos y precios (base + mejor oferta), botón "Ingresar a la Sala en Vivo" o "Ver deuda y pagar" según estado |
+| `consignar.tsx`       | Wizard 4 pasos: (1) título/categoría/descripción, (2) historia/procedencia/artista/declaraciones de propiedad y origen lícito, (3) fotos (mín 6, máx 10), (4) confirmación |
+| `pagos/[subastaId]`   | Pago de subasta: resumen (total pujado, comisión, envío, total final), selector de medio de pago con compatibilidad (moneda, fondos, estado), modo entrega (envío con dirección o retiro con waiver de seguro), confirmación |
+
+### Admin `(admin)`
+
+| Pantalla          | Descripción                                                      |
+| ----------------- | ---------------------------------------------------------------- |
+| `admin/index`     | Dashboard con 4 cards: Verificación de Registros, Medios de Pago, Artículos Consignados, Gestión de Subastas |
+| `admin/users`     | Dos tabs: **Pendientes** (aprobar con selector de categoría / rechazar con motivo, ver fotos DNI) y **Todos los Usuarios** (búsqueda, modificar categoría) |
+| `admin/articles`  | Lista de artículos pendientes con detalle (fotos, historia, artista). Modal de evaluación: aprobar con precio base y comisión, o rechazar con motivo |
+| `admin/payments`  | Lista de medios de pago pendientes de verificación con datos del titular. Botones validar/rechazar con confirmación |
+| `admin/auctions`  | Tres tabs: **Ver Subastas** (listado, catalogar ítem, cerrar), **Crear Evento** (fecha >10 días, hora, categoría, moneda, subastador, ubicación), **Catalogar** (seleccionar subasta + artículo aprobado, definir precio base y comisión) |
 
 ---
 
@@ -258,10 +281,11 @@ api.interceptors.response.use(
 
 | Archivo              | Funcionalidad                                                |
 | -------------------- | ------------------------------------------------------------ |
-| `authService.ts`     | login, logout, register (paso 1 con FormData, paso 2), forgot/reset password |
-| `auctionService.ts`  | listar subastas (públicas/autenticado), detalle, join/leave, historial pujas, pujar, pagos |
-| `articleService.ts`  | publicar artículo (con fotos en FormData), listar publicaciones, detalle, aceptar tasación, aumentar seguro |
-| `userService.ts`     | perfil (get/update), medios de pago (CRUD), métricas, multas, notificaciones. Incluye normalización de campos (`foto_url` → `foto`) |
+| `authService.ts`     | login, logout, registro paso 1 (FormData con fotos DNI), registro paso 2 (token + password + medio de pago), forgot/reset password, listar países |
+| `auctionService.ts`  | Listar subastas públicas/autenticadas, detalle, join/leave, historial pujas, pujar (con Idempotency-Key), streaming SSE con auto-reconexión, pagos (get/confirmar), admin: crear subasta, catalogar items, cerrar subasta |
+| `articleService.ts`  | Publicar artículo (multipart con fotos), listar mis publicaciones, detalle, aceptar/rechazar tasación, solicitar aumento de seguro |
+| `userService.ts`     | Perfil (get/update/delete avatar), medios de pago CRUD, métricas, multas (listar/pagar), notificaciones (listar/marcar leída). Incluye normalización de campos |
+| `adminService.ts`    | Usuarios pendientes, verificar usuario, todos los usuarios, modificar categoría. Artículos pendientes, evaluar artículo. Medios de pago pendientes, verificar medio de pago. Subastadores, artículos aprobados no catalogados |
 
 ### Idempotency Key
 
