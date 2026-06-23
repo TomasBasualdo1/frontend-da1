@@ -8,6 +8,7 @@ export interface SubastaListado {
   categoria: Categoria;
   ubicacion: string;
   moneda: Moneda;
+  duracionItemMinutos?: number;
 }
 
 export interface SubastaCreate {
@@ -60,6 +61,7 @@ export interface ItemCatalogoPublico {
   mejorOfertaActual?: number;
   subastado: 'si' | 'no';
   fotos: string[];
+  fechaFinItem?: string;
 }
 
 export interface SubastaDetalle extends SubastaListado {

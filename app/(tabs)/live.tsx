@@ -93,10 +93,25 @@ export default function LiveScreen() {
   const [sending, setSending] = useState(false);
   const [joined, setJoined] = useState(false);
   const [historial, setHistorial] = useState<Puja[]>([]);
-  const [timer, setTimer] = useState("31:59");
+  const [itemEndTime, setItemEndTime] = useState<Date | null>(null);
+  const timer = (() => {
+    if (!itemEndTime) return "00:00";
+    const diff = Math.max(0, Math.floor((itemEndTime.getTime() - Date.now()) / 1000));
+    const m = Math.floor(diff / 60).toString().padStart(2, "0");
+    const s = (diff % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  })();
   const [streamStatus, setStreamStatus] = useState<"idle" | "connecting" | "connected" | "fallback">("idle");
   const inFlightBidKey = useRef<string | null>(null);
   const streamCleanupRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    if (!itemEndTime) return;
+    const interval = setInterval(() => {
+      setItemEndTime((prev) => prev ? new Date(prev.getTime()) : null);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [itemEndTime]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -201,6 +216,13 @@ export default function LiveScreen() {
       onEvent: (event) => {
         if (event.type === "puja") {
           applyLivePuja(event);
+          return;
+        }
+        if (event.type === "item") {
+          const data = event.data as { fechaFinItem?: string };
+          if (data?.fechaFinItem) {
+            setItemEndTime(new Date(data.fechaFinItem));
+          }
           return;
         }
         if (event.type === "cierre") {

@@ -171,6 +171,7 @@ export default function AdminAuctionsScreen() {
   const [capacidad, setCapacidad] = useState("100");
   const [tieneDeposito, setTieneDeposito] = useState(false);
   const [seguridadPropia, setSeguridadPropia] = useState(false);
+  const [duracionItemMinutos, setDuracionItemMinutos] = useState("30");
 
   // Catalog Form States
   const [subastaIdInput, setSubastaIdInput] = useState("");
@@ -291,6 +292,7 @@ export default function AdminAuctionsScreen() {
       if (subastadorId.trim()) payload.subastadorId = parseInt(subastadorId);
       if (ubicacion.trim()) payload.ubicacion = ubicacion;
       if (capacidad.trim()) payload.capacidadAsistentes = parseInt(capacidad);
+      if (duracionItemMinutos.trim()) payload.duracionItemMinutos = parseInt(duracionItemMinutos);
 
       await auctionService.createSubasta(payload);
       Alert.alert("Éxito", "Subasta creada exitosamente con su catálogo.");
@@ -648,6 +650,19 @@ export default function AdminAuctionsScreen() {
           <View style={s.switchRow}>
             <Text style={s.switchLabel}>¿Cuenta con seguridad corporativa propia?</Text>
             <Switch value={seguridadPropia} onValueChange={setSeguridadPropia} trackColor={{ true: "#B8941C" }} />
+          </View>
+
+          <View style={s.formGroup}>
+            <Text style={s.formLabel}>Duración por ítem (minutos) *:</Text>
+            <TextInput
+              placeholder="Ej. 30"
+              keyboardType="numeric"
+              value={duracionItemMinutos}
+              onChangeText={setDuracionItemMinutos}
+              style={s.input}
+              placeholderTextColor="#9CA3AF"
+            />
+            <Text style={s.inputHelp}>Tiempo de puja disponible por cada ítem del catálogo.</Text>
           </View>
 
           <Pressable style={s.submitBtnWrapper} onPress={handleCreateAuction} disabled={submitting}>
