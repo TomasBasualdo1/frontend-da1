@@ -129,6 +129,31 @@ export default function AdminUsersScreen() {
     }
   };
 
+  const handleRecalculateCategory = async (u: Usuario) => {
+    if (!u.id) return;
+    setSubmitting(true);
+    try {
+      const result = await adminService.recalculateUserCategory(u.id);
+      if (result.upgraded) {
+        Alert.alert(
+          "Categoría Mejorada",
+          `El usuario fue promovido de "${result.categoriaAnterior}" a "${result.categoriaNueva}".\n\n${result.motivo}`
+        );
+      } else {
+        Alert.alert(
+          "Sin Cambios",
+          `No se requieren cambios. El usuario permanece en "${result.categoriaNueva}".\n\n${result.motivo}`
+        );
+      }
+      loadData();
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Error", "No se pudo recalcular la categoría.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const filteredAllUsers = allUsers.filter((u) => {
     const q = searchQuery.toLowerCase();
     const fullName = `${u.nombre || ""} ${u.apellido || ""}`.toLowerCase();
@@ -324,9 +349,24 @@ export default function AdminUsersScreen() {
                       {u.bloqueado ? "Sí" : "No"}
                     </Text>
                   </View>
+                  <View style={s.infoRow}>
+                    <Text style={s.infoLabel}>Diversidad de pagos:</Text>
+                    <Text style={s.infoVal}>
+                      {u.validatedPaymentDiversity ?? 0} {(u.validatedPaymentDiversity ?? 0) === 1 ? "tipo" : "tipos"}
+                    </Text>
+                  </View>
                 </View>
 
                 <View style={s.cardActions}>
+                  <Pressable
+                    style={s.actionBtnWrapper}
+                    onPress={() => handleRecalculateCategory(u)}
+                  >
+                    <View style={[s.btn, s.btnRecalc]}>
+                      <MaterialIcons name="auto-awesome" size={16} color="#2563EB" />
+                      <Text style={s.btnRecalcText}>Recalcular</Text>
+                    </View>
+                  </Pressable>
                   <Pressable
                     style={s.actionBtnWrapper}
                     onPress={() => {
@@ -706,6 +746,16 @@ const s = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     color: "#8B6914",
+  },
+  btnRecalc: {
+    backgroundColor: "#EFF6FF",
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+  },
+  btnRecalcText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#2563EB",
   },
   modalOverlay: {
     flex: 1,

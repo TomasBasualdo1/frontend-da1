@@ -13,6 +13,7 @@ export interface Usuario {
   admitido?: 'si' | 'no';
   estadoRegistro?: 'pendiente' | 'aprobado' | 'rechazado';
   categoria?: Categoria;
+  validatedPaymentDiversity?: number;
   multaActiva?: boolean;
   bloqueado?: boolean;
   fotoFrente?: string;

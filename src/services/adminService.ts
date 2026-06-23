@@ -33,6 +33,7 @@ const normalizeUsuario = (data: any): Usuario => ({
   admitido: data?.admitido,
   estadoRegistro: data?.estadoRegistro ?? data?.estado_registro ?? data?.estadoregistro,
   categoria: data?.categoria,
+  validatedPaymentDiversity: data?.validatedPaymentDiversity ?? data?.validatedpaymentdiversity ?? 0,
   multaActiva: data?.multaActiva ?? data?.multa_activa ?? data?.multaactiva,
   bloqueado: data?.bloqueado,
 });
@@ -90,6 +91,17 @@ export const adminService = {
   /** Cambiar categoría de un usuario */
   async updateUserCategory(id: number, categoria: Categoria): Promise<void> {
     await api.patch(`/admin/usuarios/${id}/categoria`, { categoria });
+  },
+
+  /** Recalcular categoría de un usuario automáticamente */
+  async recalculateUserCategory(id: number): Promise<{
+    categoriaAnterior: string;
+    categoriaNueva: string;
+    motivo: string;
+    upgraded: boolean;
+  }> {
+    const response = await api.post(`/admin/usuarios/${id}/recalcular-categoria`);
+    return response.data;
   },
 
   /** Listar artículos consignados pendientes de evaluar */

@@ -24,6 +24,7 @@ const normalizeUsuario = (data: any): Usuario => ({
   admitido: data?.admitido,
   estadoRegistro: data?.estadoRegistro ?? data?.estado_registro ?? data?.estadoregistro,
   categoria: data?.categoria,
+  validatedPaymentDiversity: data?.validatedPaymentDiversity ?? data?.validatedpaymentdiversity ?? 0,
   multaActiva: data?.multaActiva ?? data?.multa_activa ?? data?.multaactiva,
   bloqueado: data?.bloqueado,
 });
