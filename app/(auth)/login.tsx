@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Keyboard,
 } from "react-native";
 import type { AxiosError } from "axios";
 import { useRouter } from "expo-router";
@@ -65,6 +66,7 @@ export default function LoginScreen() {
   };
 
   const handleLogin = async () => {
+    Keyboard.dismiss();
     setFormError("");
     if (!validate()) return;
     setLoading(true);

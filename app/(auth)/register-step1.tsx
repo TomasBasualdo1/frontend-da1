@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   ScrollView,
   Image,
@@ -90,6 +91,7 @@ export default function RegisterStep1Screen() {
   };
 
   const handleSubmit = async () => {
+    Keyboard.dismiss();
     if (!validate()) return;
     setLoading(true);
     try {

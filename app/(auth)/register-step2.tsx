@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   Pressable,
   ScrollView,
@@ -62,6 +63,7 @@ export default function RegisterStep2Screen() {
   };
 
   const handleSubmit = async () => {
+    Keyboard.dismiss();
     if (!validate()) return;
     setLoading(true);
     try {
