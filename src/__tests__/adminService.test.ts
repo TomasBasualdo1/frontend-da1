@@ -218,4 +218,71 @@ describe('adminService', () => {
       });
     });
   });
+
+  // ─── getPendingPayments() ───────────────────────────────────────────────────
+
+  describe('getPendingPayments()', () => {
+    it('normaliza los medios de pago pendientes (snake_case → camelCase)', async () => {
+      mockApi.get.mockResolvedValueOnce({
+        data: [
+          {
+            id: 1,
+            tipo: 'tarjeta',
+            ultimos_digitos: '1234',
+            estado_verificacion: 'pendiente',
+            moneda: 'ARS',
+            limite_reservado: 10000,
+            pais_banco: 'AR',
+            es_cuenta_receptora: true,
+            clienteNombre: 'Carlos Gomez',
+          },
+        ],
+      });
+
+      const result = await adminService.getPendingPayments();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(1);
+      expect(result[0].tipo).toBe('tarjeta');
+      expect(result[0].ultimos_digitos).toBe('1234');
+      expect(result[0].estadoVerificacion).toBe('pendiente');
+      expect(result[0].moneda).toBe('ARS');
+      expect(result[0].limiteReservado).toBe(10000);
+      expect(result[0].paisBanco).toBe('AR');
+      expect(result[0].esCuentaReceptora).toBe(true);
+      expect(result[0].clienteNombre).toBe('Carlos Gomez');
+    });
+
+    it('devuelve array vacío si el backend no devuelve un array', async () => {
+      mockApi.get.mockResolvedValueOnce({ data: null });
+
+      const result = await adminService.getPendingPayments();
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  // ─── verifyPaymentMethod() ──────────────────────────────────────────────────
+
+  describe('verifyPaymentMethod()', () => {
+    it('verifica un medio de pago como validado', async () => {
+      mockApi.post.mockResolvedValueOnce({ data: {} });
+
+      await adminService.verifyPaymentMethod(3, { estadoVerificacion: 'validado' });
+
+      expect(mockApi.post).toHaveBeenCalledWith('/admin/medios-pago/3/verificar', {
+        estadoVerificacion: 'validado',
+      });
+    });
+
+    it('verifica un medio de pago como rechazado', async () => {
+      mockApi.post.mockResolvedValueOnce({ data: {} });
+
+      await adminService.verifyPaymentMethod(4, { estadoVerificacion: 'rechazado' });
+
+      expect(mockApi.post).toHaveBeenCalledWith('/admin/medios-pago/4/verificar', {
+        estadoVerificacion: 'rechazado',
+      });
+    });
+  });
 });

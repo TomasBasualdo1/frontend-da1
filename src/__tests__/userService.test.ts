@@ -158,4 +158,70 @@ describe('userService', () => {
       expect(result).toEqual([]);
     });
   });
+
+  // ─── getNotificaciones() ─────────────────────────────────────────────────────
+
+  describe('getNotificaciones()', () => {
+    it('normaliza las notificaciones (snake_case → camelCase)', async () => {
+      mockApi.get.mockResolvedValueOnce({
+        data: [
+          {
+            id: 1,
+            tipo: 'info',
+            mensaje: 'Nueva subasta disponible',
+            fecha_hora: '2026-06-23T10:00:00Z',
+            leida: false,
+          },
+        ],
+      });
+
+      const result = await userService.getNotificaciones();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(1);
+      expect(result[0].tipo).toBe('info');
+      expect(result[0].mensaje).toBe('Nueva subasta disponible');
+      expect(result[0].fechaHora).toBe('2026-06-23T10:00:00Z');
+      expect(result[0].leida).toBe(false);
+    });
+
+    it('devuelve array vacío si el backend devuelve null', async () => {
+      mockApi.get.mockResolvedValueOnce({ data: null });
+
+      const result = await userService.getNotificaciones();
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  // ─── marcarNotificacionLeida() ───────────────────────────────────────────────
+
+  describe('marcarNotificacionLeida()', () => {
+    it('llama a POST /usuarios/me/notificaciones/:id/leer', async () => {
+      mockApi.post.mockResolvedValueOnce({ data: {} });
+
+      await userService.marcarNotificacionLeida(5);
+
+      expect(mockApi.post).toHaveBeenCalledWith('/usuarios/me/notificaciones/5/leer');
+    });
+  });
+
+  // ─── addMedioPago() ──────────────────────────────────────────────────────────
+
+  describe('addMedioPago()', () => {
+    it('llama a POST /usuarios/me/medios-pago con el body correcto', async () => {
+      mockApi.post.mockResolvedValueOnce({ data: {} });
+
+      const mockInput = {
+        tipo: 'tarjeta' as const,
+        moneda: 'ARS' as const,
+        esCuentaReceptora: false,
+        paisBanco: 'AR',
+      };
+
+      await userService.addMedioPago(mockInput);
+
+      expect(mockApi.post).toHaveBeenCalledWith('/usuarios/me/medios-pago', mockInput);
+    });
+  });
 });
