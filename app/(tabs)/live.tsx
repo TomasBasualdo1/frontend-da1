@@ -106,6 +106,15 @@ export default function LiveScreen() {
   const streamCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
+    if (!joined || !detalle?.fecha || !detalle?.hora || !detalle?.duracionItemMinutos) return;
+    if (itemEndTime) return;
+    const [year, month, day] = detalle.fecha.split("T")[0].split("-").map(Number);
+    const [hours = 0, minutes = 0, seconds = 0] = detalle.hora.split(".")[0].split(":").map(Number);
+    const auctionStart = new Date(year, month - 1, day, hours, minutes, seconds);
+    setItemEndTime(new Date(auctionStart.getTime() + detalle.duracionItemMinutos * 60 * 1000));
+  }, [joined, detalle]);
+
+  useEffect(() => {
     if (!itemEndTime) return;
     const interval = setInterval(() => {
       setItemEndTime((prev) => prev ? new Date(prev.getTime()) : null);
@@ -201,6 +210,7 @@ export default function LiveScreen() {
     setSelectedId(null);
     setCurrentItem(null);
     setHistorial([]);
+    setItemEndTime(null);
   };
 
   useEffect(() => {

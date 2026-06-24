@@ -132,7 +132,7 @@ function LoadingSkeleton() {
 /* ── Format helpers ──────────────────────────────────────── */
 function formatDate(fecha: string): string {
   try {
-    const d = new Date(fecha);
+    const d = new Date(fecha + "T00:00:00");
     return d.toLocaleDateString("es-AR", { day: "numeric", month: "short" });
   } catch {
     return fecha;
