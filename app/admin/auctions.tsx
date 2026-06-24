@@ -159,8 +159,7 @@ export default function AdminAuctionsScreen() {
 
   // Create Form States
   const [fecha, setFecha] = useState(() => {
-    // Default to 11 days in the future to satisfy CURRENT_DATE + 10 days constraint
-    const d = new Date(Date.now() + 11 * 24 * 60 * 60 * 1000);
+    const d = new Date();
     return d.toISOString().split("T")[0];
   });
   const [hora, setHora] = useState("18:00:00");
@@ -269,12 +268,11 @@ export default function AdminAuctionsScreen() {
       return;
     }
 
-    // Verify date is > 10 days from today
-    const dateObj = new Date(fecha);
-    const minDate = new Date();
-    minDate.setDate(minDate.getDate() + 10);
-    if (dateObj <= minDate) {
-      Alert.alert("Error", "La fecha de la subasta debe ser posterior a 10 días desde hoy.");
+    const dateObj = new Date(fecha + "T00:00:00");
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (dateObj < today) {
+      Alert.alert("Error", "No se puede crear una subasta con fecha anterior a hoy.");
       return;
     }
 
@@ -524,7 +522,7 @@ export default function AdminAuctionsScreen() {
                 )}
               </>
             )}
-            <Text style={s.inputHelp}>Debe ser posterior a 10 días a partir de hoy.</Text>
+            <Text style={s.inputHelp}>No puede ser anterior a la fecha de hoy.</Text>
           </View>
 
           <View style={s.formGroup}>
