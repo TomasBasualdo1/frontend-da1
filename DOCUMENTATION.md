@@ -247,7 +247,7 @@ Los 4 tabs del layout principal usan `expo-router/unstable-native-tabs` con icon
 | `admin/users`     | Dos tabs: **Pendientes** (aprobar con selector de categoría / rechazar con motivo, ver fotos DNI) y **Todos los Usuarios** (búsqueda, modificar categoría) |
 | `admin/articles`  | Lista de artículos pendientes con detalle (fotos, historia, artista). Modal de evaluación: aprobar con precio base y comisión, o rechazar con motivo |
 | `admin/payments`  | Lista de medios de pago pendientes de verificación con datos del titular. Botones validar/rechazar con confirmación |
-| `admin/auctions`  | Tres tabs: **Ver Subastas** (listado, catalogar ítem, cerrar), **Crear Evento** (fecha >10 días, hora, categoría, moneda, subastador, ubicación), **Catalogar** (seleccionar subasta + artículo aprobado, definir precio base y comisión) |
+| `admin/auctions`  | Tres tabs: **Ver Subastas** (listado, catalogar ítem, cerrar), **Crear Evento** (fecha sin restricción de antelación, hora, categoría, moneda, subastador, ubicación), **Catalogar** (seleccionar subasta + artículo aprobado, definir precio base y comisión) |
 
 ---
 

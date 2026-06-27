@@ -268,15 +268,6 @@ export default function AdminAuctionsScreen() {
       return;
     }
 
-    // Verify date is > 10 days from today
-    const dateObj = new Date(fecha);
-    const minDate = new Date();
-    minDate.setDate(minDate.getDate() + 10);
-    if (dateObj <= minDate) {
-      Alert.alert("Error", "La fecha de la subasta debe ser posterior a 10 días desde hoy.");
-      return;
-    }
-
     setSubmitting(true);
     try {
       const payload: any = {
@@ -522,7 +513,7 @@ export default function AdminAuctionsScreen() {
                 )}
               </>
             )}
-            <Text style={s.inputHelp}>Debe ser posterior a 10 días a partir de hoy.</Text>
+            <Text style={s.inputHelp}>Podés crear la subasta para cualquier fecha.</Text>
           </View>
 
           <View style={s.formGroup}>

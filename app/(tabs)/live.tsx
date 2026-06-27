@@ -93,7 +93,6 @@ export default function LiveScreen() {
   const [sending, setSending] = useState(false);
   const [joined, setJoined] = useState(false);
   const [historial, setHistorial] = useState<Puja[]>([]);
-  const [timer, setTimer] = useState("31:59");
   const [streamStatus, setStreamStatus] = useState<"idle" | "connecting" | "connected" | "fallback">("idle");
   const inFlightBidKey = useRef<string | null>(null);
   const streamCleanupRef = useRef<(() => void) | null>(null);
@@ -429,10 +428,6 @@ export default function LiveScreen() {
             <View style={st.liveDot} />
             <Text style={st.liveLabel}>EN VIVO</Text>
           </View>
-          <View style={st.timerBadge}>
-            <MaterialIcons name="timer" size={16} color="#1A1A2E" />
-            <Text style={st.timerText}>{timer}</Text>
-          </View>
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }} keyboardShouldPersistTaps="handled">
@@ -633,8 +628,6 @@ const st = StyleSheet.create({
   liveIndicator: { flexDirection: "row", alignItems: "center", gap: 6 },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#DC2626" },
   liveLabel: { fontSize: 14, fontWeight: "800", color: "#1A1A2E", letterSpacing: 1 },
-  timerBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#F0EBE3", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
-  timerText: { fontSize: 14, fontWeight: "700", color: "#1A1A2E" },
 
   // Stream
   streamBox: { marginHorizontal: 20, marginBottom: 20 },
