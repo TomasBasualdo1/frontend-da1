@@ -245,6 +245,14 @@ export default function AdminArticlesScreen() {
                     <Text style={s.detailGridVal}>{selectedArticle.fechaCreacion || "No especificado"}</Text>
                   </View>
                   <View style={s.detailGridRow}>
+                    <Text style={s.detailGridLabel}>Valor Est. Usuario:</Text>
+                    <Text style={s.detailGridVal}>
+                      {selectedArticle.precioSugeridoUsuario != null
+                        ? `USD ${Number(selectedArticle.precioSugeridoUsuario).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        : "No declarado"}
+                    </Text>
+                  </View>
+                  <View style={s.detailGridRow}>
                     <Text style={s.detailGridLabel}>Postulado por:</Text>
                     <Text style={s.detailGridVal}>{selectedArticle.duenio_nombre || `Vendedor #${selectedArticle.duenioId}`}</Text>
                   </View>

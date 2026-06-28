@@ -5,6 +5,7 @@ export interface ArticuloInput {
   historia?: string;
   artista?: string;
   fechaCreacion?: string;
+  precioSugeridoUsuario?: number;
   fotos: string[];              // URIs de las imágenes (mínimo 6)
   documentacionOrigen?: string[];
   esPropietario: boolean;
@@ -16,6 +17,7 @@ export interface Articulo {
   duenioId?: number;
   duenioNombre?: string;
   descripcion?: string;
+  precioSugeridoUsuario?: number;
   precioBasePropuesto?: number;
   comisionPropuesta?: number;
   tasacionAceptada?: boolean | null;

@@ -115,6 +115,7 @@ export default function ConsignarScreen() {
         historia,
         artista: artista.trim() || undefined,
         fechaCreacion: fechaCreacion.trim() || undefined,
+        precioSugeridoUsuario: valorEstimado ? parseFloat(valorEstimado) : undefined,
         fotos,
         esPropietario,
         declaraOrigenLicito,

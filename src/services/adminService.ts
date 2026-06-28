@@ -43,6 +43,7 @@ const normalizeArticulo = (data: any): Articulo => ({
   duenioId: data?.duenioId ?? data?.duenio_id,
   duenioNombre: data?.duenioNombre ?? data?.duenio_nombre,
   descripcion: data?.descripcion ?? data?.descripcioncompleta ?? data?.descripcioncatalogo,
+  precioSugeridoUsuario: data?.precioSugeridoUsuario ?? data?.precio_sugerido_usuario,
   precioBasePropuesto: data?.precioBasePropuesto ?? data?.precio_base_propuesto,
   comisionPropuesta: data?.comisionPropuesta ?? data?.comision_propuesta,
   tasacionAceptada: data?.tasacionAceptada ?? data?.tasacion_objeto,
