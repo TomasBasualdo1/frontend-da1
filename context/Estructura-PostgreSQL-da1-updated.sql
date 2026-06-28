@@ -71,7 +71,7 @@ CREATE TABLE public.subastadores (
 );
 CREATE TABLE public.subastas (
   identificador integer NOT NULL DEFAULT nextval('subastas_identificador_seq'::regclass),
-  fecha date CHECK (fecha > (CURRENT_DATE + '10 days'::interval)::date),
+  fecha date,
   hora time without time zone NOT NULL,
   estado character varying CHECK (estado::text = ANY (ARRAY['abierta'::character varying::text, 'cerrada'::character varying::text])),
   subastador integer,
@@ -80,6 +80,9 @@ CREATE TABLE public.subastas (
   tienedeposito character varying CHECK (tienedeposito::text = ANY (ARRAY['si'::character varying, 'no'::character varying]::text[])),
   seguridadpropia character varying CHECK (seguridadpropia::text = ANY (ARRAY['si'::character varying, 'no'::character varying]::text[])),
   categoria character varying CHECK (categoria::text = ANY (ARRAY['comun'::character varying, 'especial'::character varying, 'plata'::character varying, 'oro'::character varying, 'platino'::character varying]::text[])),
+  moneda character varying NOT NULL DEFAULT 'USD'::character varying,
+  titulo_coleccion character varying,
+  duracion_item_minutos integer NOT NULL DEFAULT 30,
   CONSTRAINT subastas_pkey PRIMARY KEY (identificador),
   CONSTRAINT fk_subastas_subastadores FOREIGN KEY (subastador) REFERENCES public.subastadores(identificador)
 );
@@ -237,6 +240,7 @@ CREATE TABLE public.articulos (
   seguro_poliza character varying,
   fotos ARRAY,
   documentacion_origen ARRAY,
+  precio_sugerido_usuario numeric,
   CONSTRAINT articulos_pkey PRIMARY KEY (identificador),
   CONSTRAINT fk_articulos_duenios FOREIGN KEY (duenio_id) REFERENCES public.duenios(identificador),
   CONSTRAINT fk_articulos_seguros FOREIGN KEY (seguro_poliza) REFERENCES public.seguros(nropoliza)
@@ -277,4 +281,26 @@ CREATE TABLE public.fotos_adicionales (
   foto_url character varying NOT NULL,
   CONSTRAINT fotos_adicionales_pkey PRIMARY KEY (identificador),
   CONSTRAINT fk_fotos_adicionales_productos FOREIGN KEY (producto) REFERENCES public.productos(identificador)
+);
+CREATE TABLE public.puja_idempotency_keys (
+  identificador integer NOT NULL DEFAULT nextval('puja_idempotency_keys_identificador_seq'::regclass),
+  cliente_id integer NOT NULL,
+  subasta_id integer NOT NULL,
+  item_id integer NOT NULL,
+  importe numeric NOT NULL CHECK (importe > 0.01),
+  idempotency_key character varying NOT NULL,
+  estado character varying NOT NULL DEFAULT 'processing'::character varying CHECK (estado::text = ANY (ARRAY['processing'::character varying::text, 'completed'::character varying::text])),
+  puja_id integer,
+  mejor_oferta_actual numeric,
+  limite_minimo numeric,
+  limite_maximo numeric,
+  moneda character varying,
+  es_ganadora_parcial boolean,
+  created_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT puja_idempotency_keys_pkey PRIMARY KEY (identificador),
+  CONSTRAINT fk_puja_idempotency_cliente FOREIGN KEY (cliente_id) REFERENCES public.clientes(identificador),
+  CONSTRAINT fk_puja_idempotency_subasta FOREIGN KEY (subasta_id) REFERENCES public.subastas(identificador),
+  CONSTRAINT fk_puja_idempotency_item FOREIGN KEY (item_id) REFERENCES public.itemscatalogo(identificador),
+  CONSTRAINT fk_puja_idempotency_puja FOREIGN KEY (puja_id) REFERENCES public.pujos(identificador)
 );
