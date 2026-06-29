@@ -72,7 +72,12 @@ export default function ForgotPasswordScreen() {
                 <TextInput style={s.input} placeholder="tu@email.com" placeholderTextColor="#9CA3AF" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} />
               </View>
               <Pressable style={({ pressed }) => [s.btn, pressed && s.pressed, loading && s.dis]} onPress={handleSubmit} disabled={loading}>
-                {loading ? <ActivityIndicator color="#FFF" /> : <Text style={s.btnText}>Enviar enlace</Text>}
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  {loading ? (
+                    <ActivityIndicator color="#1A1A2E" size="small" />
+                  ) : null}
+                  <Text style={s.btnText}>Enviar enlace</Text>
+                </View>
               </Pressable>
               <Pressable style={s.codeLink} onPress={() => router.push("/(auth)/reset-password")}>
                 <Text style={s.codeLinkText}>Ya tengo un código</Text>
@@ -97,7 +102,7 @@ const s = StyleSheet.create({
   label: { fontSize: 13, fontWeight: "600", color: "#1A1A2E", marginLeft: 2 },
   input: { backgroundColor: "#FFFCF7", borderWidth: 1.5, borderColor: "#E5DDD0", borderRadius: 14, height: 52, paddingHorizontal: 16, fontSize: 15, color: "#1A1A2E" },
   btn: { flexDirection: "row", backgroundColor: "#8B6914", height: 56, borderRadius: 16, justifyContent: "center", alignItems: "center", gap: 8, elevation: 4 },
-  btnText: { color: "#FFF", fontSize: 17, fontWeight: "700" },
+  btnText: { color: "#1A1A2E", fontSize: 17, fontWeight: "700" },
   secondaryBtn: { backgroundColor: "#FFFCF7", borderWidth: 1.5, borderColor: "#E5DDD0", marginBottom: 12 },
   secondaryBtnText: { color: "#8B6914" },
   codeLink: { alignItems: "center", marginTop: 18 },

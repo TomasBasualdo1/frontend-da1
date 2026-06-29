@@ -323,10 +323,10 @@ export default function RegisterStep1Screen() {
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator color="#FFF" />
+                <ActivityIndicator color="#1A1A2E" />
               ) : (
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <MaterialIcons name="send" size={20} color="#8B6914" />
+                  <MaterialIcons name="send" size={20} color="#1A1A2E" />
                   <Text style={styles.submitButtonText}>Enviar Registro</Text>
                 </View>
               )}
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 4,
   },
-  submitButtonText: { color: "#8B6914", fontSize: 17, fontWeight: "700" },
+  submitButtonText: { color: "#1A1A2E", fontSize: 17, fontWeight: "700" },
   buttonPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   buttonDisabled: { opacity: 0.7 },
   footer: { flexDirection: "row", justifyContent: "center", marginTop: 24 },

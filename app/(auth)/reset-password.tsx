@@ -174,11 +174,12 @@ export default function ResetPasswordScreen() {
                 onPress={handleSubmit}
                 disabled={loading}
               >
-                {loading ? (
-                  <ActivityIndicator color="#FFF" />
-                ) : (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  {loading ? (
+                    <ActivityIndicator color="#1A1A2E" size="small" />
+                  ) : null}
                   <Text style={s.btnText}>Actualizar contraseña</Text>
-                )}
+                </View>
               </Pressable>
             </View>
           </ScrollView>
@@ -268,7 +269,7 @@ const s = StyleSheet.create({
     marginTop: 12,
     elevation: 4,
   },
-  btnText: { color: "#FFF", fontSize: 17, fontWeight: "700" },
+  btnText: { color: "#1A1A2E", fontSize: 17, fontWeight: "700" },
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   dis: { opacity: 0.7 },
 });
