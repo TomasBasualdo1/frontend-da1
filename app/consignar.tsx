@@ -12,7 +12,9 @@ import {
   Text,
   TextInput,
   View,
+  Platform,
 } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { articleService } from "../src/services";
 import { Categoria } from "../src/types";
@@ -44,6 +46,7 @@ export default function ConsignarScreen() {
   const [declaraOrigenLicito, setDeclaraOrigenLicito] = useState(false);
 
   const [showCategPicker, setShowCategPicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -268,12 +271,52 @@ export default function ConsignarScreen() {
 
               <View style={st.group}>
                 <Text style={st.label}>Fecha de creación (opcional)</Text>
-                <TextInput
-                  style={st.input}
-                  placeholder="AAAA-MM-DD"
-                  value={fechaCreacion}
-                  onChangeText={setFechaCreacion}
-                />
+                {Platform.OS === "web" ? (
+                  <input
+                    type="date"
+                    value={fechaCreacion}
+                    onChange={(e) => setFechaCreacion(e.target.value)}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: "#E5DDD0",
+                      borderRadius: 8,
+                      marginTop: 8,
+                      padding: 12,
+                      fontSize: 14,
+                      color: "#1A1A2E",
+                      backgroundColor: "#FFFFFF",
+                      fontFamily: "inherit",
+                    }}
+                  />
+                ) : (
+                  <>
+                    <Pressable onPress={() => setShowDatePicker(true)}>
+                      <View style={[st.input, st.pickerTriggerBox]}>
+                        <Text style={st.pickerTriggerText}>
+                          {fechaCreacion || "Seleccionar Fecha"}
+                        </Text>
+                        <MaterialIcons name="calendar-today" size={20} color="#8B6914" />
+                      </View>
+                    </Pressable>
+                    {showDatePicker && (
+                      <DateTimePicker
+                        value={(() => {
+                          if (!fechaCreacion) return new Date();
+                          const [y, m, d] = fechaCreacion.split("-").map(Number);
+                          return new Date(y, m - 1, d);
+                        })()}
+                        mode="date"
+                        display="default"
+                        onChange={(event, selectedDate) => {
+                          setShowDatePicker(false);
+                          if (selectedDate) {
+                            setFechaCreacion(selectedDate.toISOString().split("T")[0]);
+                          }
+                        }}
+                      />
+                    )}
+                  </>
+                )}
               </View>
 
               <View style={st.group}>
@@ -648,6 +691,15 @@ const st = StyleSheet.create({
     backgroundColor: "#FFF",
     borderTopWidth: 1,
     borderTopColor: "#F0EBE3",
+  },
+  pickerTriggerBox: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  pickerTriggerText: {
+    fontSize: 14,
+    color: "#1A1A2E",
   },
   btnSecondary: {
     flex: 1,
