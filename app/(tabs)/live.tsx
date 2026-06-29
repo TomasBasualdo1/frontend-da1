@@ -12,6 +12,7 @@ import {
   Puja,
   StreamEvent,
   PujaStreamData,
+  ItemStreamData,
   GarantiaInsuficienteErrorDetail,
 } from "../../src/types";
 import { isAuctionLive } from "../../src/utils/auctionSchedule";
@@ -77,6 +78,10 @@ function getBidErrorMessage(detail: unknown): string {
     ].join("\n");
   }
   return "No cumplís los requisitos.";
+}
+
+function getFirstPendingItem(detalle: SubastaDetalle): ItemCatalogo | null {
+  return detalle.catalogo.find((i) => i.subastado === "no") || null;
 }
 
 export default function LiveScreen() {
@@ -161,7 +166,7 @@ export default function LiveScreen() {
       setSelectedId(id);
       const d = await auctionService.getDetalle(id);
       setDetalle(d);
-      const firstAvailable = d.catalogo.find((i) => i.subastado === "no") || d.catalogo[0];
+      const firstAvailable = getFirstPendingItem(d) || d.catalogo[0];
       setCurrentItem(firstAvailable);
       // Load bid history
       auctionService.getHistorial(id).then(setHistorial).catch(() => {});
@@ -202,6 +207,26 @@ export default function LiveScreen() {
           applyLivePuja(event);
           return;
         }
+        if (event.type === "item") {
+          const data = event.data as Partial<ItemStreamData>;
+          if (data?.subastaCerrada) return;
+
+          auctionService.getDetalle(selectedId)
+            .then((freshDetail) => {
+              const activeId = (data?.itemActivo as { id?: number } | undefined)?.id;
+              setDetalle(freshDetail);
+              setCurrentItem(
+                freshDetail.catalogo.find((i) => i.id === activeId && i.subastado === "no") ||
+                getFirstPendingItem(freshDetail),
+              );
+              auctionService.getHistorial(selectedId).then(setHistorial).catch(() => {});
+            })
+            .catch(() => {
+              const activeItem = data?.itemActivo as ItemCatalogo | undefined;
+              if (activeItem?.id) setCurrentItem(activeItem);
+            });
+          return;
+        }
         if (event.type === "cierre") {
           Alert.alert("Subasta finalizada", "La subasta cerró.");
           setJoined(false);
@@ -231,9 +256,13 @@ export default function LiveScreen() {
           setDetalle(freshDetail);
           setCurrentItem((prev) => {
             if (!prev) {
-              return freshDetail.catalogo.find((i) => i.subastado === "no") || freshDetail.catalogo[0] || null;
+              return getFirstPendingItem(freshDetail) || freshDetail.catalogo[0] || null;
             }
-            return freshDetail.catalogo.find((i) => i.id === prev.id) || prev;
+            return (
+              freshDetail.catalogo.find((i) => i.id === prev.id && i.subastado === "no") ||
+              getFirstPendingItem(freshDetail) ||
+              null
+            );
           });
         })
         .catch(() => {});
