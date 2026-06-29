@@ -101,6 +101,17 @@ export default function LiveScreen() {
   const [streamStatus, setStreamStatus] = useState<"idle" | "connecting" | "connected" | "fallback">("idle");
   const inFlightBidKey = useRef<string | null>(null);
   const streamCleanupRef = useRef<(() => void) | null>(null);
+  const detalleRef = useRef<SubastaDetalle | null>(null);
+  const userIdRef = useRef<number | undefined>(user?.id);
+  const wonItemAlertsRef = useRef<Set<number>>(new Set());
+
+  useEffect(() => {
+    detalleRef.current = detalle;
+  }, [detalle]);
+
+  useEffect(() => {
+    userIdRef.current = user?.id;
+  }, [user?.id]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -158,8 +169,38 @@ export default function LiveScreen() {
     });
   }, []);
 
+  const showWinningItemAlert = useCallback((data: Partial<ItemStreamData>) => {
+    const itemCerrado = data?.itemCerrado;
+    const itemId = itemCerrado?.id;
+    const clienteGanador = itemCerrado?.clienteGanador;
+    const currentUserId = userIdRef.current;
+
+    if (typeof itemId !== "number" || clienteGanador == null || currentUserId == null) return;
+    if (Number(clienteGanador) !== Number(currentUserId)) return;
+    if (wonItemAlertsRef.current.has(itemId)) return;
+
+    wonItemAlertsRef.current.add(itemId);
+
+    const detalleActual = detalleRef.current;
+    const itemDetalle = detalleActual?.catalogo.find((item) => item.id === itemId);
+    const descripcion = itemDetalle?.descripcion || `Artículo #${itemId}`;
+    const importe =
+      typeof itemCerrado.importe === "number"
+        ? `Importe: ${formatMoney(detalleActual?.moneda, itemCerrado.importe)}`
+        : null;
+    const pagoHint = data?.subastaCerrada
+      ? "Ya podés verlo y pagarlo desde tu perfil."
+      : "Cuando finalice la subasta vas a poder pagarlo desde tu perfil.";
+
+    Alert.alert(
+      "Ganaste este artículo",
+      [`Ganaste: ${descripcion}`, importe, pagoHint].filter(Boolean).join("\n"),
+    );
+  }, []);
+
   const joinSubasta = async (id: number) => {
     try {
+      wonItemAlertsRef.current.clear();
       await auctionService.join(id);
       setStreamStatus("connecting");
       setJoined(true);
@@ -183,6 +224,7 @@ export default function LiveScreen() {
   const handleLeave = async () => {
     streamCleanupRef.current?.();
     streamCleanupRef.current = null;
+    wonItemAlertsRef.current.clear();
     setStreamStatus("idle");
     if (selectedId) await auctionService.leave(selectedId).catch(() => {});
     setJoined(false);
@@ -209,6 +251,7 @@ export default function LiveScreen() {
         }
         if (event.type === "item") {
           const data = event.data as Partial<ItemStreamData>;
+          showWinningItemAlert(data);
           if (data?.subastaCerrada) return;
 
           auctionService.getDetalle(selectedId)
@@ -229,6 +272,7 @@ export default function LiveScreen() {
         }
         if (event.type === "cierre") {
           Alert.alert("Subasta finalizada", "La subasta cerró.");
+          wonItemAlertsRef.current.clear();
           setJoined(false);
           setDetalle(null);
           setSelectedId(null);
@@ -244,7 +288,7 @@ export default function LiveScreen() {
       stop();
       if (streamCleanupRef.current === stop) streamCleanupRef.current = null;
     };
-  }, [joined, selectedId, applyLivePuja]);
+  }, [joined, selectedId, applyLivePuja, showWinningItemAlert]);
 
   useEffect(() => {
     if (!joined || !selectedId || streamStatus !== "fallback") return;

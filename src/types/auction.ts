@@ -117,6 +117,21 @@ export interface Pago {
   fechaLimitePago: string;
 }
 
+export interface PagoPendienteItem {
+  itemId?: number | null;
+  productoId?: number | null;
+  descripcion?: string | null;
+  importe?: number | null;
+  comision?: number | null;
+}
+
+export interface PagoPendientePerfil extends Pago {
+  subastaFecha?: string | null;
+  subastaHora?: string | null;
+  subastaUbicacion?: string | null;
+  items: PagoPendienteItem[];
+}
+
 export interface PagoRequest {
   medioPagoId: number;
   modoEntrega: 'envio' | 'retiro';

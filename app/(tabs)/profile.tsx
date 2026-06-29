@@ -19,14 +19,14 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../src/context/AuthContext";
-import { articleService, auctionService, userService } from "../../src/services";
+import { articleService, userService } from "../../src/services";
 import {
   Articulo,
   Categoria,
   MedioPago,
   Multa,
   Notificacion,
-  SubastaListado,
+  PagoPendientePerfil,
   UsuarioMetricas,
 } from "../../src/types";
 
@@ -142,6 +142,30 @@ function formatAmount(value?: number): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
+}
+
+function formatMoney(moneda: string | undefined, value?: number | null): string {
+  const prefix = moneda === "USD" ? "USD" : "$";
+  return `${prefix} ${Number(value || 0).toLocaleString("es-AR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function formatSubastaDate(fecha?: string | null, hora?: string | null): string {
+  const cleanHora = hora ? hora.substring(0, 5) : "";
+  if (!fecha) return cleanHora ? `${cleanHora} hs` : "Fecha no disponible";
+  try {
+    const parsed = new Date(`${fecha}T${cleanHora || "00:00"}:00`);
+    const dateLabel = parsed.toLocaleDateString("es-AR", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+    return cleanHora ? `${dateLabel} · ${cleanHora} hs` : dateLabel;
+  } catch {
+    return cleanHora ? `${fecha} · ${cleanHora} hs` : fecha;
+  }
 }
 
 function formatMedioLimit(medio: MedioPago): string {
@@ -280,6 +304,7 @@ export default function ProfileScreen() {
 
   const [metricas, setMetricas] = useState<UsuarioMetricas | null>(null);
   const [multas, setMultas] = useState<Multa[]>([]);
+  const [pagosPendientes, setPagosPendientes] = useState<PagoPendientePerfil[]>([]);
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [misConsignaciones, setMisConsignaciones] = useState<Articulo[]>([]);
   const [tab, setTab] = useState<ProfileTab>("perfil");
@@ -313,15 +338,24 @@ export default function ProfileScreen() {
       return;
     }
     try {
-      const [dataMedios, dataMultas, dataNotifs, dataMetricas, dataConsignaciones] =
+      const [
+        dataMedios,
+        dataPagosPendientes,
+        dataMultas,
+        dataNotifs,
+        dataMetricas,
+        dataConsignaciones,
+      ] =
         await Promise.all([
           userService.getMediosPago(),
+          userService.getPagosPendientes(),
           userService.getMultas(),
           userService.getNotificaciones(),
           userService.getMetricas(),
           articleService.getMisPublicaciones(),
         ]);
       setMedios(dataMedios);
+      setPagosPendientes(dataPagosPendientes);
       setMultas(dataMultas);
       setNotificaciones(dataNotifs);
       setMetricas(dataMetricas);
@@ -1866,6 +1900,114 @@ export default function ProfileScreen() {
                   )}
                 </View>
 
+                <Text style={s.secTitle}>Artículos ganados</Text>
+                {pagosPendientes.length === 0 ? (
+                  <View style={s.section}>
+                    <View style={{ alignItems: "center", paddingVertical: 16 }}>
+                      <MaterialIcons name="inventory-2" size={32} color="#C4B898" />
+                      <Text style={[s.emptyText, { marginTop: 8 }]}>
+                        No tenés pagos pendientes de subastas finalizadas.
+                      </Text>
+                    </View>
+                  </View>
+                ) : (
+                  <View style={s.pendingPaymentsList}>
+                    {pagosPendientes.map((pago) => (
+                      <View key={pago.id ?? pago.subastaId} style={s.pendingPaymentCard}>
+                        <View style={s.pendingPaymentHeader}>
+                          <View style={s.payCardIconContainer}>
+                            <MaterialIcons name="emoji-events" size={20} color="#8B6914" />
+                          </View>
+                          <View style={{ flex: 1, gap: 2 }}>
+                            <Text style={s.payType}>Subasta #{pago.subastaId}</Text>
+                            <Text style={s.payInfo}>
+                              {formatSubastaDate(pago.subastaFecha, pago.subastaHora)}
+                            </Text>
+                            {!!pago.subastaUbicacion && (
+                              <Text style={s.payInfo} numberOfLines={1}>
+                                {pago.subastaUbicacion}
+                              </Text>
+                            )}
+                          </View>
+                          <View style={[s.verifBadge, s.pendingPaymentBadge]}>
+                            <Text style={s.pendingPaymentBadgeText}>Pendiente</Text>
+                          </View>
+                        </View>
+
+                        <View style={s.wonItemsList}>
+                          {pago.items.length === 0 ? (
+                            <Text style={s.payInfo}>
+                              Compra ganada registrada para esta subasta.
+                            </Text>
+                          ) : (
+                            pago.items.map((item, idx) => (
+                              <View
+                                key={`${pago.id}-${item.itemId ?? item.productoId ?? idx}`}
+                                style={s.wonItemRow}
+                              >
+                                <View style={{ flex: 1 }}>
+                                  <Text style={s.wonItemTitle} numberOfLines={2}>
+                                    {item.descripcion || `Artículo #${item.itemId ?? item.productoId}`}
+                                  </Text>
+                                  <Text style={s.wonItemMeta}>
+                                    Ítem #{item.itemId ?? "-"} · Puja{" "}
+                                    {formatMoney(pago.moneda, item.importe)}
+                                  </Text>
+                                </View>
+                                <Text style={s.wonItemCommission}>
+                                  Com. {formatMoney(pago.moneda, item.comision)}
+                                </Text>
+                              </View>
+                            ))
+                          )}
+                        </View>
+
+                        <View style={s.pendingTotalsBox}>
+                          <View style={s.pendingTotalRow}>
+                            <Text style={s.pendingTotalLabel}>Total pujado</Text>
+                            <Text style={s.pendingTotalValue}>
+                              {formatMoney(pago.moneda, pago.totalPujado)}
+                            </Text>
+                          </View>
+                          <View style={s.pendingTotalRow}>
+                            <Text style={s.pendingTotalLabel}>Comisión</Text>
+                            <Text style={s.pendingTotalValue}>
+                              {formatMoney(pago.moneda, pago.comision)}
+                            </Text>
+                          </View>
+                          <View style={s.pendingTotalRow}>
+                            <Text style={s.pendingTotalLabel}>Envío</Text>
+                            <Text style={s.pendingTotalValue}>
+                              {pago.costoEnvio > 0
+                                ? formatMoney(pago.moneda, pago.costoEnvio)
+                                : "Se define al pagar"}
+                            </Text>
+                          </View>
+                          <View style={s.pendingTotalRow}>
+                            <Text style={s.pendingGrandTotalLabel}>Total actual</Text>
+                            <Text style={s.pendingGrandTotalValue}>
+                              {formatMoney(pago.moneda, pago.totalFinal)}
+                            </Text>
+                          </View>
+                          <Text style={s.pendingDeadline}>
+                            Vence {formatFecha(pago.fechaLimitePago) || "sin fecha"}
+                          </Text>
+                        </View>
+
+                        <Pressable
+                          onPress={() => router.push(`/pagos/${pago.subastaId}` as any)}
+                          style={({ pressed }) => [pressed && { opacity: 0.9 }]}
+                        >
+                          <View style={s.payAuctionButton}>
+                            <MaterialIcons name="paid" size={18} color="#FFF" />
+                            <Text style={s.payAuctionButtonText}>Pagar compra</Text>
+                          </View>
+                        </Pressable>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
                 {/* Multas section */}
                 {multas.length > 0 && (
                   <>
@@ -2800,6 +2942,118 @@ const s = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
   },
+  pendingPaymentsList: { gap: 12 },
+  pendingPaymentCard: {
+    backgroundColor: "#FFF",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#F0EBE3",
+    padding: 16,
+    gap: 14,
+    ...SHADOW_LIGHT,
+  },
+  pendingPaymentHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  pendingPaymentBadge: {
+    backgroundColor: "#FFFBEB",
+    borderColor: "#FDE68A",
+  },
+  pendingPaymentBadgeText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#B45309",
+    textTransform: "uppercase",
+  },
+  wonItemsList: {
+    gap: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#F3EDE4",
+    paddingTop: 12,
+  },
+  wonItemRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  wonItemTitle: {
+    fontSize: 13,
+    color: "#1A1A2E",
+    fontWeight: "800",
+    lineHeight: 18,
+  },
+  wonItemMeta: {
+    fontSize: 11,
+    color: "#6B7280",
+    marginTop: 2,
+    fontWeight: "600",
+  },
+  wonItemCommission: {
+    maxWidth: 116,
+    textAlign: "right",
+    fontSize: 11,
+    color: "#8B6914",
+    fontWeight: "800",
+    lineHeight: 16,
+  },
+  pendingTotalsBox: {
+    gap: 8,
+    backgroundColor: "#FFF8F0",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#F3EDE4",
+    padding: 12,
+  },
+  pendingTotalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+  },
+  pendingTotalLabel: {
+    flex: 1,
+    fontSize: 12,
+    color: "#6B7280",
+    fontWeight: "700",
+  },
+  pendingTotalValue: {
+    flexShrink: 1,
+    textAlign: "right",
+    fontSize: 12,
+    color: "#1A1A2E",
+    fontWeight: "800",
+  },
+  pendingGrandTotalLabel: {
+    flex: 1,
+    fontSize: 13,
+    color: "#1A1A2E",
+    fontWeight: "900",
+  },
+  pendingGrandTotalValue: {
+    flexShrink: 1,
+    textAlign: "right",
+    fontSize: 15,
+    color: "#8B6914",
+    fontWeight: "900",
+  },
+  pendingDeadline: {
+    fontSize: 11,
+    color: "#6B7280",
+    fontWeight: "700",
+    marginTop: 2,
+  },
+  payAuctionButton: {
+    flexDirection: "row",
+    backgroundColor: "#1A1A2E",
+    minHeight: 46,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+  },
+  payAuctionButtonText: { color: "#FFF", fontSize: 14, fontWeight: "800" },
   deletePayBtn: {
     padding: 6,
     borderRadius: 8,
