@@ -24,6 +24,23 @@ const normalizeArticulo = (data: any): Articulo => ({
   subastaEstado: data?.subastaEstado ?? data?.subasta_estado,
 });
 
+const dedupeArticulosById = (items: Articulo[]): Articulo[] => {
+  const seen = new Set<number>();
+  const result: Articulo[] = [];
+
+  for (const item of items) {
+    if (item.id == null) {
+      result.push(item);
+      continue;
+    }
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    result.push(item);
+  }
+
+  return result;
+};
+
 export const articleService = {
   /** Publicar un artículo para subasta (multipart) */
   async publicar(data: ArticuloInput): Promise<Articulo> {
@@ -82,7 +99,7 @@ export const articleService = {
   async getMisPublicaciones(): Promise<Articulo[]> {
     const response = await api.get('/articulos/mis-publicaciones');
     const items = Array.isArray(response.data) ? response.data : [];
-    return items.map(normalizeArticulo);
+    return dedupeArticulosById(items.map(normalizeArticulo));
   },
 
   /** Ver detalle de un artículo */

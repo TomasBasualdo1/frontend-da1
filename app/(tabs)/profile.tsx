@@ -65,6 +65,11 @@ const PLACEHOLDER_IMAGES = [
 
 type ProfileTab = "subastas" | "perfil" | "pagos" | "stats";
 
+const getConsignacionKey = (item: Articulo, idx: number) => {
+  if (item.id != null) return `articulo-${item.id}-${idx}`;
+  return `articulo-sin-id-${idx}`;
+};
+
 /* ── Pulsating Live Dot ─────────────────────────────────── */
 function LiveDot() {
   const pulse = useRef(new Animated.Value(1)).current;
@@ -564,6 +569,7 @@ export default function ProfileScreen() {
   };
 
   const handlePressConsignacion = (item: Articulo) => {
+    if (item.id == null) return;
     setExpandedId((prev) => (prev === item.id ? null : item.id));
     setIsEditingInsuranceId(null);
     setNewInsuranceAmount("");
@@ -773,10 +779,10 @@ export default function ProfileScreen() {
 
                     // Show buttons for valuation acceptance if approved and not yet decided
                     const showValuationActions = item.estado === "aprobado" && (item.tasacionAceptada === null || item.tasacionAceptada === undefined);
-                    const isExpanded = expandedId === item.id;
+                    const isExpanded = item.id != null && expandedId === item.id;
 
                     return (
-                      <View key={item.id} style={{ gap: 8 }}>
+                      <View key={getConsignacionKey(item, idx)} style={{ gap: 8 }}>
                         <Pressable
                           onPress={() => handlePressConsignacion(item)}
                           style={({ pressed }) => [pressed && { opacity: 0.95 }]}
