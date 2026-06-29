@@ -9,6 +9,7 @@ import {
   Multa,
   MultaPagoRequest,
   Notificacion,
+  PagoPendientePerfil,
 } from '../types';
 
 const normalizeUsuario = (data: any): Usuario => ({
@@ -54,6 +55,37 @@ const normalizeNotificacion = (data: any): Notificacion => ({
   mensaje: data?.mensaje,
   fechaHora: data?.fechaHora ?? data?.fecha_hora,
   leida: data?.leida,
+});
+
+const normalizeNumber = (value: any): number => {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const normalizePagoPendiente = (data: any): PagoPendientePerfil => ({
+  id: Number(data?.id ?? data?.identificador ?? 0),
+  subastaId: Number(data?.subastaId ?? data?.subasta_id ?? 0),
+  usuarioId: Number(data?.usuarioId ?? data?.cliente_id ?? data?.usuario_id ?? 0),
+  subastaFecha: data?.subastaFecha ?? data?.subasta_fecha ?? null,
+  subastaHora: data?.subastaHora ?? data?.subasta_hora ?? null,
+  subastaUbicacion: data?.subastaUbicacion ?? data?.subasta_ubicacion ?? null,
+  totalPujado: normalizeNumber(data?.totalPujado ?? data?.total_pujado),
+  comision: normalizeNumber(data?.comision),
+  costoEnvio: normalizeNumber(data?.costoEnvio ?? data?.costo_envio),
+  totalFinal: normalizeNumber(data?.totalFinal ?? data?.total_final),
+  moneda: data?.moneda === 'ARS' ? 'ARS' : 'USD',
+  modoEntrega: data?.modoEntrega ?? data?.modo_entrega ?? null,
+  estado: data?.estado === 'pagado' || data?.estado === 'vencido' ? data.estado : 'pendiente',
+  fechaLimitePago: data?.fechaLimitePago ?? data?.fecha_limite_pago ?? '',
+  items: Array.isArray(data?.items)
+    ? data.items.map((item: any) => ({
+        itemId: item?.itemId ?? item?.item_id ?? null,
+        productoId: item?.productoId ?? item?.producto_id ?? null,
+        descripcion: item?.descripcion ?? null,
+        importe: item?.importe == null ? null : normalizeNumber(item.importe),
+        comision: item?.comision == null ? null : normalizeNumber(item.comision),
+      }))
+    : [],
 });
 
 export const userService = {
@@ -113,6 +145,13 @@ export const userService = {
   async getMetricas(): Promise<UsuarioMetricas> {
     const response = await api.get<UsuarioMetricas>('/usuarios/me/metricas');
     return response.data;
+  },
+
+  /** Listar pagos pendientes de subastas ganadas */
+  async getPagosPendientes(): Promise<PagoPendientePerfil[]> {
+    const response = await api.get('/usuarios/me/pagos-pendientes');
+    const items = Array.isArray(response.data) ? response.data : [];
+    return items.map(normalizePagoPendiente);
   },
 
   /** Listar multas activas */

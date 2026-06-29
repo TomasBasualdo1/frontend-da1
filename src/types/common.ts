@@ -29,10 +29,24 @@ export interface CierreStreamData {
   itemsCerrados: number;
 }
 
+export interface ItemStreamData {
+  itemCerrado?: {
+    id?: number;
+    productoId?: number;
+    precioBase?: number;
+    pujaId?: number | null;
+    clienteGanador?: number | null;
+    importe?: number | null;
+  };
+  itemActivo?: unknown;
+  itemsPendientes?: number;
+  subastaCerrada?: boolean;
+}
+
 export interface StreamEvent {
   type: 'puja' | 'item' | 'cierre';
   fechaHora: string;
-  data: PujaStreamData | CierreStreamData | unknown;
+  data: PujaStreamData | ItemStreamData | CierreStreamData | unknown;
 }
 
 // Seguro de artículo
