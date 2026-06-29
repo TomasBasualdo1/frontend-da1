@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { articleService } from "../src/services";
-import { Categoria } from "../src/types";
+import { Categoria, Moneda } from "../src/types";
 
 const CATEGORIAS: { value: Categoria; label: string }[] = [
   { value: "comun", label: "Común" },
@@ -39,6 +39,7 @@ export default function ConsignarScreen() {
   const [artista, setArtista] = useState("");
   const [fechaCreacion, setFechaCreacion] = useState("");
   const [valorEstimado, setValorEstimado] = useState("");
+  const [moneda, setMoneda] = useState<Moneda>("USD");
   const [fotos, setFotos] = useState<string[]>([]);
   const [esPropietario, setEsPropietario] = useState(false);
   const [declaraOrigenLicito, setDeclaraOrigenLicito] = useState(false);
@@ -116,6 +117,7 @@ export default function ConsignarScreen() {
         artista: artista.trim() || undefined,
         fechaCreacion: fechaCreacion.trim() || undefined,
         precioSugeridoUsuario: valorEstimado ? parseFloat(valorEstimado) : undefined,
+        moneda,
         fotos,
         esPropietario,
         declaraOrigenLicito,
@@ -277,16 +279,52 @@ export default function ConsignarScreen() {
               </View>
 
               <View style={st.group}>
-                <Text style={st.label}>Valor Estimado (USD) *</Text>
-                <View style={st.inputWithIcon}>
-                  <Text style={st.inputIcon}>$</Text>
-                  <TextInput
-                    style={st.inputBorderles}
-                    placeholder="0"
-                    keyboardType="numeric"
-                    value={valorEstimado}
-                    onChangeText={setValorEstimado}
-                  />
+                <Text style={st.label}>Valor Estimado *</Text>
+                <View style={st.monedaRow}>
+                  <Pressable
+                    style={[
+                      st.monedaOption,
+                      moneda === "USD" && st.monedaOptionActive,
+                    ]}
+                    onPress={() => setMoneda("USD")}
+                  >
+                    <Text
+                      style={[
+                        st.monedaOptionText,
+                        moneda === "USD" && st.monedaOptionTextActive,
+                      ]}
+                    >
+                      USD
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      st.monedaOption,
+                      moneda === "ARS" && st.monedaOptionActive,
+                    ]}
+                    onPress={() => setMoneda("ARS")}
+                  >
+                    <Text
+                      style={[
+                        st.monedaOptionText,
+                        moneda === "ARS" && st.monedaOptionTextActive,
+                      ]}
+                    >
+                      ARS
+                    </Text>
+                  </Pressable>
+                  <View style={st.inputWithIconAlt}>
+                    <Text style={st.inputIcon}>
+                      {moneda === "USD" ? "US$" : "$"}
+                    </Text>
+                    <TextInput
+                      style={st.inputBorderles}
+                      placeholder="0"
+                      keyboardType="numeric"
+                      value={valorEstimado}
+                      onChangeText={setValorEstimado}
+                    />
+                  </View>
                 </View>
                 <Text style={st.helpText}>
                   Este valor es solo una estimación. Nuestros expertos
@@ -518,7 +556,33 @@ const st = StyleSheet.create({
   },
   dropdownText: { fontSize: 15, color: "#1A1A2E" },
 
-  inputWithIcon: {
+  monedaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  monedaOption: {
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "#E5DDD0",
+    backgroundColor: "#FFF",
+  },
+  monedaOptionActive: {
+    borderColor: "#1A1A2E",
+    backgroundColor: "#1A1A2E",
+  },
+  monedaOptionText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#6B7280",
+  },
+  monedaOptionTextActive: {
+    color: "#FFF",
+  },
+  inputWithIconAlt: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFF",

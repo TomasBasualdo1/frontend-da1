@@ -6,6 +6,7 @@ const normalizeArticulo = (data: any): Articulo => ({
   id: data?.id ?? data?.identificador,
   descripcion: data?.descripcion ?? data?.descripcioncompleta ?? data?.descripcioncatalogo,
   precioSugeridoUsuario: data?.precioSugeridoUsuario ?? data?.precio_sugerido_usuario,
+  moneda: data?.moneda,
   precioBasePropuesto: data?.precioBasePropuesto ?? data?.precio_base_propuesto,
   comisionPropuesta: data?.comisionPropuesta ?? data?.comision_propuesta,
   tasacionAceptada: data?.tasacionAceptada ?? data?.tasacion_aceptada,
@@ -50,6 +51,7 @@ export const articleService = {
     if (data.artista) formData.append('artista', data.artista);
     if (data.fechaCreacion) formData.append('fechaCreacion', data.fechaCreacion);
     if (data.precioSugeridoUsuario != null) formData.append('precioSugeridoUsuario', String(data.precioSugeridoUsuario));
+    if (data.moneda) formData.append('moneda', data.moneda);
     formData.append('esPropietario', String(data.esPropietario));
     formData.append('declaraOrigenLicito', String(data.declaraOrigenLicito));
 

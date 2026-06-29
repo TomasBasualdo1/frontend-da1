@@ -248,7 +248,7 @@ export default function AdminArticlesScreen() {
                     <Text style={s.detailGridLabel}>Valor Est. Usuario:</Text>
                     <Text style={s.detailGridVal}>
                       {selectedArticle.precioSugeridoUsuario != null
-                        ? `USD ${Number(selectedArticle.precioSugeridoUsuario).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        ? `${selectedArticle.moneda || "USD"} ${Number(selectedArticle.precioSugeridoUsuario).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                         : "No declarado"}
                     </Text>
                   </View>
