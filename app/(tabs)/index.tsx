@@ -132,7 +132,8 @@ function LoadingSkeleton() {
 /* ── Format helpers ──────────────────────────────────────── */
 function formatDate(fecha: string): string {
   try {
-    const d = new Date(fecha);
+    const [year, month, day] = fecha.split("T")[0].split("-").map(Number);
+    const d = new Date(year, month - 1, day);
     return d.toLocaleDateString("es-AR", { day: "numeric", month: "short" });
   } catch {
     return fecha;
