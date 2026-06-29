@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   TextInput,
-  Switch,
+
   Platform,
   Modal,
 } from "react-native";
@@ -37,6 +37,14 @@ const CATEG_COLORS: Record<Categoria, string> = {
   plata: "#94A3B8",
   oro: "#D97706",
   platino: "#7C3AED",
+};
+
+const CATEG_LABELS: Record<Categoria, string> = {
+  comun: "COM",
+  especial: "ESP",
+  plata: "PLA",
+  oro: "ORO",
+  platino: "PLAT",
 };
 
 interface DropdownItem {
@@ -169,8 +177,6 @@ export default function AdminAuctionsScreen() {
   const [subastadorId, setSubastadorId] = useState("");
   const [ubicacion, setUbicacion] = useState("");
   const [capacidad, setCapacidad] = useState("100");
-  const [tieneDeposito, setTieneDeposito] = useState(false);
-  const [seguridadPropia, setSeguridadPropia] = useState(false);
 
   // Catalog Form States
   const [subastaIdInput, setSubastaIdInput] = useState("");
@@ -275,8 +281,7 @@ export default function AdminAuctionsScreen() {
         hora,
         categoria,
         moneda,
-        tieneDeposito,
-        seguridadPropia,
+
       };
 
       if (subastadorId.trim()) payload.subastadorId = parseInt(subastadorId);
@@ -377,7 +382,7 @@ export default function AdminAuctionsScreen() {
         </Pressable>
         <Pressable onPress={() => setActiveTab("create")} style={s.tabWrapper}>
           <View style={[s.tab, activeTab === "create" && s.activeTab]}>
-            <Text style={[s.tabText, activeTab === "create" && s.activeTabText]}>Crear Evento</Text>
+            <Text style={[s.tabText, activeTab === "create" && s.activeTabText]}>Crear Subasta</Text>
           </View>
         </Pressable>
         <Pressable onPress={() => setActiveTab("catalog")} style={s.tabWrapper}>
@@ -474,6 +479,7 @@ export default function AdminAuctionsScreen() {
               <input
                 type="date"
                 value={fecha}
+                min={new Date().toISOString().split("T")[0]}
                 onChange={(e) => setFecha(e.target.value)}
                 style={{
                   borderWidth: 1,
@@ -503,6 +509,7 @@ export default function AdminAuctionsScreen() {
                     })()}
                     mode="date"
                     display="default"
+                    minimumDate={new Date()}
                     onChange={(event, selectedDate) => {
                       setShowDatePicker(false);
                       if (selectedDate) {
@@ -513,7 +520,6 @@ export default function AdminAuctionsScreen() {
                 )}
               </>
             )}
-            <Text style={s.inputHelp}>Podés crear la subasta para cualquier fecha.</Text>
           </View>
 
           <View style={s.formGroup}>
@@ -576,7 +582,7 @@ export default function AdminAuctionsScreen() {
                 <Pressable key={cat} onPress={() => setCategoria(cat)} style={{ flex: 1 }}>
                   <View style={[s.pickerBox, categoria === cat && s.pickerBoxActive]}>
                     <Text style={[s.pickerBoxText, categoria === cat && s.pickerBoxTextActive]}>
-                      {cat.substring(0, 3).toUpperCase()}
+                      {CATEG_LABELS[cat]}
                     </Text>
                   </View>
                 </Pressable>
@@ -631,15 +637,6 @@ export default function AdminAuctionsScreen() {
             />
           </View>
 
-          <View style={s.switchRow}>
-            <Text style={s.switchLabel}>¿Se realiza en un depósito propio?</Text>
-            <Switch value={tieneDeposito} onValueChange={setTieneDeposito} trackColor={{ true: "#B8941C" }} />
-          </View>
-
-          <View style={s.switchRow}>
-            <Text style={s.switchLabel}>¿Cuenta con seguridad corporativa propia?</Text>
-            <Switch value={seguridadPropia} onValueChange={setSeguridadPropia} trackColor={{ true: "#B8941C" }} />
-          </View>
 
           <Pressable style={s.submitBtnWrapper} onPress={handleCreateAuction} disabled={submitting}>
             <View style={s.btnSubmit}>
