@@ -44,7 +44,7 @@ const CATEG_LABELS: Record<Categoria, string> = {
   especial: "ESP",
   plata: "PLA",
   oro: "ORO",
-  platino: "PLAT",
+  platino: "PLO",
 };
 
 interface DropdownItem {
@@ -681,7 +681,7 @@ export default function AdminAuctionsScreen() {
           </View>
 
           <View style={s.formGroup}>
-            <Text style={s.formLabel}>Precio Base Definitivo (USD) *:</Text>
+            <Text style={s.formLabel}>Precio Base Definitivo{selectedSubastaObj ? ` (${selectedSubastaObj.moneda})` : ""} *:</Text>
             <TextInput
               placeholder="Ej. 1200"
               keyboardType="numeric"
@@ -693,7 +693,7 @@ export default function AdminAuctionsScreen() {
           </View>
 
           <View style={s.formGroup}>
-            <Text style={s.formLabel}>Comisión Definitiva (USD) *:</Text>
+            <Text style={s.formLabel}>Comisión Definitiva{selectedSubastaObj ? ` (${selectedSubastaObj.moneda})` : ""} *:</Text>
             <TextInput
               placeholder="Ej. 120"
               keyboardType="numeric"
