@@ -320,6 +320,10 @@ export default function ProfileScreen() {
   const [newInsuranceAmount, setNewInsuranceAmount] = useState<string>("");
   const [updatingInsurance, setUpdatingInsurance] = useState<boolean>(false);
 
+  // Confirmación de envío del bien (consigna: acuerdo de cargo de devolución)
+  const [aceptoCargoEnvio, setAceptoCargoEnvio] = useState<boolean>(false);
+  const [enviandoArticulo, setEnviandoArticulo] = useState<boolean>(false);
+
   // Payment form states
   const [showAddPago, setShowAddPago] = useState(false);
   const [newPagoTipo, setNewPagoTipo] = useState<
@@ -558,7 +562,11 @@ export default function ProfileScreen() {
   const misConsignacionesStats = useMemo(() => {
     const total = misConsignaciones.length;
     const pendientes = misConsignaciones.filter(
-      (c) => c.estado === "pendiente" || c.estado === "en_inspeccion"
+      (c) =>
+        c.estado === "pendiente" ||
+        c.estado === "interesado" ||
+        c.estado === "en_transito" ||
+        c.estado === "en_inspeccion"
     ).length;
     const revisadas = misConsignaciones.filter(
       (c) => (c.estado === "aprobado" && !c.subastaId) || c.estado === "rechazado" || c.estado === "devuelto"
@@ -596,10 +604,39 @@ export default function ProfileScreen() {
 
   const STATE_LABELS: Record<string, string> = {
     pendiente: "Pendiente",
+    interesado: "La empresa solicita el envío",
+    en_transito: "Enviado, esperando recepción",
     en_inspeccion: "En Inspección",
     aprobado: "Aprobado",
     rechazado: "Rechazado",
     devuelto: "Devuelto",
+  };
+
+  const handleConfirmarEnvio = async (id: number, acepta: boolean) => {
+    if (acepta && !aceptoCargoEnvio) {
+      Alert.alert(
+        "Acuerdo requerido",
+        "Debes aceptar el cargo de devolución para poder enviar el bien."
+      );
+      return;
+    }
+    setEnviandoArticulo(true);
+    try {
+      await articleService.confirmarEnvio(id, acepta);
+      Alert.alert(
+        acepta ? "Envío confirmado" : "Envío declinado",
+        acepta
+          ? "Tu artículo quedó marcado como enviado. La empresa lo recibirá para inspección."
+          : "El proceso de consignación finalizó."
+      );
+      setAceptoCargoEnvio(false);
+      loadAllData();
+    } catch (err) {
+      console.error("Error al confirmar envío:", err);
+      Alert.alert("Error", "No se pudo registrar el envío. Intentá nuevamente.");
+    } finally {
+      setEnviandoArticulo(false);
+    }
   };
 
   const handlePressConsignacion = (item: Articulo) => {
@@ -607,6 +644,7 @@ export default function ProfileScreen() {
     setExpandedId((prev) => (prev === item.id ? null : item.id));
     setIsEditingInsuranceId(null);
     setNewInsuranceAmount("");
+    setAceptoCargoEnvio(false);
   };
 
   const handleAumentarSeguro = async (id: number, currentAmount: number) => {
@@ -804,6 +842,8 @@ export default function ProfileScreen() {
                     // State chip styling
                     const STATE_COLORS: Record<string, { bg: string; text: string; border: string; label: string }> = {
                       pendiente: { bg: "#FFFDF5", text: "#D97706", border: "#FDE68A", label: "Pendiente" },
+                      interesado: { bg: "#FFF7ED", text: "#C2410C", border: "#FED7AA", label: "Solicitan envío" },
+                      en_transito: { bg: "#F5F3FF", text: "#6D28D9", border: "#DDD6FE", label: "En tránsito" },
                       en_inspeccion: { bg: "#EFF6FF", text: "#2563EB", border: "#BFDBFE", label: "En Inspección" },
                       aprobado: { bg: "#ECFDF5", text: "#059669", border: "#A7F3D0", label: item.subastaId ? "En Subasta" : "Listo para Subastar" },
                       rechazado: { bg: "#FEF2F2", text: "#DC2626", border: "#FCA5A5", label: "Rechazado" },
@@ -932,6 +972,167 @@ export default function ProfileScreen() {
                                   <View style={[s.detailRow, s.rejectionBox]}>
                                     <Text style={[s.detailLabel, { color: "#DC2626" }]}>Motivo de Rechazo:</Text>
                                     <Text style={[s.detailValue, { color: "#DC2626" }]}>{item.motivoRechazo}</Text>
+                                  </View>
+                                )}
+
+                                {(item.estado === "rechazado" || item.estado === "devuelto") &&
+                                  item.costoDevolucion != null && (
+                                    <View style={[s.detailRow, s.rejectionBox]}>
+                                      <Text style={[s.detailLabel, { color: "#DC2626" }]}>
+                                        Cargo de devolución a tu cargo:
+                                      </Text>
+                                      <Text style={[s.detailValue, { color: "#DC2626", fontWeight: "700" }]}>
+                                        {item.moneda || "USD"}{" "}
+                                        {Number(item.costoDevolucion).toLocaleString("es-AR", {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        })}
+                                      </Text>
+                                    </View>
+                                  )}
+
+                                {/* Envío e inspección */}
+                                {(item.direccionInspeccion ||
+                                  item.fechaEnvioFisico ||
+                                  item.instruccionesEnvio) && (
+                                  <View
+                                    style={{
+                                      marginTop: 4,
+                                      padding: 12,
+                                      borderRadius: 12,
+                                      backgroundColor: "#F8FAFC",
+                                      borderWidth: 1,
+                                      borderColor: "#E2E8F0",
+                                      gap: 6,
+                                    }}
+                                  >
+                                    <Text style={[s.detailSectionTitle, { fontSize: 13 }]}>
+                                      📦 Envío e inspección
+                                    </Text>
+                                    {item.direccionInspeccion && (
+                                      <View style={s.detailRow}>
+                                        <Text style={s.detailLabel}>Dirección de inspección:</Text>
+                                        <Text style={s.detailValue}>{item.direccionInspeccion}</Text>
+                                      </View>
+                                    )}
+                                    {item.instruccionesEnvio && (
+                                      <View style={s.detailRow}>
+                                        <Text style={s.detailLabel}>Instrucciones:</Text>
+                                        <Text style={s.detailValue}>{item.instruccionesEnvio}</Text>
+                                      </View>
+                                    )}
+                                    {item.fechaEnvioFisico && (
+                                      <View style={s.detailRow}>
+                                        <Text style={s.detailLabel}>Enviado (físico):</Text>
+                                        <Text style={s.detailValue}>
+                                          {formatFecha(item.fechaEnvioFisico)}
+                                        </Text>
+                                      </View>
+                                    )}
+                                    {item.aceptaCargoDevolucion != null && (
+                                      <View style={s.detailRow}>
+                                        <Text style={s.detailLabel}>Acepta cargo dev.:</Text>
+                                        <Text style={s.detailValue}>
+                                          {item.aceptaCargoDevolucion ? "Sí" : "No"}
+                                        </Text>
+                                      </View>
+                                    )}
+                                  </View>
+                                )}
+
+                                {/* Confirmación de envío (consigna: acuerdo de cargo) */}
+                                {item.estado === "interesado" && (
+                                  <View
+                                    style={{
+                                      marginTop: 8,
+                                      padding: 12,
+                                      borderRadius: 12,
+                                      backgroundColor: "#FFF7ED",
+                                      borderWidth: 1,
+                                      borderColor: "#FED7AA",
+                                      gap: 10,
+                                    }}
+                                  >
+                                    <Text
+                                      style={{
+                                        fontSize: 12,
+                                        color: "#9A3412",
+                                        lineHeight: 18,
+                                      }}
+                                    >
+                                      La empresa está interesada en tu artículo. Debés enviarlo a
+                                      la dirección indicada para su inspección. Aceptás que, en caso
+                                      de no aceptarse el bien enviado, la empresa lo devolverá con
+                                      cargo a vos.
+                                    </Text>
+
+                                    <Pressable
+                                      onPress={() => setAceptoCargoEnvio((v) => !v)}
+                                      style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+                                    >
+                                      <View
+                                        style={{
+                                          width: 20,
+                                          height: 20,
+                                          borderRadius: 5,
+                                          borderWidth: 2,
+                                          borderColor: aceptoCargoEnvio ? "#C2410C" : "#D6D3D1",
+                                          backgroundColor: aceptoCargoEnvio ? "#C2410C" : "#FFFFFF",
+                                          alignItems: "center",
+                                          justifyContent: "center",
+                                        }}
+                                      >
+                                        {aceptoCargoEnvio && (
+                                          <MaterialIcons name="check" size={14} color="#FFFFFF" />
+                                        )}
+                                      </View>
+                                      <Text style={{ fontSize: 12, color: "#1A1A2E", flex: 1 }}>
+                                        Acepto el cargo de devolución si el bien no se admite.
+                                      </Text>
+                                    </Pressable>
+
+                                    {enviandoArticulo ? (
+                                      <ActivityIndicator size="small" color="#C2410C" />
+                                    ) : (
+                                      <View style={{ flexDirection: "row", gap: 10 }}>
+                                        <Pressable
+                                          style={{ flex: 1 }}
+                                          onPress={() => handleConfirmarEnvio(item.id!, true)}
+                                        >
+                                          <View
+                                            style={{
+                                              backgroundColor: "#C2410C",
+                                              paddingVertical: 10,
+                                              borderRadius: 10,
+                                              alignItems: "center",
+                                            }}
+                                          >
+                                            <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 13 }}>
+                                              Confirmar envío
+                                            </Text>
+                                          </View>
+                                        </Pressable>
+                                        <Pressable
+                                          style={{ flex: 1 }}
+                                          onPress={() => handleConfirmarEnvio(item.id!, false)}
+                                        >
+                                          <View
+                                            style={{
+                                              backgroundColor: "#F3F4F6",
+                                              borderWidth: 1,
+                                              borderColor: "#E5E7EB",
+                                              paddingVertical: 10,
+                                              borderRadius: 10,
+                                              alignItems: "center",
+                                            }}
+                                          >
+                                            <Text style={{ color: "#6B7280", fontWeight: "700", fontSize: 13 }}>
+                                              Declinar
+                                            </Text>
+                                          </View>
+                                        </Pressable>
+                                      </View>
+                                    )}
                                   </View>
                                 )}
 

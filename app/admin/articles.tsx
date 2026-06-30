@@ -32,26 +32,46 @@ export default function AdminArticlesScreen() {
   const insets = useSafeAreaInsets();
   const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [estadoFilter, setEstadoFilter] = useState<string | undefined>(undefined);
 
   // Modal / Detail States
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEvaluateModal, setShowEvaluateModal] = useState(false);
+  const [showEnvioModal, setShowEnvioModal] = useState(false);
   const [evalType, setEvalType] = useState<"aprobado" | "rechazado" | null>(null);
 
   // Form Fields
   const [precioBase, setPrecioBase] = useState("");
   const [comision, setComision] = useState("");
   const [motivoRechazo, setMotivoRechazo] = useState("");
+  const [costoDevolucion, setCostoDevolucion] = useState("");
+  const [envioDireccion, setEnvioDireccion] = useState("");
+  const [envioInstrucciones, setEnvioInstrucciones] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   // Full Screen Image Viewer State
   const [viewerImage, setViewerImage] = useState<string | null>(null);
 
+  const ESTADO_FILTROS: { key: string | undefined; label: string }[] = [
+    { key: undefined, label: "Todos" },
+    { key: "pendiente", label: "Pendientes" },
+    { key: "interesado", label: "Interesados" },
+    { key: "en_transito", label: "En tránsito" },
+    { key: "en_inspeccion", label: "En inspección" },
+  ];
+
+  const ESTADO_LABELS: Record<string, string> = {
+    pendiente: "Pendiente",
+    interesado: "Esperando envío",
+    en_transito: "En tránsito",
+    en_inspeccion: "En inspección",
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
-      const data = await adminService.getPendingArticles();
+      const data = await adminService.getPendingArticles(estadoFilter);
       setArticles(data);
     } catch (error) {
       console.error(error);
@@ -63,7 +83,55 @@ export default function AdminArticlesScreen() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [estadoFilter]);
+
+  const handleSolicitarEnvio = async () => {
+    if (!selectedArticle?.id) return;
+    if (!envioDireccion.trim()) {
+      Alert.alert("Error", "Debe indicar la dirección de inspección.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await adminService.requestArticleEnvio(selectedArticle.id, {
+        direccionInspeccion: envioDireccion.trim(),
+        instruccionesEnvio: envioInstrucciones.trim() || undefined,
+      });
+      Alert.alert(
+        "Envío solicitado",
+        "Se notificó al usuario la dirección de envío y el acuerdo de cargo por devolución."
+      );
+      setShowEnvioModal(false);
+      setShowDetailModal(false);
+      setSelectedArticle(null);
+      setEnvioDireccion("");
+      setEnvioInstrucciones("");
+      loadData();
+    } catch (error) {
+      console.error(error);
+      Alert.alert(
+        "Error",
+        "No se pudo solicitar el envío. Verifique que el artículo siga pendiente."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRecibir = async (art: any) => {
+    if (!art?.id) return;
+    setSubmitting(true);
+    try {
+      await adminService.receiveArticle(art.id);
+      Alert.alert("Recepción registrada", "El artículo quedó en inspección.");
+      loadData();
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Error", "No se pudo registrar la recepción del bien.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleEvaluate = async () => {
     if (!selectedArticle?.id || !evalType) return;
@@ -94,11 +162,14 @@ export default function AdminArticlesScreen() {
           setSubmitting(false);
           return;
         }
+        const cargo = parseFloat(costoDevolucion);
+        const cargoNum = isNaN(cargo) ? undefined : cargo;
         await adminService.evaluateArticle(selectedArticle.id, {
           estado: "rechazado",
           motivoRechazo: motivoRechazo,
+          costoDevolucion: cargoNum,
         });
-        Alert.alert("Éxito", "Artículo rechazado.");
+        Alert.alert("Éxito", "Artículo rechazado tras inspección.");
       }
       setShowEvaluateModal(false);
       setShowDetailModal(false);
@@ -106,6 +177,7 @@ export default function AdminArticlesScreen() {
       setPrecioBase("");
       setComision("");
       setMotivoRechazo("");
+      setCostoDevolucion("");
       loadData();
     } catch (error) {
       console.error(error);
@@ -151,10 +223,34 @@ export default function AdminArticlesScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={s.listContainer}>
+          {/* Filtro por estado */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={s.filterRow}
+          >
+            {ESTADO_FILTROS.map((f) => (
+              <Pressable
+                key={f.key ?? "todos"}
+                onPress={() => setEstadoFilter(f.key)}
+                style={[s.filterChip, estadoFilter === f.key && s.filterChipActive]}
+              >
+                <Text
+                  style={[
+                    s.filterChipText,
+                    estadoFilter === f.key && s.filterChipTextActive,
+                  ]}
+                >
+                  {f.label}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+
           {articles.length === 0 ? (
             <View style={s.emptyContainer}>
               <MaterialIcons name="inventory" size={48} color="#9CA3AF" />
-              <Text style={s.emptyText}>No hay artículos pendientes de evaluación.</Text>
+              <Text style={s.emptyText}>No hay artículos en este estado.</Text>
             </View>
           ) : (
             articles.map((art) => (
@@ -173,7 +269,7 @@ export default function AdminArticlesScreen() {
                     </Text>
                     <View style={[s.badgeState, art.estado === "en_inspeccion" && s.badgeStateInspeccion]}>
                       <Text style={[s.badgeStateText, art.estado === "en_inspeccion" && s.badgeStateTextInspeccion]}>
-                        {art.estado === "en_inspeccion" ? "En Inspección" : "Pendiente"}
+                        {ESTADO_LABELS[art.estado] ?? art.estado}
                       </Text>
                     </View>
                   </View>
@@ -187,6 +283,18 @@ export default function AdminArticlesScreen() {
                       <Text style={s.infoLabel}>Fecha de Envío:</Text>
                       <Text style={s.infoVal}>{formatDate(art.fechaEnvio)}</Text>
                     </View>
+                    {art.direccionInspeccion && (
+                      <View style={s.infoRow}>
+                        <Text style={s.infoLabel}>Dir. inspección:</Text>
+                        <Text style={s.infoVal}>{art.direccionInspeccion}</Text>
+                      </View>
+                    )}
+                    {art.fechaEnvioFisico && (
+                      <View style={s.infoRow}>
+                        <Text style={s.infoLabel}>Enviado (físico):</Text>
+                        <Text style={s.infoVal}>{formatDate(art.fechaEnvioFisico)}</Text>
+                      </View>
+                    )}
                     {art.artista && (
                       <View style={s.infoRow}>
                         <Text style={s.infoLabel}>Artista/Autor:</Text>
@@ -195,10 +303,40 @@ export default function AdminArticlesScreen() {
                     )}
                   </View>
 
-                  <View style={s.cardFooter}>
-                    <Text style={s.actionText}>Auditar & Tasar</Text>
-                    <MaterialIcons name="keyboard-arrow-right" size={18} color="#8B6914" />
-                  </View>
+                  {art.estado === "en_transito" && (
+                    <View style={[s.cardFooter, { justifyContent: "space-between" }]}>
+                      <Text style={s.actionText}>Esperando recepción</Text>
+                      <Pressable
+                        onPress={(e) => {
+                          e.stopPropagation?.();
+                          handleRecibir(art);
+                        }}
+                        disabled={submitting}
+                        style={s.recibirBtn}
+                      >
+                        <MaterialIcons name="inventory" size={16} color="#FFFFFF" />
+                        <Text style={s.recibirBtnText}>Registrar recepción</Text>
+                      </Pressable>
+                    </View>
+                  )}
+                  {art.estado === "interesado" && (
+                    <View style={s.cardFooter}>
+                      <Text style={s.actionText}>Esperando envío del usuario</Text>
+                      <MaterialIcons name="schedule" size={18} color="#8B6914" />
+                    </View>
+                  )}
+                  {art.estado === "pendiente" && (
+                    <View style={s.cardFooter}>
+                      <Text style={s.actionText}>Auditar & Tasar</Text>
+                      <MaterialIcons name="keyboard-arrow-right" size={18} color="#8B6914" />
+                    </View>
+                  )}
+                  {art.estado === "en_inspeccion" && (
+                    <View style={s.cardFooter}>
+                      <Text style={s.actionText}>Inspeccionar & Tasar</Text>
+                      <MaterialIcons name="keyboard-arrow-right" size={18} color="#8B6914" />
+                    </View>
+                  )}
                 </View>
               </Pressable>
             ))
@@ -270,6 +408,55 @@ export default function AdminArticlesScreen() {
                 </Text>
               </View>
 
+              {/* Envío / inspección */}
+              {(selectedArticle.direccionInspeccion ||
+                selectedArticle.fechaEnvioFisico ||
+                selectedArticle.instruccionesEnvio) && (
+                <View style={s.detailSection}>
+                  <Text style={s.detailSecTitle}>Envío e Inspección</Text>
+                  <View style={s.detailGrid}>
+                    {selectedArticle.direccionInspeccion && (
+                      <View style={s.detailGridRow}>
+                        <Text style={s.detailGridLabel}>Dir. de inspección:</Text>
+                        <Text style={s.detailGridVal}>{selectedArticle.direccionInspeccion}</Text>
+                      </View>
+                    )}
+                    {selectedArticle.fechaEnvioFisico && (
+                      <View style={s.detailGridRow}>
+                        <Text style={s.detailGridLabel}>Enviado (físico):</Text>
+                        <Text style={s.detailGridVal}>{formatDate(selectedArticle.fechaEnvioFisico)}</Text>
+                      </View>
+                    )}
+                    {selectedArticle.instruccionesEnvio && (
+                      <View style={s.detailGridRow}>
+                        <Text style={s.detailGridLabel}>Instrucciones:</Text>
+                        <Text style={s.detailGridVal}>{selectedArticle.instruccionesEnvio}</Text>
+                      </View>
+                    )}
+                    {selectedArticle.aceptaCargoDevolucion != null && (
+                      <View style={s.detailGridRow}>
+                        <Text style={s.detailGridLabel}>Acepta cargo dev.:</Text>
+                        <Text style={s.detailGridVal}>
+                          {selectedArticle.aceptaCargoDevolucion ? "Sí" : "No"}
+                        </Text>
+                      </View>
+                    )}
+                    {selectedArticle.costoDevolucion != null && (
+                      <View style={s.detailGridRow}>
+                        <Text style={s.detailGridLabel}>Cargo de devolución:</Text>
+                        <Text style={s.detailGridVal}>
+                          {selectedArticle.moneda || "USD"}{" "}
+                          {Number(selectedArticle.costoDevolucion).toLocaleString("es-AR", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              )}
+
               {/* Photos Gallery */}
               <View style={s.detailSection}>
                 <Text style={s.detailSecTitle}>Fotos Adjuntas ({selectedArticle.fotos?.length || 0})</Text>
@@ -285,37 +472,125 @@ export default function AdminArticlesScreen() {
                 </ScrollView>
               </View>
 
-              {/* Evaluation Forms trigger */}
-              <View style={s.auditActions}>
-                <Pressable
-                  style={s.actionBtnWrapper}
-                  onPress={() => {
-                    setEvalType("rechazado");
-                    setMotivoRechazo("");
-                    setShowEvaluateModal(true);
-                  }}
-                >
-                  <View style={[s.btn, s.btnReject, { paddingVertical: 14 }]}>
-                    <MaterialIcons name="close" size={20} color="#DC2626" />
-                    <Text style={s.btnRejectText}>Rechazar Postulación</Text>
-                  </View>
-                </Pressable>
+              {/* Acciones según estado */}
+              {selectedArticle.estado === "pendiente" && (
+                <View style={s.auditActions}>
+                  <Pressable
+                    style={s.actionBtnWrapper}
+                    onPress={() => {
+                      setEnvioDireccion("");
+                      setEnvioInstrucciones("");
+                      setShowEnvioModal(true);
+                    }}
+                  >
+                    <View style={[s.btn, s.btnEnvio, { paddingVertical: 14 }]}>
+                      <MaterialIcons name="local-shipping" size={20} color="#FFFFFF" />
+                      <Text style={s.btnApproveText}>Solicitar envío</Text>
+                    </View>
+                  </Pressable>
 
-                <Pressable
-                  style={s.actionBtnWrapper}
-                  onPress={() => {
-                    setEvalType("aprobado");
-                    setPrecioBase("");
-                    setComision("");
-                    setShowEvaluateModal(true);
-                  }}
-                >
-                  <View style={[s.btn, s.btnApprove, { paddingVertical: 14 }]}>
-                    <MaterialIcons name="gavel" size={20} color="#FFFFFF" />
-                    <Text style={s.btnApproveText}>Aprobar & Tasar</Text>
+                  <View
+                    style={{
+                      marginTop: 8,
+                      padding: 10,
+                      borderRadius: 8,
+                      backgroundColor: "#FEF3C7",
+                      borderWidth: 1,
+                      borderColor: "#FCD34D",
+                    }}
+                  >
+                    <Text style={{ fontSize: 11, color: "#92400E", textAlign: "center" }}>
+                      Evaluación directa disponible por transición (artículos sin inspección física).
+                    </Text>
                   </View>
-                </Pressable>
-              </View>
+
+                  <Pressable
+                    style={s.actionBtnWrapper}
+                    onPress={() => {
+                      setEvalType("aprobado");
+                      setPrecioBase("");
+                      setComision("");
+                      setShowEvaluateModal(true);
+                    }}
+                  >
+                    <View style={[s.btn, s.btnApprove, { paddingVertical: 14 }]}>
+                      <MaterialIcons name="gavel" size={20} color="#FFFFFF" />
+                      <Text style={s.btnApproveText}>Aprobar & Tasar ( directo )</Text>
+                    </View>
+                  </Pressable>
+                  <Pressable
+                    style={s.actionBtnWrapper}
+                    onPress={() => {
+                      setEvalType("rechazado");
+                      setMotivoRechazo("");
+                      setCostoDevolucion("");
+                      setShowEvaluateModal(true);
+                    }}
+                  >
+                    <View style={[s.btn, s.btnReject, { paddingVertical: 14 }]}>
+                      <MaterialIcons name="close" size={20} color="#DC2626" />
+                      <Text style={s.btnRejectText}>Rechazar Postulación</Text>
+                    </View>
+                  </Pressable>
+                </View>
+              )}
+
+              {selectedArticle.estado === "interesado" && (
+                <View style={s.auditActions}>
+                  <Text style={{ fontSize: 13, color: "#6B7280", textAlign: "center", paddingVertical: 12 }}>
+                    En espera de que el usuario acepte el cargo de devolución y envíe el bien.
+                  </Text>
+                </View>
+              )}
+
+              {selectedArticle.estado === "en_transito" && (
+                <View style={s.auditActions}>
+                  <Pressable
+                    style={s.actionBtnWrapper}
+                    onPress={() => handleRecibir(selectedArticle)}
+                    disabled={submitting}
+                  >
+                    <View style={[s.btn, s.btnApprove, { paddingVertical: 14 }]}>
+                      <MaterialIcons name="inventory" size={20} color="#FFFFFF" />
+                      <Text style={s.btnApproveText}>Registrar recepción</Text>
+                    </View>
+                  </Pressable>
+                </View>
+              )}
+
+              {selectedArticle.estado === "en_inspeccion" && (
+                <View style={s.auditActions}>
+                  <Pressable
+                    style={s.actionBtnWrapper}
+                    onPress={() => {
+                      setEvalType("rechazado");
+                      setMotivoRechazo("");
+                      setCostoDevolucion("");
+                      setShowEvaluateModal(true);
+                    }}
+                  >
+                    <View style={[s.btn, s.btnReject, { paddingVertical: 14 }]}>
+                      <MaterialIcons name="close" size={20} color="#DC2626" />
+                      <Text style={s.btnRejectText}>Rechazar tras inspección</Text>
+                    </View>
+                  </Pressable>
+
+                  <Pressable
+                    style={s.actionBtnWrapper}
+                    onPress={() => {
+                      setEvalType("aprobado");
+                      setPrecioBase("");
+                      setComision("");
+                      setShowEvaluateModal(true);
+                    }}
+                  >
+                    <View style={[s.btn, s.btnApprove, { paddingVertical: 14 }]}>
+                      <MaterialIcons name="gavel" size={20} color="#FFFFFF" />
+                      <Text style={s.btnApproveText}>Aprobar & Tasar</Text>
+                    </View>
+                  </Pressable>
+                </View>
+              )}
             </ScrollView>
           )}
         </View>
@@ -359,17 +634,33 @@ export default function AdminArticlesScreen() {
                 </View>
               </View>
             ) : (
-              <View style={[s.formGroup, { marginBottom: 20 }]}>
-                <Text style={s.formLabel}>Motivo del Rechazo:</Text>
-                <TextInput
-                  placeholder="Escriba los motivos por los cuales no se acepta el artículo..."
-                  value={motivoRechazo}
-                  onChangeText={setMotivoRechazo}
-                  style={s.reasonInput}
-                  multiline
-                  numberOfLines={4}
-                  placeholderTextColor="#9CA3AF"
-                />
+              <View style={{ gap: 16, marginBottom: 20 }}>
+                <View style={s.formGroup}>
+                  <Text style={s.formLabel}>Motivo del Rechazo:</Text>
+                  <TextInput
+                    placeholder="Escriba los motivos por los cuales no se acepta el artículo..."
+                    value={motivoRechazo}
+                    onChangeText={setMotivoRechazo}
+                    style={s.reasonInput}
+                    multiline
+                    numberOfLines={4}
+                    placeholderTextColor="#9CA3AF"
+                  />
+                </View>
+                <View style={s.formGroup}>
+                  <Text style={s.formLabel}>Cargo de devolución (a cargo del usuario):</Text>
+                  <TextInput
+                    placeholder="Ej. 800"
+                    keyboardType="numeric"
+                    value={costoDevolucion}
+                    onChangeText={setCostoDevolucion}
+                    style={s.input}
+                    placeholderTextColor="#9CA3AF"
+                  />
+                  <Text style={{ fontSize: 11, color: "#9CA3AF", marginTop: 4 }}>
+                    Se notifica al usuario el monto a abonar por la devolución del bien.
+                  </Text>
+                </View>
               </View>
             )}
 
@@ -395,6 +686,83 @@ export default function AdminArticlesScreen() {
                     <ActivityIndicator size="small" color="#FFFFFF" />
                   ) : (
                     <Text style={s.modalBtnSubmitText}>Finalizar</Text>
+                  )}
+                </View>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Solicitar envío Modal */}
+      <Modal visible={showEnvioModal && !!selectedArticle} transparent animationType="fade">
+        <View style={s.modalOverlay}>
+          <View style={s.modalContent}>
+            <Text style={s.modalTitle}>Solicitar envío del bien</Text>
+            <Text style={s.modalUser} numberOfLines={1}>
+              Artículo: {selectedArticle?.descripcion}
+            </Text>
+
+            <View style={{ gap: 16, marginBottom: 20 }}>
+              <View style={s.formGroup}>
+                <Text style={s.formLabel}>Dirección de inspección:</Text>
+                <TextInput
+                  placeholder="Ej. Av. Corrientes 1234, CABA"
+                  value={envioDireccion}
+                  onChangeText={setEnvioDireccion}
+                  style={s.input}
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
+              <View style={s.formGroup}>
+                <Text style={s.formLabel}>Instrucciones de envío (opcional):</Text>
+                <TextInput
+                  placeholder="Horarios, acuses, datos del remitente..."
+                  value={envioInstrucciones}
+                  onChangeText={setEnvioInstrucciones}
+                  style={s.reasonInput}
+                  multiline
+                  numberOfLines={3}
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
+              <View
+                style={{
+                  padding: 10,
+                  borderRadius: 8,
+                  backgroundColor: "#FEF3C7",
+                  borderWidth: 1,
+                  borderColor: "#FCD34D",
+                }}
+              >
+                <Text style={{ fontSize: 11, color: "#92400E" }}>
+                  Se le notifica al usuario que acepta el cargo de devolución por si el
+                  bien no se admite, conforme a la consigna.
+                </Text>
+              </View>
+            </View>
+
+            <View style={s.modalActions}>
+              <Pressable
+                style={s.modalBtnWrapper}
+                onPress={() => setShowEnvioModal(false)}
+                disabled={submitting}
+              >
+                <View style={[s.modalBtn, s.modalBtnCancel]}>
+                  <Text style={s.modalBtnCancelText}>Cancelar</Text>
+                </View>
+              </Pressable>
+
+              <Pressable
+                style={s.modalBtnWrapper}
+                onPress={handleSolicitarEnvio}
+                disabled={submitting}
+              >
+                <View style={[s.modalBtn, s.modalBtnSubmit]}>
+                  {submitting ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text style={s.modalBtnSubmitText}>Solicitar envío</Text>
                   )}
                 </View>
               </Pressable>
@@ -467,6 +835,30 @@ const s = StyleSheet.create({
   listContainer: {
     padding: 24,
     gap: 16,
+  },
+  filterRow: {
+    paddingBottom: 4,
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5DDD0",
+  },
+  filterChipActive: {
+    backgroundColor: "#1A1A2E",
+    borderColor: "#1A1A2E",
+  },
+  filterChipText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#6B7280",
+  },
+  filterChipTextActive: {
+    color: "#FFFFFF",
   },
   emptyContainer: {
     alignItems: "center",
@@ -673,6 +1065,23 @@ const s = StyleSheet.create({
   },
   btnApprove: {
     backgroundColor: "#1A1A2E",
+  },
+  btnEnvio: {
+    backgroundColor: "#8B6914",
+  },
+  recibirBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#1A1A2E",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  recibirBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   btnApproveText: {
     fontSize: 13,

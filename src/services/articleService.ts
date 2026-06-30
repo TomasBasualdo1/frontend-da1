@@ -16,8 +16,13 @@ const normalizeArticulo = (data: any): Articulo => ({
   estado: data?.estado ?? data?.estado_evaluacion,
   motivoRechazo: data?.motivoRechazo ?? data?.motivo_rechazo,
   fechaEnvio: data?.fechaEnvio ?? data?.fecha_envio,
+  fechaEnvioFisico: data?.fechaEnvioFisico ?? data?.fecha_envio_fisico,
   fotos: data?.fotos ?? data?.imagenes,
   ubicacion: data?.ubicacion,
+  direccionInspeccion: data?.direccionInspeccion ?? data?.direccion_inspeccion,
+  instruccionesEnvio: data?.instruccionesEnvio ?? data?.instrucciones_envio,
+  aceptaCargoDevolucion: data?.aceptaCargoDevolucion ?? data?.acepta_cargo_devolucion,
+  costoDevolucion: data?.costoDevolucion ?? data?.costo_devolucion,
   seguro: data?.seguro,
   subastaId: data?.subastaId ?? data?.subasta_id,
   subastaFecha: data?.subastaFecha ?? data?.subasta_fecha,
@@ -113,6 +118,17 @@ export const articleService = {
   /** Aceptar o rechazar tasación */
   async aceptarTasacion(id: number, acepta: boolean): Promise<void> {
     await api.post(`/articulos/${id}/aceptar-tasacion`, { acepta });
+  },
+
+  /** Confirmar envío físico del bien (usuario acepta el cargo de devolución) */
+  async confirmarEnvio(
+    id: number,
+    aceptaCargoDevolucion: boolean
+  ): Promise<Articulo> {
+    const response = await api.post(`/articulos/${id}/confirmar-envio`, {
+      aceptaCargoDevolucion,
+    });
+    return normalizeArticulo(response.data);
   },
 
   /** Solicitar aumento de cobertura del seguro */

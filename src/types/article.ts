@@ -26,14 +26,28 @@ export interface Articulo {
   historia?: string;
   artista?: string;
   fechaCreacion?: string;
-  estado?: 'pendiente' | 'en_inspeccion' | 'aprobado' | 'rechazado' | 'devuelto';
+  estado?: EstadoArticulo;
   motivoRechazo?: string | null;
   fechaEnvio?: string;
+  fechaEnvioFisico?: string | null;
   fotos?: string[];
   ubicacion?: string;
+  direccionInspeccion?: string | null;
+  instruccionesEnvio?: string | null;
+  aceptaCargoDevolucion?: boolean | null;
+  costoDevolucion?: number | null;
   seguro?: Seguro;
   subastaId?: number | null;
   subastaFecha?: string | null;
   subastaHora?: string | null;
   subastaEstado?: 'abierta' | 'cerrada' | 'proxima' | null;
 }
+
+export type EstadoArticulo =
+  | 'pendiente'
+  | 'interesado'
+  | 'en_transito'
+  | 'en_inspeccion'
+  | 'aprobado'
+  | 'rechazado'
+  | 'devuelto';

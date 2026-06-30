@@ -12,6 +12,12 @@ export interface ArticuloEvaluacionInput {
   motivoRechazo?: string;
   precioBasePropuesto?: number;
   comisionPropuesta?: number;
+  costoDevolucion?: number;
+}
+
+export interface SolicitudEnvioInput {
+  direccionInspeccion: string;
+  instruccionesEnvio?: string;
 }
 
 export interface MedioPagoVerificacionInput {
@@ -54,8 +60,13 @@ const normalizeArticulo = (data: any): Articulo => ({
   estado: data?.estado ?? data?.estado_evaluacion,
   motivoRechazo: data?.motivoRechazo ?? data?.motivo_rechazo,
   fechaEnvio: data?.fechaEnvio ?? data?.fecha_envio,
+  fechaEnvioFisico: data?.fechaEnvioFisico ?? data?.fecha_envio_fisico,
   fotos: data?.fotos ?? data?.imagenes,
   ubicacion: data?.ubicacion,
+  direccionInspeccion: data?.direccionInspeccion ?? data?.direccion_inspeccion,
+  instruccionesEnvio: data?.instruccionesEnvio ?? data?.instrucciones_envio,
+  aceptaCargoDevolucion: data?.aceptaCargoDevolucion ?? data?.acepta_cargo_devolucion,
+  costoDevolucion: data?.costoDevolucion ?? data?.costo_devolucion,
   seguro: data?.seguro,
 });
 
@@ -107,8 +118,11 @@ export const adminService = {
   },
 
   /** Listar artículos consignados pendientes de evaluar */
-  async getPendingArticles(): Promise<Articulo[]> {
-    const response = await api.get('/admin/articulos/pendientes');
+  async getPendingArticles(estado?: string): Promise<Articulo[]> {
+    const url = estado
+      ? `/admin/articulos/pendientes?estado=${encodeURIComponent(estado)}`
+      : '/admin/articulos/pendientes';
+    const response = await api.get(url);
     const items = Array.isArray(response.data) ? response.data : [];
     return items.map(normalizeArticulo);
   },
@@ -116,6 +130,16 @@ export const adminService = {
   /** Evaluar un artículo consignado */
   async evaluateArticle(id: number, data: ArticuloEvaluacionInput): Promise<void> {
     await api.post(`/admin/articulos/${id}/evaluar`, data);
+  },
+
+  /** Solicitar al usuario el envío del bien e indicar la dirección de inspección */
+  async requestArticleEnvio(id: number, data: SolicitudEnvioInput): Promise<void> {
+    await api.post(`/admin/articulos/${id}/solicitar-envio`, data);
+  },
+
+  /** Registrar la recepción del bien en el depósito */
+  async receiveArticle(id: number, ubicacion?: string): Promise<void> {
+    await api.post(`/admin/articulos/${id}/recibir`, ubicacion ? { ubicacion } : {});
   },
 
   /** Listar medios de pago pendientes de verificación */
